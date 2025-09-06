@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Jobs\SendWelcomeEmail;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Auth\Events\Registered;
 
 class RegisterController extends Controller
 {
@@ -39,6 +41,43 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+    }
+
+    /**
+     * Handle a registration request for the application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     */
+    public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+        event(new Registered($user = $this->create($request->all())));
+
+        // Smart queue handling for shared hosting
+        try {
+            if (config('queue.default') === 'database') {
+                // Try to dispatch to queue
+                SendWelcomeEmail::dispatch($user);
+            } else {
+                // For sync driver, send immediately
+                SendWelcomeEmail::dispatchSync($user);
+            }
+        } catch (\Exception $e) {
+            // If queue fails, log and continue (don't block registration)
+            \Log::error('Failed to queue welcome email for user: ' . $user->email . '. Error: ' . $e->getMessage());
+        }
+
+        $this->guard()->login($user);
+
+        if ($response = $this->registered($request, $user)) {
+            return $response;
+        }
+
+        return $request->wantsJson()
+                    ? new JsonResponse([], 201)
+                    : redirect($this->redirectPath())->with('success', 'Welcome! A confirmation email has been sent to your email address.');
     }
 
     /**
