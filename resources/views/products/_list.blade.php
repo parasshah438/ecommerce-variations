@@ -15,23 +15,23 @@
                     </div>
                 @endif
                 
-                    <!-- Wishlist Button -->
-                    @auth
-                    @php
-                        $isWishlisted = \App\Models\Wishlist::where('user_id', auth()->id())->where('product_id', $product->id)->exists();
-                    @endphp
-                    <button class="btn btn-sm position-absolute top-0 end-0 m-2 wishlist-btn {{ $isWishlisted ? 'btn-danger' : 'btn-outline-danger' }}" 
-                            data-product-id="{{ $product->id }}"
-                            data-wishlisted="{{ $isWishlisted ? 'true' : 'false' }}"
-                            title="{{ $isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist' }}">
-                        <i class="bi {{ $isWishlisted ? 'bi-heart-fill' : 'bi-heart' }} wishlist-icon"></i>
-                    </button>
-                    @else
-                    <button class="btn btn-outline-danger btn-sm position-absolute top-0 end-0 m-2 wishlist-btn-guest" 
-                            title="Login to add to Wishlist">
-                        <i class="bi bi-heart"></i>
-                    </button>
-                    @endauth
+                <!-- Wishlist Button -->
+                @auth
+                @php
+                    $isWishlisted = \App\Models\Wishlist::where('user_id', auth()->id())->where('product_id', $product->id)->exists();
+                @endphp
+                <button class="btn btn-sm position-absolute top-0 end-0 m-2 wishlist-btn {{ $isWishlisted ? 'btn-danger' : 'btn-outline-danger' }}" 
+                        data-product-id="{{ $product->id }}"
+                        data-wishlisted="{{ $isWishlisted ? 'true' : 'false' }}"
+                        title="{{ $isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist' }}">
+                    <i class="bi {{ $isWishlisted ? 'bi-heart-fill' : 'bi-heart' }} wishlist-icon"></i>
+                </button>
+                @else
+                <button class="btn btn-outline-danger btn-sm position-absolute top-0 end-0 m-2 wishlist-btn-guest" 
+                        title="Login to add to Wishlist">
+                    <i class="bi bi-heart"></i>
+                </button>
+                @endauth
                 
                 <!-- Discount Badge -->
                 @if($product->mrp && $product->mrp > $product->price)
@@ -39,10 +39,20 @@
                     {{ round((($product->mrp - $product->price) / $product->mrp) * 100) }}% OFF
                 </span>
                 @endif
+
+                <!-- Variations Badge -->
+                @if($product->has_variations ?? false)
+                <span class="badge bg-info position-absolute bottom-0 start-0 m-2">
+                    {{ $product->variations->count() }} Options
+                </span>
+                @endif
             </div>
             
             <div class="card-body d-flex flex-column">
-                <h6 class="card-title mb-2">{{ Str::limit($product->name, 50) }}</h6>
+                <!-- Product Name (clickable) -->
+                <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none">
+                    <h6 class="card-title mb-2 text-dark">{{ Str::limit($product->name, 50) }}</h6>
+                </a>
                 
                 <!-- Category -->
                 @if($product->category)
@@ -59,26 +69,48 @@
                     <small class="text-muted">(4.0)</small>
                 </div>
                 
-                <!-- Price -->
+                <!-- Price Display (Real Amazon/Flipkart style) -->
                 <div class="mb-3">
-                    <h5 class="text-primary fw-bold mb-0">₹{{ number_format($product->price ?? 0, 2) }}</h5>
-                    @if($product->mrp && $product->mrp > $product->price)
-                    <small class="text-muted text-decoration-line-through">₹{{ number_format($product->mrp, 2) }}</small>
+                    @if($product->has_variations ?? false)
+                        <!-- Show starting price only (like Amazon) -->
+                        <h5 class="text-primary fw-bold mb-0">₹{{ number_format($product->min_price, 0) }}</h5>
+                        @if($product->min_price != $product->max_price)
+                            <small class="text-muted">onwards</small>
+                        @endif
+                    @else
+                        <!-- Simple product price -->
+                        <h5 class="text-primary fw-bold mb-0">₹{{ number_format($product->price ?? 0, 0) }}</h5>
+                    @endif
+                    
+                    @if($product->mrp && $product->mrp > ($product->min_price ?? $product->price))
+                    <small class="text-muted text-decoration-line-through">₹{{ number_format($product->mrp, 0) }}</small>
                     @endif
                 </div>
                 
-                <!-- Actions -->
+                <!-- Actions (Real Amazon/Flipkart Style) -->
                 <div class="mt-auto">
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('products.show', $product->slug) }}" 
-                           class="btn btn-primary btn-sm">
-                            <i class="bi bi-eye me-1"></i>View Details
-                        </a>
-                        <button class="btn btn-outline-primary btn-sm quick-add-btn" 
-                                data-product-id="{{ $product->id }}">
-                            <i class="bi bi-cart-plus me-1"></i>Quick Add
-                        </button>
-                    </div>
+                    @if($product->has_variations ?? false)
+                        <!-- Products with variations: Only "View Product" like Amazon -->
+                        <div class="d-grid">
+                            <a href="{{ route('products.show', $product->slug) }}" 
+                               class="btn btn-primary">
+                                View Product
+                            </a>
+                        </div>
+                    @else
+                        <!-- Simple products: Can add directly to cart -->
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('products.show', $product->slug) }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                View Product
+                            </a>
+                            <button class="btn btn-primary btn-sm quick-add-btn" 
+                                    data-product-id="{{ $product->id }}"
+                                    data-has-variations="false">
+                                <i class="bi bi-cart-plus me-1"></i>Add to Cart
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -436,18 +468,85 @@ $(document).on('click', '.wishlist-btn-guest', function(e) {
     }
 });
 
-// Quick add functionality
+// Quick add functionality (Updated for Real-world UX)
 $(document).on('click', '.quick-add-btn', function(e) {
     e.preventDefault();
-    const productId = $(this).data('product-id');
-   
+    const $btn = $(this);
+    const productId = $btn.data('product-id');
+    const hasVariations = $btn.data('has-variations');
     
-    // Redirect to product page for variation selection
-    const productSlug = $(this).closest('.product-card').find('a[href*="/products/"]').attr('href');
-    if (productSlug) {
-        window.location.href = productSlug;
+    if (hasVariations === true || hasVariations === 'true') {
+        // Products with variations: Redirect to product page
+        const productSlug = $btn.closest('.product-card').find('a[href*="/products/"]').attr('href');
+        if (productSlug) {
+            window.location.href = productSlug;
+        } else {
+            window.location.href = "{{ url('products') }}/" + productId;
+        }
     } else {
-        window.location.href = "{{ url('products') }}/" + productId;
+        // Simple products: Add directly to cart
+        const originalText = $btn.html();
+        $btn.html('<i class="spinner-border spinner-border-sm me-1"></i>Adding...');
+        $btn.prop('disabled', true);
+        
+        // Simulate add to cart for simple products
+        $.ajax({
+            url: '{{ route("cart.add") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                product_id: productId,
+                quantity: 1
+            },
+            success: function(response) {
+                if (response.success) {
+                    $btn.html('<i class="bi bi-check-circle me-1"></i>Added!');
+                    $btn.removeClass('btn-primary').addClass('btn-success');
+                    
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success('Product added to cart successfully!');
+                    }
+                    
+                    // Update cart counter if function exists
+                    if (typeof window.updateCartCounter === 'function') {
+                        window.updateCartCounter(response.cart_count);
+                    }
+                    
+                    // Reset button after 2 seconds
+                    setTimeout(function() {
+                        $btn.html(originalText);
+                        $btn.removeClass('btn-success').addClass('btn-primary');
+                        $btn.prop('disabled', false);
+                    }, 2000);
+                } else {
+                    $btn.html(originalText);
+                    $btn.prop('disabled', false);
+                    
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(response.message || 'Failed to add product to cart');
+                    } else {
+                        alert(response.message || 'Failed to add product to cart');
+                    }
+                }
+            },
+            error: function(xhr) {
+                $btn.html(originalText);
+                $btn.prop('disabled', false);
+                
+                let errorMessage = 'Failed to add product to cart';
+                if (xhr.status === 401) {
+                    errorMessage = 'Please login to add items to cart';
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(errorMessage);
+                } else {
+                    alert(errorMessage);
+                }
+            }
+        });
     }
 });
 

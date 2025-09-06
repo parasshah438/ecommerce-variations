@@ -38,6 +38,10 @@
     
     <!-- Social Login Options -->
     <div class="social-login">
+        <a href="{{ route('otp.login') }}" class="social-btn text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+            <i class="bi bi-phone me-2" style="font-size: 1.25rem;"></i>
+            Login with OTP
+        </a>
         <a href="#" class="social-btn text-dark">
             <svg width="20" height="20" viewBox="0 0 24 24" class="me-2">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -119,6 +123,15 @@
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="display: none;"></span>
             {{ __('Sign In') }}
         </button>
+        
+        <!-- OTP Login Alternative -->
+        <div class="text-center mt-3">
+            <p class="text-muted small mb-2">or</p>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="otpLoginBtn">
+                <i class="fas fa-mobile-alt me-2"></i>
+                Login with OTP instead
+            </button>
+        </div>
     </form>
     
     <!-- Register Link -->
@@ -177,5 +190,19 @@
     
     form.addEventListener('submit', function(e) {
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing In...';
+    });
+    
+    // OTP Login button handler
+    const otpLoginBtn = document.getElementById('otpLoginBtn');
+    otpLoginBtn.addEventListener('click', function() {
+        const emailValue = loginField.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        // If valid email is entered, pass it to OTP login
+        if (emailValue && emailRegex.test(emailValue)) {
+            window.location.href = '{{ route("otp.login") }}?email=' + encodeURIComponent(emailValue);
+        } else {
+            window.location.href = '{{ route("otp.login") }}';
+        }
     });
 @endsection

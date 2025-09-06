@@ -9,12 +9,33 @@ use App\Http\Controllers\Frontend\SearchController as FrontSearch;
 use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Auth\OtpController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
 Auth::routes();
+
+// OTP Authentication Routes
+Route::prefix('otp')->name('otp.')->group(function () {
+    Route::get('/login', [OtpController::class, 'showOtpForm'])->name('login');
+    Route::post('/send', [OtpController::class, 'sendOtp'])->name('send');
+    Route::get('/send', [OtpController::class, 'redirectToLogin'])->name('send.redirect'); // Handle GET requests
+    Route::get('/verify', [OtpController::class, 'showVerifyForm'])->name('verify.form');
+    Route::post('/verify', [OtpController::class, 'verifyOtp'])->name('verify');
+    Route::post('/resend', [OtpController::class, 'resendOtp'])->name('resend');
+    Route::get('/status', [OtpController::class, 'getOtpStatus'])->name('status');
+    Route::post('/cancel', [OtpController::class, 'cancelOtp'])->name('cancel');
+});
+
+// Alternative auth routes for cleaner URLs
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::get('/otp-login', [OtpController::class, 'showOtpForm'])->name('otp.login');
+    Route::post('/otp-send', [OtpController::class, 'sendOtp'])->name('otp.send');
+    Route::get('/otp-verify', [OtpController::class, 'showVerifyForm'])->name('otp.verify.form');
+    Route::post('/otp-verify', [OtpController::class, 'verifyOtp'])->name('otp.verify');
+});
 
 // API routes for registration validation
 Route::post('/api/check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('api.check.email');
@@ -67,6 +88,102 @@ Route::get('/debug/pincode/{pincode}', function($pincode) {
 })->where('pincode', '[0-9]{6}');
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+// Dashboard route (protected)
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware('auth')->name('dashboard');
+
+// Test OTP system
+Route::get('/test-otp', function () {
+    try {
+        $otpService = new \App\Services\OtpService(new \App\Services\ReliableEmailService());
+        $result = $otpService->sendOtp('mingjk@yopmail.com', 'email', true);
+        return response()->json([
+            'status' => 'success',
+            'result' => $result
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+});
+
+// Clear OTP cooldowns for testing
+Route::get('/debug/clear-otp-cooldown/{email}', function($email) {
+    try {
+        // Delete recent OTP records to clear cooldown
+        \App\Models\UserOtp::where('identifier', $email)
+            ->where('created_at', '>', now()->subMinutes(15))
+            ->delete();
+            
+        return response()->json([
+            'status' => 'success',
+            'message' => "OTP cooldown cleared for {$email}",
+            'email' => $email
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+});
+
+// Clear OTP rate limiting for testing
+Route::get('/debug/clear-otp-rate-limit/{email}', function($email) {
+    try {
+        $hourlyKey = 'otp_hourly:' . $email;
+        $dailyKey = 'otp_daily:' . $email;
+        
+        // Clear rate limiting
+        \Illuminate\Support\Facades\RateLimiter::clear($hourlyKey);
+        \Illuminate\Support\Facades\RateLimiter::clear($dailyKey);
+        
+        // Also clear any OTP records
+        \App\Models\UserOtp::where('identifier', $email)
+            ->where('created_at', '>', now()->subHour())
+            ->delete();
+            
+        return response()->json([
+            'status' => 'success',
+            'message' => "Rate limiting cleared for {$email}",
+            'email' => $email,
+            'cleared' => [
+                'hourly_key' => $hourlyKey,
+                'daily_key' => $dailyKey,
+                'otp_records' => 'Recent OTP records deleted'
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+});
+
+// Debug OTP status
+Route::get('/debug/otp-status/{email}', function($email) {
+    try {
+        $otpService = new \App\Services\OtpService(new \App\Services\ReliableEmailService());
+        $status = $otpService->getOtpStatus($email);
+        
+        return response()->json([
+            'status' => 'success',
+            'email' => $email,
+            'otp_status' => $status
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+});
 
 // Debug route to check product variations
 Route::get('/debug/product/{id}', function($id) {

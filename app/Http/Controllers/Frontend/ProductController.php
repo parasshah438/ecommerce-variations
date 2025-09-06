@@ -10,7 +10,30 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::with('images')->paginate(12);
+        $products = Product::with(['images', 'variations'])->paginate(12);
+        
+        // Add price range calculation for each product
+        $products->getCollection()->transform(function ($product) {
+            if ($product->variations->count() > 0) {
+                $prices = $product->variations->pluck('price')->filter();
+                if ($prices->count() > 0) {
+                    $product->min_price = $prices->min();
+                    $product->max_price = $prices->max();
+                    $product->has_variations = true;
+                } else {
+                    $product->min_price = $product->price;
+                    $product->max_price = $product->price;
+                    $product->has_variations = false;
+                }
+            } else {
+                // Simple product (no variations)
+                $product->min_price = $product->price;
+                $product->max_price = $product->price;
+                $product->has_variations = false;
+            }
+            return $product;
+        });
+        
         return view('products.index', compact('products'));
     }
 
@@ -78,7 +101,30 @@ class ProductController extends Controller
 
     public function loadMore(Request $request)
     {
-        $products = Product::with('images')->paginate(12);
+        $products = Product::with(['images', 'variations'])->paginate(12);
+        
+        // Add price range calculation for each product
+        $products->getCollection()->transform(function ($product) {
+            if ($product->variations->count() > 0) {
+                $prices = $product->variations->pluck('price')->filter();
+                if ($prices->count() > 0) {
+                    $product->min_price = $prices->min();
+                    $product->max_price = $prices->max();
+                    $product->has_variations = true;
+                } else {
+                    $product->min_price = $product->price;
+                    $product->max_price = $product->price;
+                    $product->has_variations = false;
+                }
+            } else {
+                // Simple product (no variations)
+                $product->min_price = $product->price;
+                $product->max_price = $product->price;
+                $product->has_variations = false;
+            }
+            return $product;
+        });
+        
         return view('products._list', compact('products'));
     }
 }
