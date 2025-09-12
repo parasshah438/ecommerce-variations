@@ -26,7 +26,7 @@ class OtpController extends Controller
     public function showOtpForm(Request $request)
     {
         $email = $request->get('email');
-        return view('auth.otp-login', compact('email'));
+        return view('auth.otp.login', compact('email'));
     }
 
     /**
@@ -34,11 +34,53 @@ class OtpController extends Controller
      */
     public function sendOtp(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email'
-        ], [
-            'email.exists' => 'This email is not registered with us.'
-        ]);
+        // Get the input - could be email or mobile_number
+        $identifier = $request->input('email');
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $validator = Validator::make(
+                ['email' => $identifier],
+                ['email' => 'required|email']
+            );
+            $channelType = 'email';
+
+            $user = \App\Models\User::where('email', $identifier)->first();
+            if (!$user) {
+                return back()
+                ->withErrors(['identifier' => "This {$channelType} is not registered with us."])
+                ->withInput();
+            }
+            
+        } elseif (is_numeric($identifier)) {
+            $validator = Validator::make(
+                ['mobile_number' => $identifier],
+                ['mobile_number' => 'required']
+            );
+            $channelType = 'mobile';
+
+            $normalizedMobile = $this->normalizeMobileNumber($identifier);
+            $user = \App\Models\User::where('mobile_number', $normalizedMobile)->first();
+
+            if (!$user) {
+                return back()
+                ->withErrors(['identifier' => "This {$channelType} is not registered with us."])
+                ->withInput();
+            }
+
+        } else {
+            // No valid input provided
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please provide either email or mobile number.'
+                ], 422);
+            }
+
+           
+            
+            return redirect()->back()
+                ->with('error', 'Please provide either email or mobile number.')
+                ->withInput();
+        }
 
         if ($validator->fails()) {
             // Check if it's an AJAX request
@@ -56,15 +98,14 @@ class OtpController extends Controller
                 ->withInput();
         }
 
-        $email = $request->email;
         $testMode = config('app.debug', false); // Use test mode in debug environment
 
         try {
-            $result = $this->otpService->sendOtp($email, 'email', $testMode);
+            $result = $this->otpService->sendOtp($identifier, $channelType, $testMode);
 
             if ($result['success']) {
-                // Store email in session for verification
-                Session::put('otp_email', $email);
+                // Store identifier in session for verification
+                Session::put('otp_email', $identifier);
                 Session::put('otp_sent_at', now());
 
                 $message = $result['message'];
@@ -97,7 +138,8 @@ class OtpController extends Controller
 
             // Log the actual error for debugging
             Log::warning('OTP send failed in controller', [
-                'email' => $email,
+                'identifier' => $identifier,
+                'channel_type' => $channelType,
                 'result' => $result
             ]);
 
@@ -125,7 +167,8 @@ class OtpController extends Controller
 
         } catch (\Exception $e) {
             Log::error('OTP sending failed in controller', [
-                'email' => $email,
+                'identifier' => $identifier,
+                'channel_type' => $channelType,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -454,7 +497,7 @@ class OtpController extends Controller
 
         $status = $this->otpService->getOtpStatus($email);
         
-        return view('auth.otp-verify', [
+        return view('auth.otp.verify', [
             'email' => $email,
             'status' => $status
         ]);
@@ -466,5 +509,27 @@ class OtpController extends Controller
     public function redirectToLogin()
     {
         return redirect()->route('otp.login')->with('info', 'Please enter your email address to receive an OTP.');
+    }
+
+    protected function normalizeMobileNumber($mobile)
+    {
+        // Remove all non-digit characters except +
+        $mobile = preg_replace('/[^\d+]/', '', $mobile);
+        
+        // If it doesn't start with +, assume it's an Indian number and add +91
+        if (substr($mobile, 0, 1) !== '+') {
+            // Check if it's a 10-digit Indian number
+            if (strlen($mobile) === 10 && substr($mobile, 0, 1) === '9') {
+                $mobile = '+91' . $mobile;
+            } elseif (strlen($mobile) === 12 && substr($mobile, 0, 2) === '91') {
+                // If it starts with 91 but no +, add the +
+                $mobile = '+' . $mobile;
+            } elseif (strlen($mobile) === 13 && substr($mobile, 0, 3) === '919') {
+                // If it's 919xxxxxxxxx format, add +
+                $mobile = '+' . $mobile;
+            }
+        }
+        
+        return $mobile;
     }
 }

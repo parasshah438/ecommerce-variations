@@ -524,9 +524,17 @@
             }
         }
         
+        /* OTP specific styles */
+        .otp-input-large {
+            font-size: 1.5rem !important;
+            font-weight: bold !important;
+            letter-spacing: 0.5rem !important;
+            text-align: center !important;
+            padding: 1.5rem 1rem !important;
+        }
+        
         @yield('additional-styles')
-    </style>
-</head>
+    </style></head>
 <body>
     <div class="auth-container">
         <div class="row g-0 h-100">

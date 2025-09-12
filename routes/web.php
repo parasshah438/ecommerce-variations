@@ -29,14 +29,6 @@ Route::prefix('otp')->name('otp.')->group(function () {
     Route::post('/cancel', [OtpController::class, 'cancelOtp'])->name('cancel');
 });
 
-// Alternative auth routes for cleaner URLs
-Route::prefix('auth')->name('auth.')->group(function () {
-    Route::get('/otp-login', [OtpController::class, 'showOtpForm'])->name('otp.login');
-    Route::post('/otp-send', [OtpController::class, 'sendOtp'])->name('otp.send');
-    Route::get('/otp-verify', [OtpController::class, 'showVerifyForm'])->name('otp.verify.form');
-    Route::post('/otp-verify', [OtpController::class, 'verifyOtp'])->name('otp.verify');
-});
-
 // API routes for registration validation
 Route::post('/api/check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('api.check.email');
 Route::post('/api/check-mobile', [App\Http\Controllers\Auth\RegisterController::class, 'checkMobile'])->name('api.check.mobile');
