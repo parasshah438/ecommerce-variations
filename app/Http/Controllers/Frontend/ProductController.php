@@ -66,9 +66,11 @@ class ProductController extends Controller
         })->toArray();
 
         // Product-level images with asset URLs
-        $productImages = $product->images->map(function ($i) {
-            return ['id' => $i->id, 'path' => \Illuminate\Support\Facades\Storage::url($i->path), 'position' => $i->position];
-        })->values();
+        // $productImages = $product->images->map(function ($i) {
+        //     return ['id' => $i->id, 'path' => \Illuminate\Support\Facades\Storage::url($i->path), 'position' => $i->position];
+        // })->values();
+
+        $productImages = $product->images;
 
         // Prepare attribute groups (attribute -> options) used by this product's variations
         $allValueIds = collect($variations)->flatMap(function ($v) { return $v['values']; })->unique()->values()->all();

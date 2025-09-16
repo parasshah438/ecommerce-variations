@@ -4,7 +4,8 @@
             <div class="position-relative">
                 @php $img = optional($product->images->first())->path ?? null; @endphp
                 @if($img)
-                    <img src="{{ Storage::url($img) }}" 
+                    <?php /*<img src="{{ Storage::url($img) }}" */?>
+                    <img src="{{$img}}" 
                          class="card-img-top product-image" 
                          style="height:200px;object-fit:cover;"
                          alt="{{ $product->name }}"

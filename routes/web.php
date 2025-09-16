@@ -8,7 +8,6 @@ use App\Http\Controllers\Frontend\WishlistController as FrontWishlist;
 use App\Http\Controllers\Frontend\SearchController as FrontSearch;
 use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Auth\OtpController;
 
 Route::get('/', function () {
@@ -50,35 +49,6 @@ Route::get('/location-integration', function () {
     return view('location-integration-example');
 })->name('location.integration');
 
-// Debug route for pincode API
-Route::get('/debug/pincode/{pincode}', function($pincode) {
-    $controller = new App\Http\Controllers\GeoLocationController();
-    
-    try {
-        $request = new Illuminate\Http\Request();
-        $request->merge(['pincode' => $pincode]);
-        
-        $response = $controller->getPincodeDetails($request);
-        $data = $response->getData(true);
-        
-        $output = "<h3>Pincode Debug: {$pincode}</h3>";
-        $output .= "<strong>Status:</strong> " . ($data['success'] ? 'Success' : 'Failed') . "<br>";
-        
-        if ($data['success']) {
-            $output .= "<h4>Data:</h4>";
-            $output .= "<pre>" . json_encode($data['data'], JSON_PRETTY_PRINT) . "</pre>";
-        } else {
-            $output .= "<strong>Error:</strong> " . $data['error'] . "<br>";
-            $output .= "<strong>Message:</strong> " . $data['message'] . "<br>";
-        }
-        
-        return $output;
-        
-    } catch (\Exception $e) {
-        return "<h3>Exception occurred:</h3><p>" . $e->getMessage() . "</p>";
-    }
-})->where('pincode', '[0-9]{6}');
-
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 // Dashboard route (protected)
@@ -100,79 +70,6 @@ Route::get('/test-otp', function () {
             'status' => 'error',
             'message' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
-        ]);
-    }
-});
-
-// Clear OTP cooldowns for testing
-Route::get('/debug/clear-otp-cooldown/{email}', function($email) {
-    try {
-        // Delete recent OTP records to clear cooldown
-        \App\Models\UserOtp::where('identifier', $email)
-            ->where('created_at', '>', now()->subMinutes(15))
-            ->delete();
-            
-        return response()->json([
-            'status' => 'success',
-            'message' => "OTP cooldown cleared for {$email}",
-            'email' => $email
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage()
-        ]);
-    }
-});
-
-// Clear OTP rate limiting for testing
-Route::get('/debug/clear-otp-rate-limit/{email}', function($email) {
-    try {
-        $hourlyKey = 'otp_hourly:' . $email;
-        $dailyKey = 'otp_daily:' . $email;
-        
-        // Clear rate limiting
-        \Illuminate\Support\Facades\RateLimiter::clear($hourlyKey);
-        \Illuminate\Support\Facades\RateLimiter::clear($dailyKey);
-        
-        // Also clear any OTP records
-        \App\Models\UserOtp::where('identifier', $email)
-            ->where('created_at', '>', now()->subHour())
-            ->delete();
-            
-        return response()->json([
-            'status' => 'success',
-            'message' => "Rate limiting cleared for {$email}",
-            'email' => $email,
-            'cleared' => [
-                'hourly_key' => $hourlyKey,
-                'daily_key' => $dailyKey,
-                'otp_records' => 'Recent OTP records deleted'
-            ]
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage()
-        ]);
-    }
-});
-
-// Debug OTP status
-Route::get('/debug/otp-status/{email}', function($email) {
-    try {
-        $otpService = new \App\Services\OtpService(new \App\Services\ReliableEmailService());
-        $status = $otpService->getOtpStatus($email);
-        
-        return response()->json([
-            'status' => 'success',
-            'email' => $email,
-            'otp_status' => $status
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage()
         ]);
     }
 });
@@ -284,62 +181,6 @@ Route::get('/debug/product-data/{slug}', function($slug) {
     return $output;
 });
 
-// Debug route to fix product variations by adding attributes
-Route::get('/debug/fix-product-variations/{id}', function($id) {
-    $product = App\Models\Product::with('variations')->find($id);
-    
-    if (!$product) {
-        return "Product $id not found";
-    }
-
-    // Get some color attribute values
-    $colorValues = App\Models\AttributeValue::whereHas('attribute', function($q) {
-        $q->where('slug', 'color');
-    })->take(5)->pluck('id')->toArray();
-    
-    // Get some size attribute values  
-    $sizeValues = App\Models\AttributeValue::whereHas('attribute', function($q) {
-        $q->where('slug', 'size');
-    })->take(4)->pluck('id')->toArray();
-
-    $output = "<h3>Fixing Product Variations: {$product->name}</h3>";
-    
-    if (empty($colorValues) || empty($sizeValues)) {
-        return $output . "<p>No attribute values found. Please run the seeder first.</p>";
-    }
-    
-    $fixed = 0;
-    foreach ($product->variations as $index => $variation) {
-        if (empty($variation->attribute_value_ids)) {
-            // Assign some attributes to this variation
-            $attributes = [];
-            
-            // Assign a color
-            if (!empty($colorValues)) {
-                $attributes[] = $colorValues[$index % count($colorValues)];
-            }
-            
-            // Assign a size
-            if (!empty($sizeValues)) {
-                $attributes[] = $sizeValues[$index % count($sizeValues)];
-            }
-            
-            $variation->update([
-                'attribute_value_ids' => $attributes
-            ]);
-            
-            $output .= "Fixed variation ID {$variation->id} - assigned attributes: " . implode(', ', $attributes) . "<br>";
-            $fixed++;
-        }
-    }
-    
-    $output .= "<br><strong>Fixed {$fixed} variations</strong><br>";
-    $output .= "<br><a href='/test/12/variations/public/debug/product-data/{$product->slug}'>Check Product Data</a> | ";
-    $output .= "<a href='/test/12/variations/public/products/{$product->slug}'>View Product Page</a>";
-    
-    return $output;
-});
-
 Route::get('/products', [FrontProduct::class, 'index'])->name('products.index');
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
@@ -371,26 +212,6 @@ Route::get('/wishlist/load-more', [FrontWishlist::class, 'loadMore'])->name('wis
 
 Route::get('/search', [FrontSearch::class, 'autocomplete'])->name('products.search');
 Route::post('/coupon/apply', [FrontCoupon::class, 'apply'])->name('coupon.apply');
-
-// Admin Order Management Routes
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
-    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirmOrder'])->name('orders.confirm');
-    Route::post('/orders/{order}/cancel', [AdminOrderController::class, 'cancelOrder'])->name('orders.cancel');
-    Route::post('/orders/{order}/return', [AdminOrderController::class, 'returnOrder'])->name('orders.return');
-    Route::post('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
-    
-    // Email Log Management Routes
-    Route::get('/email-logs', [\App\Http\Controllers\Admin\EmailLogController::class, 'index'])->name('email-logs.index');
-    Route::get('/email-logs/{emailLog}', [\App\Http\Controllers\Admin\EmailLogController::class, 'show'])->name('email-logs.show');
-    Route::get('/email-logs/{emailLog}/retry', [\App\Http\Controllers\Admin\EmailLogController::class, 'retry'])->name('email-logs.retry');
-    Route::get('/email-logs/retry-all', [\App\Http\Controllers\Admin\EmailLogController::class, 'retryAll'])->name('email-logs.retry-all');
-    Route::get('/email-logs/process-retry-queue', [\App\Http\Controllers\Admin\EmailLogController::class, 'processRetryQueue'])->name('email-logs.process-retry-queue');
-    Route::get('/email-logs/{emailLog}/delete', [\App\Http\Controllers\Admin\EmailLogController::class, 'delete'])->name('email-logs.delete');
-    Route::post('/email-logs/bulk-delete', [\App\Http\Controllers\Admin\EmailLogController::class, 'bulkDelete'])->name('email-logs.bulk-delete');
-    Route::get('/email-logs/export', [\App\Http\Controllers\Admin\EmailLogController::class, 'export'])->name('email-logs.export');
-});
 
 // Include admin routes
 require __DIR__.'/admin.php';
