@@ -9,10 +9,22 @@ use App\Http\Controllers\Frontend\SearchController as FrontSearch;
 use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
 use App\Http\Controllers\Auth\OtpController;
+use App\Http\Controllers\WelcomeController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Location Integration Example
+Route::get('/location-integration', function () {
+    return view('location-integration');
+})->name('location.integration');
+
+// Postal Code Validation Routes
+Route::get('/postal-code-checker', [App\Http\Controllers\PostalCodeController::class, 'index'])->name('postal.code.checker');
+Route::post('/api/validate-postal-code', [App\Http\Controllers\PostalCodeController::class, 'validatePostalCode'])->name('api.validate.postal.code');
+Route::get('/api/supported-countries', [App\Http\Controllers\PostalCodeController::class, 'getSupportedCountries'])->name('api.supported.countries');
+
+Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
+
+// API route for featured products
+Route::get('/api/featured-products', [WelcomeController::class, 'getFeaturedProducts'])->name('api.featured.products');
 
 Auth::routes();
 

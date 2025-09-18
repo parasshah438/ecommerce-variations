@@ -133,19 +133,46 @@
                             <label class="form-label fw-semibold text-dark mb-3">
                                 Choose {{ $attrName }}: <span class="selected-value text-primary" data-attr="{{ strtolower($attrName) }}"></span>
                             </label>
-                            <div class="attribute-options d-flex flex-wrap gap-2">
-                                @foreach($options as $opt)
-                                <button class="btn btn-outline-secondary attr-option position-relative" 
-                                        data-attr-id="{{ $opt['attribute_id'] }}" 
-                                        data-attr-name="{{ strtolower($attrName) }}"
-                                        data-opt-id="{{ $opt['id'] }}"
-                                        data-opt-value="{{ $opt['value'] }}"
-                                        title="Select {{ $opt['value'] }}">
-                                    {{ $opt['value'] }}
-                                    <i class="bi bi-check-circle-fill position-absolute top-0 start-100 translate-middle text-success d-none selected-check"></i>
-                                </button>
-                                @endforeach
-                            </div>
+                            
+                            @if(strtolower($attrName) === 'color')
+                                {{-- Color variation with image preview (Amazon style) --}}
+                                <div class="color-options d-flex flex-wrap gap-3">
+                                    @foreach($options as $opt)
+                                    <div class="color-option-wrapper">
+                                        <button class="btn btn-outline-secondary attr-option color-option position-relative p-1" 
+                                                data-attr-id="{{ $opt['attribute_id'] }}" 
+                                                data-attr-name="{{ strtolower($attrName) }}"
+                                                data-opt-id="{{ $opt['id'] }}"
+                                                data-opt-value="{{ $opt['value'] }}"
+                                                style="width: 70px; height: 70px; border-radius: 8px;"
+                                                title="Select {{ $opt['value'] }}">
+                                            {{-- Color preview image will be populated by JS --}}
+                                            <div class="color-preview-img w-100 h-100 rounded" 
+                                                 style="background: #f8f9fa; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">
+                                                {{ $opt['value'] }}
+                                            </div>
+                                            <i class="bi bi-check-circle-fill position-absolute top-0 start-100 translate-middle text-success d-none selected-check"></i>
+                                        </button>
+                                        <small class="d-block text-center mt-1 text-muted" style="font-size: 11px;">{{ $opt['value'] }}</small>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                {{-- Regular text-based options (Size, etc.) --}}
+                                <div class="attribute-options d-flex flex-wrap gap-2">
+                                    @foreach($options as $opt)
+                                    <button class="btn btn-outline-secondary attr-option position-relative" 
+                                            data-attr-id="{{ $opt['attribute_id'] }}" 
+                                            data-attr-name="{{ strtolower($attrName) }}"
+                                            data-opt-id="{{ $opt['id'] }}"
+                                            data-opt-value="{{ $opt['value'] }}"
+                                            title="Select {{ $opt['value'] }}">
+                                        {{ $opt['value'] }}
+                                        <i class="bi bi-check-circle-fill position-absolute top-0 start-100 translate-middle text-success d-none selected-check"></i>
+                                    </button>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                         @endforeach
                     @else
@@ -386,16 +413,42 @@
                         </div>
                         <div class="tab-pane fade" id="specifications" role="tabpanel">
                             <h5 class="mb-4">Technical Specifications</h5>
+                            
+                            {{-- Dynamic Variation-Specific Details --}}
+                            <div id="dynamic-specifications" class="mb-4">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Select a variation to see specific details
+                                </div>
+                            </div>
+                            
+                            {{-- Static Product Details --}}
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <tbody>
                                         <tr><td class="fw-semibold">Brand</td><td>{{ $product->brand->name ?? 'N/A' }}</td></tr>
                                         <tr><td class="fw-semibold">Category</td><td>{{ $product->category->name ?? 'N/A' }}</td></tr>
-                                        <tr><td class="fw-semibold">Available Variations</td><td id="spec-variations">{{ $variations->count() }}</td></tr>
-                                        <tr><td class="fw-semibold">Weight</td><td>To be updated</td></tr>
-                                        <tr><td class="fw-semibold">Dimensions</td><td>To be updated</td></tr>
+                                        <tr><td class="fw-semibold">Available Variations</td><td id="spec-variations">{{ count($variations) }}</td></tr>
+                                        <tr><td class="fw-semibold">SKU</td><td id="spec-sku">Select variation</td></tr>
+                                        <tr><td class="fw-semibold">Material Composition</td><td id="spec-material">Premium Quality Materials</td></tr>
+                                        <tr><td class="fw-semibold">Care Instructions</td><td id="spec-care">Machine wash cold, tumble dry low</td></tr>
+                                        <tr><td class="fw-semibold">Country of Origin</td><td>India</td></tr>
+                                        <tr><td class="fw-semibold">Weight</td><td id="spec-weight">400g (approx)</td></tr>
+                                        <tr><td class="fw-semibold">Dimensions</td><td id="spec-dimensions">Standard sizing</td></tr>
                                     </tbody>
                                 </table>
+                            </div>
+                            
+                            {{-- Amazon-style "About this item" section --}}
+                            <div class="mt-4">
+                                <h6 class="mb-3">About this item</h6>
+                                <ul class="list-unstyled" id="about-this-item">
+                                    <li class="mb-2">• <strong>Product type:</strong> <span id="item-type">{{ $product->category->name ?? 'Fashion Item' }}</span></li>
+                                    <li class="mb-2">• <strong>Pattern:</strong> <span id="item-pattern">Solid/Textured</span></li>
+                                    <li class="mb-2">• <strong>Occasion:</strong> <span id="item-occasion">Casual/Formal</span></li>
+                                    <li class="mb-2">• <strong>Fit:</strong> <span id="item-fit">Regular/Slim Fit</span></li>
+                                    <li class="mb-2">• <strong>Quality:</strong> Premium materials with attention to detail</li>
+                                </ul>
                             </div>
                         </div>
                         <div class="tab-pane fade" id="reviews" role="tabpanel">
@@ -546,6 +599,40 @@
             transition: all 0.3s ease;
         }
 
+        /* Amazon-style Color Options */
+        .color-option-wrapper {
+            text-align: center;
+        }
+        
+        .color-option {
+            border: 2px solid #ddd !important;
+            transition: all 0.2s ease;
+        }
+        
+        .color-option:hover {
+            border-color: #007bff !important;
+            transform: scale(1.05);
+        }
+        
+        .color-option.active {
+            border-color: #007bff !important;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .color-preview-img {
+            transition: all 0.2s ease;
+        }
+        
+        /* Dynamic Specifications Styling */
+        #dynamic-specifications .table {
+            margin-bottom: 0;
+        }
+        
+        #dynamic-specifications .table-light th {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
         /* Animate.css integration */
         .animate__animated {
             animation-duration: 0.6s;
@@ -651,6 +738,7 @@ $(document).ready(function() {
     initializeProductPage();
     
     function initializeProductPage() {
+        populateColorPreviews();
         renderImageGallery(productImages);
         updateVariationSelection();
         bindEventHandlers();
@@ -659,6 +747,44 @@ $(document).ready(function() {
         if (Object.keys(getAttributeGroups()).length === 1) {
             autoSelectFirstVariation();
         }
+    }
+    
+    function populateColorPreviews() {
+        // Populate color option previews with first image from each color variation
+        $('.color-option').each(function() {
+            const $colorBtn = $(this);
+            const optId = $colorBtn.data('opt-id');
+            
+            // Find variations that have this color option
+            const colorVariations = variations.filter(v => v.values.includes(parseInt(optId)));
+            
+            if (colorVariations.length > 0) {
+                // Get the first variation with this color
+                const firstVariation = colorVariations[0];
+                const varImages = variationImages[firstVariation.id];
+                
+                if (varImages && varImages.length > 0) {
+                    // Use the first image for this color variation
+                    const firstImage = varImages[0];
+                    $colorBtn.find('.color-preview-img').css({
+                        'background-image': `url(${firstImage.path})`,
+                        'background-size': 'cover',
+                        'background-position': 'center',
+                        'color': 'transparent'
+                    }).text('');
+                } else {
+                    // Fallback to product images if no variation images
+                    if (productImages && productImages.length > 0) {
+                        $colorBtn.find('.color-preview-img').css({
+                            'background-image': `url(${productImages[0].path})`,
+                            'background-size': 'cover',
+                            'background-position': 'center',
+                            'color': 'transparent'
+                        }).text('');
+                    }
+                }
+            }
+        });
     }
     
     function getAttributeGroups() {
@@ -820,9 +946,87 @@ $(document).ready(function() {
             $('#qty').attr('max', 0);
         }
         
+        // Update dynamic specifications (Amazon style)
+        updateDynamicSpecifications(variation);
+        
         // Update images
         const variationImgs = variationImages[variation.id] || productImages;
         renderImageGallery(variationImgs);
+    }
+    
+    function updateDynamicSpecifications(variation) {
+        // Update SKU in specifications
+        $('#spec-sku').text(variation.sku);
+        
+        // Get selected attributes for display
+        const selectedAttrs = Object.entries(selectedAttributes);
+        let dynamicSpecsHtml = '<div class="table-responsive"><table class="table table-bordered">';
+        
+        // Add variation-specific details
+        dynamicSpecsHtml += '<thead class="table-light"><tr><th colspan="2">Selected Variation Details</th></tr></thead><tbody>';
+        
+        selectedAttrs.forEach(([attrId, valueId]) => {
+            // Find attribute name and value
+            $('.attr-option').each(function() {
+                if ($(this).data('opt-id') == valueId) {
+                    const attrName = $(this).data('attr-name');
+                    const attrValue = $(this).data('opt-value');
+                    dynamicSpecsHtml += `<tr><td class="fw-semibold">${attrName.charAt(0).toUpperCase() + attrName.slice(1)}</td><td>${attrValue}</td></tr>`;
+                }
+            });
+        });
+        
+        dynamicSpecsHtml += `<tr><td class="fw-semibold">Price</td><td>₹${parseFloat(variation.price).toFixed(2)}</td></tr>`;
+        dynamicSpecsHtml += `<tr><td class="fw-semibold">Stock Status</td><td>${variation.in_stock ? '<span class="badge bg-success">In Stock (' + variation.quantity + ')</span>' : '<span class="badge bg-danger">Out of Stock</span>'}</td></tr>`;
+        dynamicSpecsHtml += '</tbody></table></div>';
+        
+        $('#dynamic-specifications').html(dynamicSpecsHtml);
+        
+        // Update "About this item" based on selection
+        updateAboutThisItem(variation);
+    }
+    
+    function updateAboutThisItem(variation) {
+        const colorSelected = selectedAttributes[getColorAttributeId()];
+        const sizeSelected = selectedAttributes[getSizeAttributeId()];
+        
+        if (colorSelected) {
+            const colorValue = $('.attr-option[data-opt-id="' + colorSelected + '"]').data('opt-value');
+            $('#item-pattern').text(colorValue + ' Pattern');
+        }
+        
+        // Update fit based on size
+        if (sizeSelected) {
+            const sizeValue = $('.attr-option[data-opt-id="' + sizeSelected + '"]').data('opt-value');
+            $('#item-fit').text(getSizeFitType(sizeValue));
+        }
+    }
+    
+    function getColorAttributeId() {
+        // Find the color attribute ID
+        return $('.color-option').first().data('attr-id') || null;
+    }
+    
+    function getSizeAttributeId() {
+        // Find the size attribute ID (assuming it's not color)
+        let sizeAttrId = null;
+        $('.attr-option').not('.color-option').each(function() {
+            const attrName = $(this).data('attr-name').toLowerCase();
+            if (attrName.includes('size')) {
+                sizeAttrId = $(this).data('attr-id');
+                return false; // break
+            }
+        });
+        return sizeAttrId;
+    }
+    
+    function getSizeFitType(size) {
+        const sizeUpper = size.toUpperCase();
+        if (['XS', 'S'].includes(sizeUpper)) return 'Slim Fit';
+        if (['M', 'L'].includes(sizeUpper)) return 'Regular Fit';
+        if (['XL', 'XXL'].includes(sizeUpper)) return 'Relaxed Fit';
+        return 'Standard Fit';
+    }
     }
     
     function updateOptionStates(matchingVariations) {

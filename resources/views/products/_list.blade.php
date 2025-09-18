@@ -1,117 +1,113 @@
 @forelse($products as $product)
     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
-        <div class="card product-card h-100 shadow-sm">
-            <div class="position-relative">
+        <div class="card product-card h-100 shadow-sm border-0">
+            <div class="product-image-container position-relative">
                 @php $img = optional($product->images->first())->path ?? null; @endphp
                 @if($img)
-                    <?php /*<img src="{{ Storage::url($img) }}" */?>
                     <img src="{{$img}}" 
                          class="card-img-top product-image" 
-                         style="height:200px;object-fit:cover;"
+                         style="height:250px;object-fit:cover;"
                          alt="{{ $product->name }}"
                          loading="lazy">
                 @else
-                    <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:200px;">
+                    <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:250px;">
                         <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                     </div>
                 @endif
                 
-                <!-- Wishlist Button -->
-                @auth
-                @php
-                    $isWishlisted = \App\Models\Wishlist::where('user_id', auth()->id())->where('product_id', $product->id)->exists();
-                @endphp
-                <button class="btn btn-sm position-absolute top-0 end-0 m-2 wishlist-btn {{ $isWishlisted ? 'btn-danger' : 'btn-outline-danger' }}" 
-                        data-product-id="{{ $product->id }}"
-                        data-wishlisted="{{ $isWishlisted ? 'true' : 'false' }}"
-                        title="{{ $isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist' }}">
-                    <i class="bi {{ $isWishlisted ? 'bi-heart-fill' : 'bi-heart' }} wishlist-icon"></i>
-                </button>
-                @else
-                <button class="btn btn-outline-danger btn-sm position-absolute top-0 end-0 m-2 wishlist-btn-guest" 
-                        title="Login to add to Wishlist">
-                    <i class="bi bi-heart"></i>
-                </button>
-                @endauth
-                
                 <!-- Discount Badge -->
                 @if($product->mrp && $product->mrp > $product->price)
-                <span class="badge bg-success position-absolute top-0 start-0 m-2">
+                <span class="discount-badge">
                     {{ round((($product->mrp - $product->price) / $product->mrp) * 100) }}% OFF
                 </span>
                 @endif
 
+                <!-- Stock Badge -->
+                @if(!($product->in_stock ?? true))
+                <span class="stock-badge out-of-stock">Out of Stock</span>
+                @endif
+
                 <!-- Variations Badge -->
                 @if($product->has_variations ?? false)
-                <span class="badge bg-info position-absolute bottom-0 start-0 m-2">
+                <span class="variations-badge">
                     {{ $product->variations->count() }} Options
                 </span>
                 @endif
+
+                <!-- Hover Overlay with Quick Actions -->
+                <div class="product-overlay">
+                    <div class="quick-actions">
+                        @auth
+                        @php
+                            $isWishlisted = \App\Models\Wishlist::where('user_id', auth()->id())->where('product_id', $product->id)->exists();
+                        @endphp
+                        <button class="quick-action-btn wishlist-btn {{ $isWishlisted ? 'active' : '' }}" 
+                                data-product-id="{{ $product->id }}"
+                                data-wishlisted="{{ $isWishlisted ? 'true' : 'false' }}"
+                                title="{{ $isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist' }}">
+                            <i class="bi {{ $isWishlisted ? 'bi-heart-fill' : 'bi-heart' }}"></i>
+                        </button>
+                        @else
+                        <button class="quick-action-btn wishlist-btn-guest" 
+                                title="Login to add to Wishlist">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                        @endauth
+                        
+                        <a href="{{ route('products.show', $product->slug) }}" class="quick-action-btn">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </div>
             </div>
             
-            <div class="card-body d-flex flex-column">
-                <!-- Product Name (clickable) -->
-                <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none">
-                    <h6 class="card-title mb-2 text-dark">{{ Str::limit($product->name, 50) }}</h6>
-                </a>
-                
-                <!-- Category -->
-                @if($product->category)
-                <small class="text-muted mb-2">{{ $product->category->name }}</small>
+            <div class="card-body d-flex flex-column p-3">
+                <!-- Brand -->
+                @if($product->brand)
+                <div class="product-brand mb-2">{{ $product->brand->name }}</div>
                 @endif
                 
-                <!-- Rating (placeholder) -->
-                <div class="mb-2">
-                    <span class="text-warning">
+                <!-- Product Name (clickable) -->
+                <h6 class="product-title mb-2">
+                    <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none">
+                        {{ Str::limit($product->name, 50) }}
+                    </a>
+                </h6>
+                
+                <!-- Rating -->
+                <div class="product-rating mb-3">
+                    <div class="rating-stars">
                         @for($i = 1; $i <= 5; $i++)
                             <i class="bi bi-star{{ $i <= 4 ? '-fill' : '' }}"></i>
                         @endfor
-                    </span>
-                    <small class="text-muted">(4.0)</small>
+                    </div>
+                    <span class="rating-text">4.0 (150)</span>
                 </div>
                 
-                <!-- Price Display (Real Amazon/Flipkart style) -->
-                <div class="mb-3">
+                <!-- Price Display (Amazon style) -->
+                <div class="product-price mb-3">
                     @if($product->has_variations ?? false)
                         <!-- Show starting price only (like Amazon) -->
-                        <h5 class="text-primary fw-bold mb-0">₹{{ number_format($product->min_price, 0) }}</h5>
+                        <span class="current-price">₹{{ number_format($product->min_price, 0) }}</span>
                         @if($product->min_price != $product->max_price)
-                            <small class="text-muted">onwards</small>
+                            <small class="text-muted"> onwards</small>
                         @endif
                     @else
                         <!-- Simple product price -->
-                        <h5 class="text-primary fw-bold mb-0">₹{{ number_format($product->price ?? 0, 0) }}</h5>
+                        <span class="current-price">₹{{ number_format($product->price ?? 0, 0) }}</span>
                     @endif
                     
                     @if($product->mrp && $product->mrp > ($product->min_price ?? $product->price))
-                    <small class="text-muted text-decoration-line-through">₹{{ number_format($product->mrp, 0) }}</small>
+                    <span class="original-price">₹{{ number_format($product->mrp, 0) }}</span>
                     @endif
                 </div>
                 
-                <!-- Actions (Real Amazon/Flipkart Style) -->
-                <div class="mt-auto">
-                    @if($product->has_variations ?? false)
-                        <!-- Products with variations: Only "View Product" like Amazon -->
-                        <div class="d-grid">
-                            <a href="{{ route('products.show', $product->slug) }}" 
-                               class="btn btn-primary">
-                                View Product
-                            </a>
-                        </div>
-                    @else
-                        <!-- Simple products: Can add directly to cart -->
-                        <div class="d-grid gap-2">
-                            <a href="{{ route('products.show', $product->slug) }}" 
-                               class="btn btn-outline-primary btn-sm">
-                                View Product
-                            </a>
-                            <button class="btn btn-primary btn-sm quick-add-btn" 
-                                    data-product-id="{{ $product->id }}"
-                                    data-has-variations="false">
-                                <i class="bi bi-cart-plus me-1"></i>Add to Cart
-                            </button>
-                        </div>
-                    @endif
+                <!-- Actions (Amazon Style) -->
+                <div class="product-actions mt-auto">
+                    <a href="{{ route('products.show', $product->slug) }}" 
+                       class="btn btn-primary btn-add-cart">
+                        <i class="bi bi-eye me-2"></i>View Product
+                    </a>
                 </div>
             </div>
         </div>
