@@ -23,6 +23,11 @@ class User extends Authenticatable
         'password',
         'country_code',
         'mobile_number',
+        'active_session_id',
+        'last_login_at',
+        'last_login_ip',
+        'last_device_info',
+        'social_providers',
     ];
 
     /**
@@ -45,6 +50,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'last_login_at' => 'datetime',
+            'last_device_info' => 'array',
+            'social_providers' => 'array',
         ];
     }
 }

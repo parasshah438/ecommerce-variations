@@ -1152,6 +1152,11 @@
 
                 <!-- Navigation Icons -->
                 <div class="nav-icons ms-auto">
+                    <!-- Social Login Demo -->
+                    <a href="{{ route('social.login.demo') }}" class="nav-icon" title="Social Login Demo">
+                        <i class="bi bi-people"></i>
+                    </a>
+
                     <!-- Theme Toggle -->
                     <button class="theme-toggle btn" id="themeToggle">
                         <i class="bi bi-sun-fill" id="themeIcon"></i>
@@ -1167,6 +1172,9 @@
                                 <li><a class="dropdown-item" href="{{ route('home') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
                                 <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
                                 <li><a class="dropdown-item" href="#"><i class="bi bi-bag me-2"></i>Orders</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ route('test.single.login') }}"><i class="bi bi-shield-check me-2"></i>Single Login Test</a></li>
+                                <li><a class="dropdown-item" href="{{ route('social.login.demo') }}"><i class="bi bi-people me-2"></i>Social Login Demo</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}" class="d-inline">

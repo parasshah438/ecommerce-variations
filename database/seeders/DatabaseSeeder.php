@@ -13,26 +13,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('🌱 Starting database seeding...');
+        //$this->command->info('🌱 Starting database seeding...');
         
         // Create admin user
-        $this->command->info('👤 Creating admin user...');
-        User::factory()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password123'),
-            'email_verified_at' => now(),
-        ]);
+        // $this->command->info('👤 Creating admin user...');
+        // User::factory()->create([
+        //     'name' => 'Admin User',
+        //     'email' => 'admin@example.com',
+        //     'password' => Hash::make('password123'),
+        //     'email_verified_at' => now(),
+        // ]);
 
         // Create test user
         $this->command->info('👤 Creating test user...');
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('123456'),
             'email_verified_at' => now(),
         ]);
-
+        /*
         // Create additional sample users
         $this->command->info('👥 Creating sample users...');
         User::factory(8)->create();
@@ -59,5 +59,6 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🔐 Login credentials:');
         $this->command->info('   Admin: admin@example.com / password123');
         $this->command->info('   Test:  test@example.com / password123');
+        */
     }
 }

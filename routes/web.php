@@ -28,6 +28,25 @@ Route::get('/api/featured-products', [WelcomeController::class, 'getFeaturedProd
 
 Auth::routes();
 
+// Social Login Routes
+Route::prefix('auth')->name('social.')->group(function () {
+    Route::get('/{provider}', [App\Http\Controllers\Auth\SocialLoginController::class, 'redirectToProvider'])
+        ->name('redirect')
+        ->where('provider', 'google|facebook|github|linkedin|twitter');
+    
+    Route::get('/{provider}/callback', [App\Http\Controllers\Auth\SocialLoginController::class, 'handleProviderCallback'])
+        ->name('callback')
+        ->where('provider', 'google|facebook|github|linkedin|twitter');
+    
+    Route::get('/providers', [App\Http\Controllers\Auth\SocialLoginController::class, 'getProviders'])
+        ->name('providers');
+    
+    Route::delete('/{provider}/disconnect', [App\Http\Controllers\Auth\SocialLoginController::class, 'disconnectProvider'])
+        ->name('disconnect')
+        ->middleware('auth')
+        ->where('provider', 'google|facebook|github|linkedin|twitter');
+});
+
 // OTP Authentication Routes
 Route::prefix('otp')->name('otp.')->group(function () {
     Route::get('/login', [OtpController::class, 'showOtpForm'])->name('login');
@@ -63,10 +82,22 @@ Route::get('/location-integration', function () {
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
+// Social Login Demo Page
+Route::get('/social-login-demo', function () {
+    $socialController = new App\Http\Controllers\Auth\SocialLoginController();
+    $socialProviders = $socialController->getEnabledProviders();
+    return view('social-login-demo', compact('socialProviders'));
+})->name('social.login.demo');
+
+// Test single device login functionality
+Route::get('/test-single-login', function () {
+    return view('test-single-login');
+})->name('test.single.login');
+
 // Dashboard route (protected)
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware('auth')->name('dashboard');
+})->middleware(['auth', 'single.session'])->name('dashboard');
 
 // Test OTP system
 Route::get('/test-otp', function () {
@@ -197,33 +228,43 @@ Route::get('/products', [FrontProduct::class, 'index'])->name('products.index');
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 
-Route::post('/cart/add', [FrontCart::class, 'add'])->name('cart.add');
-Route::post('/cart/update', [FrontCart::class, 'update'])->name('cart.update');
-Route::post('/cart/remove', [FrontCart::class, 'remove'])->name('cart.remove');
-Route::post('/cart/save-for-later', [FrontCart::class, 'saveForLater'])->name('cart.save_for_later');
-Route::post('/cart/move-to-cart', [FrontCart::class, 'moveToCart'])->name('cart.move_to_cart');
-Route::post('/cart/remove-saved', [FrontCart::class, 'removeSaved'])->name('cart.remove_saved');
-Route::post('/cart/move-to-wishlist', [FrontCart::class, 'moveToWishlist'])->name('cart.move_to_wishlist');
-Route::get('/cart/sync-counts', [FrontCart::class, 'syncCounts'])->name('cart.sync_counts');
-Route::get('/cart', [FrontCart::class, 'index'])->name('cart.index');
+// Authenticated routes - requiring single session
+Route::middleware(['auth', 'single.session'])->group(function () {
+    // Cart routes
+    Route::post('/cart/add', [FrontCart::class, 'add'])->name('cart.add');
+    Route::post('/cart/update', [FrontCart::class, 'update'])->name('cart.update');
+    Route::post('/cart/remove', [FrontCart::class, 'remove'])->name('cart.remove');
+    Route::post('/cart/save-for-later', [FrontCart::class, 'saveForLater'])->name('cart.save_for_later');
+    Route::post('/cart/move-to-cart', [FrontCart::class, 'moveToCart'])->name('cart.move_to_cart');
+    Route::post('/cart/remove-saved', [FrontCart::class, 'removeSaved'])->name('cart.remove_saved');
+    Route::post('/cart/move-to-wishlist', [FrontCart::class, 'moveToWishlist'])->name('cart.move_to_wishlist');
+    Route::get('/cart/sync-counts', [FrontCart::class, 'syncCounts'])->name('cart.sync_counts');
+    Route::get('/cart', [FrontCart::class, 'index'])->name('cart.index');
 
-Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
-Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');
+    // Checkout routes
+    Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');
 
-Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    // Order routes
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
-Route::get('/wishlist', [FrontWishlist::class, 'index'])->name('wishlist.index');
-Route::post('/wishlist/toggle', [FrontWishlist::class, 'toggle'])->name('wishlist.toggle');
-Route::post('/wishlist/remove', [FrontWishlist::class, 'remove'])->name('wishlist.remove');
-Route::post('/wishlist/remove-multiple', [FrontWishlist::class, 'removeMultiple'])->name('wishlist.remove_multiple');
-Route::post('/wishlist/clear-all', [FrontWishlist::class, 'clearAll'])->name('wishlist.clear_all');
-Route::post('/wishlist/move-to-cart', [FrontWishlist::class, 'moveToCart'])->name('wishlist.move_to_cart');
-Route::post('/wishlist/move-all-to-cart', [FrontWishlist::class, 'moveAllToCart'])->name('wishlist.move_all_to_cart');
-Route::get('/wishlist/load-more', [FrontWishlist::class, 'loadMore'])->name('wishlist.load_more');
+    // Wishlist routes
+    Route::get('/wishlist', [FrontWishlist::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/toggle', [FrontWishlist::class, 'toggle'])->name('wishlist.toggle');
+    Route::post('/wishlist/remove', [FrontWishlist::class, 'remove'])->name('wishlist.remove');
+    Route::post('/wishlist/remove-multiple', [FrontWishlist::class, 'removeMultiple'])->name('wishlist.remove_multiple');
+    Route::post('/wishlist/clear-all', [FrontWishlist::class, 'clearAll'])->name('wishlist.clear_all');
+    Route::post('/wishlist/move-to-cart', [FrontWishlist::class, 'moveToCart'])->name('wishlist.move_to_cart');
+    Route::post('/wishlist/move-all-to-cart', [FrontWishlist::class, 'moveAllToCart'])->name('wishlist.move_all_to_cart');
+    Route::get('/wishlist/load-more', [FrontWishlist::class, 'loadMore'])->name('wishlist.load_more');
 
+    // Coupon routes
+    Route::post('/coupon/apply', [FrontCoupon::class, 'apply'])->name('coupon.apply');
+});
+
+// Public search route (doesn't require authentication)
 Route::get('/search', [FrontSearch::class, 'autocomplete'])->name('products.search');
-Route::post('/coupon/apply', [FrontCoupon::class, 'apply'])->name('coupon.apply');
 
 // Include admin routes
 require __DIR__.'/admin.php';

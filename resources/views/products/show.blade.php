@@ -756,7 +756,10 @@ $(document).ready(function() {
             const optId = $colorBtn.data('opt-id');
             
             // Find variations that have this color option
-            const colorVariations = variations.filter(v => v.values.includes(parseInt(optId)));
+            const colorVariations = variations.filter(v => {
+                const variationValues = v.values.map(val => parseInt(val));
+                return variationValues.includes(parseInt(optId));
+            });
             
             if (colorVariations.length > 0) {
                 // Get the first variation with this color
@@ -897,7 +900,9 @@ $(document).ready(function() {
     function findMatchingVariations() {
         return variations.filter(variation => {
             return Object.entries(selectedAttributes).every(([attrId, valueId]) => {
-                return valueId === null || variation.values.includes(parseInt(valueId));
+                // Convert variation.values to integers for comparison
+                const variationValues = variation.values.map(v => parseInt(v));
+                return valueId === null || variationValues.includes(parseInt(valueId));
             });
         });
     }
@@ -1027,27 +1032,51 @@ $(document).ready(function() {
         if (['XL', 'XXL'].includes(sizeUpper)) return 'Relaxed Fit';
         return 'Standard Fit';
     }
-    }
     
     function updateOptionStates(matchingVariations) {
         $('.attr-option').each(function() {
             const $btn = $(this);
-            const attrId = $btn.data('attr-id');
-            const optId = $btn.data('opt-id');
+            const attrId = parseInt($btn.data('attr-id'));
+            const optId = parseInt($btn.data('opt-id'));
             
-            // Test if this option would lead to any valid variations
+            // Create test selection with this option
             const testSelection = {...selectedAttributes, [attrId]: optId};
+            
+            // Find variations that match this test selection
             const testVariations = variations.filter(variation => {
+                // For each attribute in our test selection
                 return Object.entries(testSelection).every(([testAttrId, testValueId]) => {
-                    return testValueId === null || variation.values.includes(parseInt(testValueId));
+                    const attrIdInt = parseInt(testAttrId);
+                    const valueIdInt = parseInt(testValueId);
+                    // Convert variation.values to integers for comparison
+                    const variationValues = variation.values.map(v => parseInt(v));
+                    const matches = testValueId === null || variationValues.includes(valueIdInt);
+                    return matches;
                 });
             });
             
+            // Check if there are any in-stock variations with this option
             const hasInStockVariations = testVariations.some(v => v.in_stock);
             
-            $btn.prop('disabled', !hasInStockVariations)
-                .toggleClass('btn-outline-secondary', !hasInStockVariations)
-                .toggleClass('btn-outline-primary', hasInStockVariations);
+            // If no attributes are selected yet, show all options that have stock
+            if (Object.keys(selectedAttributes).length === 0) {
+                const optionVariations = variations.filter(v => {
+                    // Convert variation.values to integers for comparison
+                    const variationValues = v.values.map(val => parseInt(val));
+                    const includes = variationValues.includes(optId) && v.in_stock;
+                    return includes;
+                });
+                const isEnabled = optionVariations.length > 0;
+                
+                $btn.prop('disabled', !isEnabled)
+                    .toggleClass('btn-outline-secondary', !isEnabled)
+                    .toggleClass('btn-outline-primary', isEnabled);
+            } else {
+                // Normal logic when some attributes are already selected
+                $btn.prop('disabled', !hasInStockVariations)
+                    .toggleClass('btn-outline-secondary', !hasInStockVariations)
+                    .toggleClass('btn-outline-primary', hasInStockVariations);
+            }
         });
     }
     

@@ -152,7 +152,7 @@
                                             <!-- Variation Attributes -->
                                             @if($item->productVariation->attribute_value_ids)
                                                 @php
-                                                    $attributeIds = json_decode($item->productVariation->attribute_value_ids, true);
+                                                    $attributeIds = $item->productVariation->attribute_value_ids;
                                                     $attributeValues = \App\Models\AttributeValue::whereIn('id', $attributeIds)->with('attribute')->get();
                                                 @endphp
                                                 @foreach($attributeValues as $attrValue)

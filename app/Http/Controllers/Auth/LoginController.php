@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\RateLimiter;
 
 class LoginController extends Controller
 {
@@ -33,6 +35,27 @@ class LoginController extends Controller
     protected $redirectTo = '/home';
 
     /**
+     * The guard name for rate limiting.
+     *
+     * @var string
+     */
+    protected $guardName = 'web';
+
+    /**
+     * The maximum number of attempts to allow.
+     *
+     * @var int
+     */
+    protected $maxAttempts = 3;
+
+    /**
+     * The number of minutes to throttle for.
+     *
+     * @var int
+     */
+    protected $decayMinutes = 2;
+
+    /**
      * Create a new controller instance.
      *
      * @return void
@@ -44,6 +67,55 @@ class LoginController extends Controller
     }
 
     /**
+     * Show the application's login form with social providers.
+     *
+     * @return \Illuminate\Contracts\View\View
+     */
+    public function showLoginForm()
+    {
+        $socialController = new SocialLoginController();
+        $socialProviders = $socialController->getEnabledProviders();
+        
+        return view('auth.login', compact('socialProviders'));
+    }
+
+    /**
+     * Handle a login request to the application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+
+        // Check if the user has too many login attempts
+        if ($this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+            return $this->sendLockoutResponse($request);
+        }
+
+        // Attempt to log the user in
+        if ($this->attemptLogin($request)) {
+            if ($request->hasSession()) {
+                $request->session()->put('auth.password_confirmed_at', time());
+            }
+
+            $this->clearLoginAttempts($request);
+
+            return $this->sendLoginResponse($request);
+        }
+
+        // If the login attempt was unsuccessful we will increment the number of attempts
+        // to login and redirect the user back to the login form. Of course, when this
+        // user surpasses their maximum number of attempts they will get locked out.
+        $this->incrementLoginAttempts($request);
+        return $this->sendFailedLoginResponse($request);
+    }
+
+    /**
      * Get the login username to be used by the controller.
      *
      * @return string
@@ -51,6 +123,121 @@ class LoginController extends Controller
     public function username()
     {
         return 'login_field';
+    }
+
+    /**
+     * Determine if the user has too many failed login attempts.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return bool
+     */
+    protected function hasTooManyLoginAttempts(Request $request)
+    {
+        return RateLimiter::tooManyAttempts(
+            $this->throttleKey($request), $this->maxAttempts
+        );
+    }
+
+    /**
+     * Increment the login attempts for the user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    protected function incrementLoginAttempts(Request $request)
+    {
+        RateLimiter::hit(
+            $this->throttleKey($request), $this->decayMinutes * 60
+        );
+    }
+
+    /**
+     * Clear the login locks for the given user credentials.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    protected function clearLoginAttempts(Request $request)
+    {
+        RateLimiter::clear($this->throttleKey($request));
+    }
+
+    /**
+     * Fire an event when a lockout occurs.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    protected function fireLockoutEvent(Request $request)
+    {
+        // You can dispatch a lockout event here if needed
+        Log::warning('User locked out due to too many login attempts', [
+            'ip' => $request->ip(),
+            'login_field' => $request->input('login_field'),
+            'user_agent' => $request->userAgent(),
+        ]);
+    }
+
+    /**
+     * Redirect the user after determining they are locked out.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function sendLockoutResponse(Request $request)
+    {
+        $seconds = RateLimiter::availableIn(
+            $this->throttleKey($request)
+        );
+
+        throw ValidationException::withMessages([
+            'login_field' => [
+                sprintf(
+                    'Too many login attempts. Please try again in %d seconds.',
+                    $seconds
+                )
+            ],
+        ])->status(429);
+    }
+
+    /**
+     * Get the throttle key for the given request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return string
+     */
+    protected function throttleKey(Request $request)
+    {
+        return strtolower($request->input('login_field')) . '|' . $request->ip();
+    }
+
+    /**
+     * Get the remaining attempts for the given request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return int
+     */
+    public function getRemainingAttempts(Request $request)
+    {
+        $attempts = RateLimiter::attempts($this->throttleKey($request));
+        return max(0, $this->maxAttempts - $attempts);
+    }
+
+    /**
+     * Get the lockout time remaining in seconds.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return int
+     */
+    public function getLockoutTimeRemaining(Request $request)
+    {
+        if (!$this->hasTooManyLoginAttempts($request)) {
+            return 0;
+        }
+
+        return RateLimiter::availableIn($this->throttleKey($request));
     }
 
     /**
@@ -145,8 +332,177 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        // You can add any post-login logic here
+        // Enforce single device login
+        $this->enforceUniqueSession($user, $request);
+        
+        // Log session activity
+        $this->logSessionActivity($user, $request);
+        
+        // Set session data for tracking
+        session([
+            'device_info' => $this->getDeviceInfo($request),
+            'login_time' => now(),
+            'user_id' => $user->id,
+        ]);
+        
         return redirect()->intended($this->redirectPath());
+    }
+
+    /**
+     * Enforce unique session by invalidating previous sessions.
+     *
+     * @param  \App\Models\User  $user
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    protected function enforceUniqueSession($user, Request $request)
+    {
+        // Get previous session ID
+        $previousSessionId = $user->active_session_id;
+        
+        if ($previousSessionId) {
+            // Destroy previous session
+            $this->destroySession($previousSessionId);
+            
+            // Log security event
+            Log::info('User session replaced - Single device login enforced', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'previous_session' => $previousSessionId,
+                'new_session' => session()->getId(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+        
+        // Update user with new session information
+        $user->update([
+            'active_session_id' => session()->getId(),
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+            'last_device_info' => $this->getDeviceInfo($request),
+        ]);
+    }
+
+    /**
+     * Destroy a specific session.
+     *
+     * @param  string  $sessionId
+     * @return void
+     */
+    protected function destroySession($sessionId)
+    {
+        try {
+            $sessionHandler = app('session.store')->getHandler();
+            $sessionHandler->destroy($sessionId);
+        } catch (\Exception $e) {
+            Log::warning('Failed to destroy session', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Get device information from request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    protected function getDeviceInfo(Request $request)
+    {
+        $userAgent = $request->userAgent();
+        
+        return [
+            'ip' => $request->ip(),
+            'user_agent' => $userAgent,
+            'device' => $this->detectDevice($userAgent),
+            'browser' => $this->detectBrowser($userAgent),
+            'platform' => $this->detectPlatform($userAgent),
+        ];
+    }
+
+    /**
+     * Detect device type from user agent.
+     *
+     * @param  string  $userAgent
+     * @return string
+     */
+    protected function detectDevice($userAgent)
+    {
+        if (preg_match('/Mobile|Android|iPhone|iPad/', $userAgent)) {
+            if (preg_match('/iPad/', $userAgent)) {
+                return 'Tablet';
+            }
+            return 'Mobile';
+        }
+        return 'Desktop';
+    }
+
+    /**
+     * Detect browser from user agent.
+     *
+     * @param  string  $userAgent
+     * @return string
+     */
+    protected function detectBrowser($userAgent)
+    {
+        if (preg_match('/Chrome/', $userAgent)) {
+            return 'Chrome';
+        } elseif (preg_match('/Firefox/', $userAgent)) {
+            return 'Firefox';
+        } elseif (preg_match('/Safari/', $userAgent)) {
+            return 'Safari';
+        } elseif (preg_match('/Edge/', $userAgent)) {
+            return 'Edge';
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Detect platform from user agent.
+     *
+     * @param  string  $userAgent
+     * @return string
+     */
+    protected function detectPlatform($userAgent)
+    {
+        if (preg_match('/Windows/', $userAgent)) {
+            return 'Windows';
+        } elseif (preg_match('/Mac/', $userAgent)) {
+            return 'macOS';
+        } elseif (preg_match('/Linux/', $userAgent)) {
+            return 'Linux';
+        } elseif (preg_match('/Android/', $userAgent)) {
+            return 'Android';
+        } elseif (preg_match('/iPhone|iPad/', $userAgent)) {
+            return 'iOS';
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Log session activity for security monitoring.
+     *
+     * @param  \App\Models\User  $user
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    protected function logSessionActivity($user, Request $request)
+    {
+        $deviceInfo = $this->getDeviceInfo($request);
+        
+        Log::info('User logged in', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'session_id' => session()->getId(),
+            'ip_address' => $request->ip(),
+            'device_type' => $deviceInfo['device'],
+            'browser' => $deviceInfo['browser'],
+            'platform' => $deviceInfo['platform'],
+            'user_agent' => $request->userAgent(),
+            'login_time' => now(),
+        ]);
     }
 
     /**
@@ -243,8 +599,16 @@ class LoginController extends Controller
      */
     protected function sendFailedLoginResponse(Request $request)
     {
+        $remainingAttempts = $this->getRemainingAttempts($request);
+        
+        $message = trans('auth.failed');
+        
+        if ($remainingAttempts > 0) {
+            $message .= sprintf(' You have %d attempt(s) remaining.', $remainingAttempts);
+        }
+
         throw ValidationException::withMessages([
-            'login_field' => [trans('auth.failed')],
+            'login_field' => [$message],
         ]);
     }
 }
