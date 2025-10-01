@@ -180,4 +180,12 @@ class ProductVariation extends Model
     {
         return $query->whereBetween('price', [$min, $max]);
     }
+
+    /**
+     * Get the attribute values for this variation.
+     */
+    public function attributeValues()
+    {
+        return AttributeValue::whereIn('id', $this->attribute_value_ids ?? [])->get();
+    }
 }

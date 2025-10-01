@@ -276,7 +276,19 @@ function deleteImage(imageId) {
 
 function duplicateProduct() {
     if (confirm('Are you sure you want to duplicate this product?')) {
-        alert('Product duplication functionality');
+        // Create a form and submit to a new route for duplication
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("admin.products.duplicate", $product) }}';
+
+        const tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = '_token';
+        tokenInput.value = '{{ csrf_token() }}';
+
+        form.appendChild(tokenInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

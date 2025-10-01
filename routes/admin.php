@@ -29,12 +29,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit');
         Route::put('/{product}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
-        
-        // Variation management
+        Route::post('/{product}/duplicate', [ProductController::class, 'duplicate'])->name('duplicate');
         Route::post('/{product}/variations', [ProductController::class, 'storeVariation'])->name('variations.store');
         Route::delete('/variations/{variation}', [ProductController::class, 'destroyVariation'])->name('variations.destroy');
-        
-        // Image management
         Route::post('/{product}/images', [ProductController::class, 'storeImage'])->name('images.store');
         Route::delete('/images/{image}', [ProductController::class, 'destroyImage'])->name('images.destroy');
     });
