@@ -48,6 +48,28 @@
             border-radius: 8px;
             transition: all 0.3s ease;
         }
+        
+        /* Fix pagination arrows and design */
+        .pagination {
+            margin: 0;
+        }
+        .pagination .page-link {
+            font-size: 0.875rem !important;
+            padding: 0.375rem 0.75rem !important;
+            border-radius: 6px !important;
+            margin: 0 2px;
+            border: 1px solid #dee2e6;
+            line-height: 1.25 !important;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .pagination .page-link:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
         .variation-item:hover {
             border-color: #0d6efd;
             background: #f8f9ff;
@@ -114,6 +136,29 @@
             padding: 0.4rem 0.6rem;
             font-size: 0.8rem;
         }
+        
+        /* Force override for very small pagination arrows - highest specificity */
+        .card-body .pagination-sm .page-link,
+        .table-responsive .pagination-sm .page-link {
+            font-size: 10px !important;
+            padding: 4px 6px !important;
+            line-height: 1 !important;
+            min-width: 26px !important;
+            height: 26px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .card-body .pagination-sm .page-item:first-child .page-link,
+        .card-body .pagination-sm .page-item:last-child .page-link,
+        .table-responsive .pagination-sm .page-item:first-child .page-link,
+        .table-responsive .pagination-sm .page-item:last-child .page-link {
+            font-size: 9px !important;
+            width: 26px !important;
+            height: 26px !important;
+            padding: 0 !important;
+        }
     </style>
     @stack('styles')
 </head>
@@ -136,6 +181,14 @@
                         <a class="nav-link {{ request()->routeIs('admin.products*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
                             <i class="bi bi-box-seam me-2"></i>
                             Products
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.attributes*') ? 'active' : '' }}" href="{{ route('admin.attributes.index') }}">
+                            <i class="bi bi-tags me-2"></i>
+                            Attributes
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.attribute-values*') ? 'active' : '' }}" href="{{ route('admin.attribute-values.index') }}">
+                            <i class="bi bi-list-ul me-2"></i>
+                            Attribute Values
                         </a>
                         <a class="nav-link" href="#">
                             <i class="bi bi-people me-2"></i>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag Input Demo - Product Variations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/tag-input.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .before-after {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .demo-section h4 {
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        .old-style .form-check {
+            margin-bottom: 0.5rem;
+        }
+        .old-style .badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .improvement-list {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .improvement-list h5 {
+            color: #0056b3;
+            margin-bottom: 0.5rem;
+        }
+        .improvement-list ul {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold text-primary">Product Variations UI Improvement</h1>
+            <p class="lead">Professional Tag-Based Interface vs. Traditional Checkboxes</p>
+        </div>
+
+        <div class="improvement-list">
+            <h5><i class="bi bi-lightbulb"></i> Key Improvements</h5>
+            <ul>
+                <li><strong>Searchable</strong> - Type to find options quickly (try "red", "blue")</li>
+                <li><strong>Tag-based</strong> - Clean, modern interface with easy removal</li>
+                <li><strong>Space efficient</strong> - No long lists of checkboxes</li>
+                <li><strong>Professional</strong> - Matches modern admin interfaces</li>
+                <li><strong>Keyboard navigation</strong> - Arrow keys, Enter, Backspace support</li>
+                <li><strong>Color-coded</strong> - Different colors for different attribute types</li>
+            </ul>
+        </div>
+
+        <div class="before-after">
+            <!-- OLD WAY - Checkboxes -->
+            <div class="demo-section">
+                <h4>❌ Old Way - Checkboxes</h4>
+                <div class="old-style">
+                    <label class="form-label small text-muted">Select color options:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="red">
+                            <label class="form-check-label badge bg-light text-dark" for="red">Red</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="blue">
+                            <label class="form-check-label badge bg-light text-dark" for="blue">Blue</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="green">
+                            <label class="form-check-label badge bg-light text-dark" for="green">Green</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="yellow">
+                            <label class="form-check-label badge bg-light text-dark" for="yellow">Yellow</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="black">
+                            <label class="form-check-label badge bg-light text-dark" for="black">Black</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="white">
+                            <label class="form-check-label badge bg-light text-dark" for="white">White</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="purple">
+                            <label class="form-check-label badge bg-light text-dark" for="purple">Purple</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="orange">
+                            <label class="form-check-label badge bg-light text-dark" for="orange">Orange</label>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Problems: Takes lots of space, hard to scan, not searchable</small>
+                </div>
+            </div>
+
+            <!-- NEW WAY - Tag Input -->
+            <div class="demo-section">
+                <h4>✅ New Way - Tag Input</h4>
+                <label class="form-label small text-muted mb-2">Search and select color options:</label>
+                <div class="tag-input-wrapper" id="color-demo" data-attribute-name="color">
+                    <!-- Tag input will be initialized here -->
+                </div>
+                <small class="text-success mt-2 d-block">Benefits: Searchable, clean, professional, space-efficient</small>
+            </div>
+        </div>
+
+        <!-- Size Example -->
+        <div class="demo-section mb-4">
+            <h4>Size Attribute Example</h4>
+            <label class="form-label small text-muted mb-2">Search and select size options:</label>
+            <div class="tag-input-wrapper attribute-card size" id="size-demo" data-attribute-name="size">
+                <!-- Tag input will be initialized here -->
+            </div>
+        </div>
+
+        <!-- Material Example -->
+        <div class="demo-section mb-4">
+            <h4>Material Attribute Example</h4>
+            <label class="form-label small text-muted mb-2">Search and select material options:</label>
+            <div class="tag-input-wrapper attribute-card material" id="material-demo" data-attribute-name="material">
+                <!-- Tag input will be initialized here -->
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-info-circle"></i> How to Use</h5>
+            <ul class="mb-0">
+                <li><strong>Type to search:</strong> Start typing to filter options</li>
+                <li><strong>Select:</strong> Click on suggestions or press Enter</li>
+                <li><strong>Remove:</strong> Click the × on tags or press Backspace</li>
+                <li><strong>Navigate:</strong> Use arrow keys to navigate suggestions</li>
+                <li><strong>Add custom:</strong> Type and press Enter to add new values</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <p class="text-muted">This professional interface will greatly improve the user experience for managing product variations!</p>
+        </div>
+    </div>
+
+    <script src="js/tag-input.js"></script>
+    <script>
+        // Demo data
+        const colorOptions = [
+            { id: 1, value: 'Red' },
+            { id: 2, value: 'Blue' },
+            { id: 3, value: 'Green' },
+            { id: 4, value: 'Yellow' },
+            { id: 5, value: 'Black' },
+            { id: 6, value: 'White' },
+            { id: 7, value: 'Purple' },
+            { id: 8, value: 'Orange' },
+            { id: 9, value: 'Pink' },
+            { id: 10, value: 'Teal' },
+            { id: 11, value: 'Navy Blue' },
+            { id: 12, value: 'Forest Green' },
+            { id: 13, value: 'Crimson Red' },
+            { id: 14, value: 'Golden Yellow' }
+        ];
+
+        const sizeOptions = [
+            { id: 1, value: 'XS' },
+            { id: 2, value: 'S' },
+            { id: 3, value: 'M' },
+            { id: 4, value: 'L' },
+            { id: 5, value: 'XL' },
+            { id: 6, value: 'XXL' },
+            { id: 7, value: '28' },
+            { id: 8, value: '30' },
+            { id: 9, value: '32' },
+            { id: 10, value: '34' },
+            { id: 11, value: '36' },
+            { id: 12, value: '38' }
+        ];
+
+        const materialOptions = [
+            { id: 1, value: 'Cotton' },
+            { id: 2, value: 'Polyester' },
+            { id: 3, value: 'Wool' },
+            { id: 4, value: 'Silk' },
+            { id: 5, value: 'Denim' },
+            { id: 6, value: 'Linen' },
+            { id: 7, value: 'Leather' },
+            { id: 8, value: 'Canvas' },
+            { id: 9, value: 'Velvet' },
+            { id: 10, value: 'Bamboo' }
+        ];
+
+        // Initialize tag inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            // Color tag input
+            const colorTagInput = new TagInput(document.getElementById('color-demo'), {
+                placeholder: 'Search colors...',
+                suggestions: colorOptions,
+                attributeType: 'color'
+            });
+
+            // Size tag input
+            const sizeTagInput = new TagInput(document.getElementById('size-demo'), {
+                placeholder: 'Search sizes...',
+                suggestions: sizeOptions,
+                attributeType: 'size'
+            });
+
+            // Material tag input
+            const materialTagInput = new TagInput(document.getElementById('material-demo'), {
+                placeholder: 'Search materials...',
+                suggestions: materialOptions,
+                attributeType: 'material'
+            });
+
+            // Pre-select some values for demo
+            setTimeout(() => {
+                colorTagInput.setSelectedTags([
+                    { id: 1, value: 'Red' },
+                    { id: 2, value: 'Blue' }
+                ]);
+                
+                sizeTagInput.setSelectedTags([
+                    { id: 2, value: 'S' },
+                    { id: 3, value: 'M' },
+                    { id: 4, value: 'L' }
+                ]);
+                
+                materialTagInput.setSelectedTags([
+                    { id: 1, value: 'Cotton' }
+                ]);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -72,10 +72,10 @@
                         <div class="rating-info">
                             <span class="text-warning me-1">
                                 @for($i = 1; $i <= 5; $i++)
-                                    <i class="bi bi-star{{ $i <= 4 ? '-fill' : '' }}"></i>
+                                    <i class="bi bi-star{{ $i <= ($product->average_rating ?? 4) ? '-fill' : '' }}"></i>
                                 @endfor
                             </span>
-                            <small class="text-muted">(4.2) 156 reviews</small>
+                            <small class="text-muted">({{ number_format($product->average_rating ?? 4.2, 1) }}) {{ $product->reviews_count ?? 0 }} {{ Str::plural('review', $product->reviews_count ?? 0) }}</small>
                         </div>
                     </div>
                     
@@ -138,6 +138,30 @@
                                 {{-- Color variation with image preview (Amazon style) --}}
                                 <div class="color-options d-flex flex-wrap gap-3">
                                     @foreach($options as $opt)
+                                    @php
+                                        $colorName = strtolower($opt['value']);
+                                        $colorMap = [
+                                            'white' => '#FFFFFF',
+                                            'black' => '#000000',
+                                            'red' => '#DC2626',
+                                            'blue' => '#2563EB',
+                                            'green' => '#16A34A',
+                                            'yellow' => '#FACC15',
+                                            'purple' => '#9333EA',
+                                            'pink' => '#EC4899',
+                                            'orange' => '#EA580C',
+                                            'brown' => '#A3782A',
+                                            'gray' => '#6B7280',
+                                            'navy' => '#1E3A8A',
+                                            'beige' => '#F5F5DC',
+                                            'khaki' => '#F0E68C',
+                                            'maroon' => '#800000',
+                                            'gold' => '#FFD700',
+                                            'silver' => '#C0C0C0'
+                                        ];
+                                        $colorCode = $colorMap[$colorName] ?? '#f8f9fa';
+                                        $isWhite = $colorCode === '#FFFFFF';
+                                    @endphp
                                     <div class="color-option-wrapper">
                                         <button class="btn btn-outline-secondary attr-option color-option position-relative p-1" 
                                                 data-attr-id="{{ $opt['attribute_id'] }}" 
@@ -146,14 +170,19 @@
                                                 data-opt-value="{{ $opt['value'] }}"
                                                 style="width: 70px; height: 70px; border-radius: 8px;"
                                                 title="Select {{ $opt['value'] }}">
-                                            {{-- Color preview image will be populated by JS --}}
+                                            {{-- Color preview with direct styling --}}
                                             <div class="color-preview-img w-100 h-100 rounded" 
-                                                 style="background: #f8f9fa; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">
-                                                {{ $opt['value'] }}
+                                                 style="background-color: {{ $colorCode }}; background-image: none; border: 2px solid {{ $isWhite ? '#dee2e6' : '#e9ecef' }}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: {{ $isWhite ? '#666' : 'transparent' }};">
+                                                @if($isWhite)
+                                                    W
+                                                @endif
                                             </div>
                                             <i class="bi bi-check-circle-fill position-absolute top-0 start-100 translate-middle text-success d-none selected-check"></i>
                                         </button>
                                         <small class="d-block text-center mt-1 text-muted" style="font-size: 11px;">{{ $opt['value'] }}</small>
+                                        @if(config('app.debug'))
+                                        <small class="d-block text-center text-info" style="font-size: 9px;">ID: {{ $opt['id'] }}</small>
+                                        @endif
                                     </div>
                                     @endforeach
                                 </div>
@@ -382,7 +411,7 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">
-                                <i class="bi bi-star me-2"></i>Reviews (156)
+                                <i class="bi bi-star me-2"></i>Reviews ({{ $product->reviews_count ?? 0 }})
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -457,10 +486,51 @@
                                     <h5>Customer Reviews</h5>
                                     <button class="btn btn-primary btn-sm">Write a Review</button>
                                 </div>
+                                
+                                @if(($product->reviews_count ?? 0) > 0)
+                                <!-- Reviews Summary -->
+                                <div class="reviews-summary mb-4 p-3 bg-light rounded">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4 text-center">
+                                            <h2 class="mb-1">{{ number_format($product->average_rating ?? 0, 1) }}</h2>
+                                            <div class="mb-2">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    <i class="bi bi-star{{ $i <= ($product->average_rating ?? 0) ? '-fill' : '' }} text-warning"></i>
+                                                @endfor
+                                            </div>
+                                            <small class="text-muted">{{ $product->reviews_count }} {{ Str::plural('review', $product->reviews_count) }}</small>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="rating-breakdown">
+                                                @for($star = 5; $star >= 1; $star--)
+                                                @php $percentage = rand(10, 90); @endphp
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="me-2">{{ $star }}</span>
+                                                    <i class="bi bi-star-fill text-warning me-2"></i>
+                                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                        <div class="progress-bar bg-warning" style="width: {{ $percentage }}%"></div>
+                                                    </div>
+                                                    <span class="text-muted small">{{ $percentage }}%</span>
+                                                </div>
+                                                @endfor
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sample Reviews (you can replace this with real reviews from database) -->
+                                <div class="reviews-list">
+                                    <p class="text-muted text-center py-4">
+                                        <i class="bi bi-clock-history me-2"></i>
+                                        Review system implementation coming soon. Currently showing {{ $product->reviews_count }} reviews.
+                                    </p>
+                                </div>
+                                @else
                                 <div class="review-placeholder text-center py-5 text-muted">
                                     <i class="bi bi-chat-quote fs-1 mb-3"></i>
                                     <p>No reviews yet. Be the first to review this product!</p>
                                 </div>
+                                @endif
                             </div>
                         </div>
                         <div class="tab-pane fade" id="shipping" role="tabpanel">
@@ -620,7 +690,33 @@
         }
         
         .color-preview-img {
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .color-option:hover .color-preview-img {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .color-option.selected {
+            border-color: #0d6efd !important;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+        }
+        
+        .color-option.selected .color-preview-img {
+            border-color: #0d6efd;
+        }
+        
+        .color-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .color-option.disabled:hover .color-preview-img {
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         /* Dynamic Specifications Styling */
@@ -738,10 +834,14 @@ $(document).ready(function() {
     initializeProductPage();
     
     function initializeProductPage() {
-        populateColorPreviews();
         renderImageGallery(productImages);
         updateVariationSelection();
         bindEventHandlers();
+        
+        // Populate color previews after DOM is ready
+        setTimeout(function() {
+            populateColorPreviews();
+        }, 100);
         
         // Auto-select first available variation if only one attribute group
         if (Object.keys(getAttributeGroups()).length === 1) {
@@ -750,42 +850,53 @@ $(document).ready(function() {
     }
     
     function populateColorPreviews() {
-        // Populate color option previews with first image from each color variation
+        // Define color mapping for better visual representation
+        const colorMap = {
+            'white': '#FFFFFF',
+            'black': '#000000',
+            'red': '#DC2626',
+            'blue': '#2563EB',
+            'green': '#16A34A',
+            'yellow': '#FACC15',
+            'purple': '#9333EA',
+            'pink': '#EC4899',
+            'orange': '#EA580C',
+            'brown': '#A3782A',
+            'gray': '#6B7280',
+            'grey': '#6B7280',
+            'navy': '#1E3A8A',
+            'beige': '#F5F5DC',
+            'khaki': '#F0E68C',
+            'maroon': '#800000',
+            'gold': '#FFD700',
+            'silver': '#C0C0C0'
+        };
+
+        // Process each color option
         $('.color-option').each(function() {
             const $colorBtn = $(this);
-            const optId = $colorBtn.data('opt-id');
+            const $colorPreview = $colorBtn.find('.color-preview-img');
+            const colorName = $colorBtn.data('opt-value').toLowerCase();
+            const colorCode = colorMap[colorName] || '#f8f9fa';
             
-            // Find variations that have this color option
-            const colorVariations = variations.filter(v => {
-                const variationValues = v.values.map(val => parseInt(val));
-                return variationValues.includes(parseInt(optId));
+            // Apply color styling directly
+            $colorPreview.css({
+                'background-color': colorCode,
+                'background-image': 'none',
+                'border': colorCode === '#FFFFFF' ? '2px solid #dee2e6' : '2px solid #e9ecef'
             });
             
-            if (colorVariations.length > 0) {
-                // Get the first variation with this color
-                const firstVariation = colorVariations[0];
-                const varImages = variationImages[firstVariation.id];
-                
-                if (varImages && varImages.length > 0) {
-                    // Use the first image for this color variation
-                    const firstImage = varImages[0];
-                    $colorBtn.find('.color-preview-img').css({
-                        'background-image': `url(${firstImage.path})`,
-                        'background-size': 'cover',
-                        'background-position': 'center',
-                        'color': 'transparent'
-                    }).text('');
-                } else {
-                    // Fallback to product images if no variation images
-                    if (productImages && productImages.length > 0) {
-                        $colorBtn.find('.color-preview-img').css({
-                            'background-image': `url(${productImages[0].path})`,
-                            'background-size': 'cover',
-                            'background-position': 'center',
-                            'color': 'transparent'
-                        }).text('');
-                    }
-                }
+            // Handle white color visibility
+            if (colorCode === '#FFFFFF') {
+                $colorPreview.css({
+                    'color': '#666',
+                    'font-weight': 'bold',
+                    'display': 'flex',
+                    'align-items': 'center',
+                    'justify-content': 'center'
+                }).text('W');
+            } else {
+                $colorPreview.text('');
             }
         });
     }

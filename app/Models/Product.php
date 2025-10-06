@@ -9,7 +9,7 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description', 'category_id', 'brand_id', 'price', 'mrp', 'active'];
+    protected $fillable = ['name', 'slug', 'description', 'category_id', 'brand_id', 'price', 'mrp', 'active', 'reviews_count', 'average_rating'];
 
     public function images()
     {
@@ -29,6 +29,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 
     /**
@@ -55,5 +60,22 @@ class Product extends Model
 
         // 3) Finally, return general product-level images
         return $this->images()->whereNull('product_variation_id')->orderBy('position')->get();
+    }
+    
+    /**
+     * Update product review statistics
+     * This method is called automatically when reviews are added/updated/deleted
+     */
+    public function updateReviewStats()
+    {
+        $stats = $this->reviews()
+            ->where('is_approved', true)
+            ->selectRaw('COUNT(*) as count, AVG(rating) as average')
+            ->first();
+        
+        $this->update([
+            'reviews_count' => $stats->count ?? 0,
+            'average_rating' => $stats->average ? round($stats->average, 2) : null
+        ]);
     }
 }

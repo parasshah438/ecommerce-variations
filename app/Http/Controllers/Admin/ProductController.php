@@ -36,6 +36,15 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        // Filter out empty variations before validation
+        $variations = $request->input('variations', []);
+        $variations = array_filter($variations, function($variation) {
+            return !empty($variation) && !empty($variation['attributes']);
+        });
+        
+        // Update request with filtered variations
+        $request->merge(['variations' => $variations]);
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -48,11 +57,11 @@ class ProductController extends Controller
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'variations' => 'nullable|array',
             'variations.*.id' => 'nullable|exists:product_variations,id',
-            'variations.*.attributes' => 'required_with:variations|array',
-            'variations.*.attributes.*' => 'required_with:variations|exists:attribute_values,id',
+            'variations.*.attributes' => 'required|array|min:1',
+            'variations.*.attributes.*' => 'required|exists:attribute_values,id',
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.sku' => 'nullable|string|max:100',
-            'variations.*.stock' => 'required_with:variations|integer|min:0',
+            'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
             'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
@@ -213,6 +222,15 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // Filter out empty variations before validation
+        $variations = $request->input('variations', []);
+        $variations = array_filter($variations, function($variation) {
+            return !empty($variation) && !empty($variation['attributes']);
+        });
+        
+        // Update request with filtered variations
+        $request->merge(['variations' => $variations]);
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -228,11 +246,11 @@ class ProductController extends Controller
             
             // Variations (optional - some products don't have variations)
             'variations' => 'nullable|array',
-            'variations.*.attributes' => 'required_with:variations|array',
-            'variations.*.attributes.*' => 'required_with:variations|exists:attribute_values,id',
+            'variations.*.attributes' => 'required|array|min:1',
+            'variations.*.attributes.*' => 'required|exists:attribute_values,id',
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.sku' => 'nullable|string|max:100',
-            'variations.*.stock' => 'required_with:variations|integer|min:0',
+            'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
             
             // Variation images

@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         //$this->command->info('🌱 Starting database seeding...');
         
-        // Create admin user
+        //Create admin user
         // $this->command->info('👤 Creating admin user...');
         // User::factory()->create([
         //     'name' => 'Admin User',
@@ -32,12 +32,14 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('123456'),
             'email_verified_at' => now(),
         ]);
+
+        $this->call(TestProductSeeder::class);
         /*
         // Create additional sample users
         $this->command->info('👥 Creating sample users...');
         User::factory(8)->create();
 
-        // Ecommerce seed
+        // Ecommerce seeding
         $this->command->info('🛍️  Starting ecommerce data seeding...');
         $this->call(EcommerceSeeder::class);
         

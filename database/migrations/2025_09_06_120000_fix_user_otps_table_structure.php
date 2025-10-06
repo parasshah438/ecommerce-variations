@@ -11,27 +11,55 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('user_otps', function (Blueprint $table) {
-            // Add missing columns
-            $table->timestamp('verified_at')->nullable()->after('expires_at');
-            $table->boolean('is_used')->default(false)->after('verified_at');
-            $table->string('ip_address')->nullable()->after('is_used');
-            $table->text('user_agent')->nullable()->after('ip_address');
+        // Only run this migration if the table exists and actually needs updates
+        if (Schema::hasTable('user_otps')) {
+            $needsUpdate = false;
             
-            // Drop the old column if it exists
-            if (Schema::hasColumn('user_otps', 'is_verified')) {
-                $table->dropColumn('is_verified');
+            // Check if we need to update the table structure
+            if (Schema::hasColumn('user_otps', 'is_verified') || 
+                Schema::hasColumn('user_otps', 'last_attempt_at') || 
+                Schema::hasColumn('user_otps', 'purpose') ||
+                !Schema::hasColumn('user_otps', 'verified_at')) {
+                $needsUpdate = true;
             }
             
-            // Drop unused columns if they exist
-            if (Schema::hasColumn('user_otps', 'last_attempt_at')) {
-                $table->dropColumn('last_attempt_at');
+            if ($needsUpdate) {
+                // Add missing columns only if they don't exist
+                Schema::table('user_otps', function (Blueprint $table) {
+                    if (!Schema::hasColumn('user_otps', 'verified_at')) {
+                        $table->timestamp('verified_at')->nullable()->after('expires_at');
+                    }
+                    
+                    if (!Schema::hasColumn('user_otps', 'is_used')) {
+                        $table->boolean('is_used')->default(false)->after('verified_at');
+                    }
+                    
+                    if (!Schema::hasColumn('user_otps', 'ip_address')) {
+                        $table->string('ip_address')->nullable()->after('is_used');
+                    }
+                    
+                    if (!Schema::hasColumn('user_otps', 'user_agent')) {
+                        $table->text('user_agent')->nullable()->after('ip_address');
+                    }
+                });
+                
+                // Drop old columns in a separate schema call to avoid conflicts
+                Schema::table('user_otps', function (Blueprint $table) {
+                    // Drop the old columns if they exist
+                    if (Schema::hasColumn('user_otps', 'is_verified')) {
+                        $table->dropColumn('is_verified');
+                    }
+                    
+                    if (Schema::hasColumn('user_otps', 'last_attempt_at')) {
+                        $table->dropColumn('last_attempt_at');
+                    }
+                    
+                    if (Schema::hasColumn('user_otps', 'purpose')) {
+                        $table->dropColumn('purpose');
+                    }
+                });
             }
-            
-            if (Schema::hasColumn('user_otps', 'purpose')) {
-                $table->dropColumn('purpose');
-            }
-        });
+        }
     }
 
     /**
@@ -39,12 +67,26 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('user_otps', function (Blueprint $table) {
-            // Reverse the changes
-            $table->dropColumn(['verified_at', 'is_used', 'ip_address', 'user_agent']);
-            $table->boolean('is_verified')->default(false);
-            $table->timestamp('last_attempt_at')->nullable();
-            $table->string('purpose')->default('login');
-        });
+        if (Schema::hasTable('user_otps')) {
+            Schema::table('user_otps', function (Blueprint $table) {
+                // Add back the old columns if they don't exist
+                if (!Schema::hasColumn('user_otps', 'is_verified')) {
+                    $table->boolean('is_verified')->default(false);
+                }
+                
+                if (!Schema::hasColumn('user_otps', 'last_attempt_at')) {
+                    $table->timestamp('last_attempt_at')->nullable();
+                }
+                
+                if (!Schema::hasColumn('user_otps', 'purpose')) {
+                    $table->string('purpose')->default('login');
+                }
+            });
+            
+            // Drop the new columns in a separate schema call
+            Schema::table('user_otps', function (Blueprint $table) {
+                $table->dropColumn(['verified_at', 'is_used', 'ip_address', 'user_agent']);
+            });
+        }
     }
 };

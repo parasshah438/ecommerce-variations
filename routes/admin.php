@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\AttributeValueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +42,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/api/attributes/{attribute}/values', [ProductController::class, 'getAttributeValues'])->name('api.attributes.values');
     Route::post('/api/variations/preview', [ProductController::class, 'previewVariations'])->name('api.variations.preview');
     
+    // Attributes Management
+    Route::resource('attributes', AttributeController::class);
+    Route::resource('attribute-values', AttributeValueController::class);
+    
     // Order Management Routes
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
@@ -57,4 +63,16 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/email-logs/{emailLog}/delete', [\App\Http\Controllers\Admin\EmailLogController::class, 'delete'])->name('email-logs.delete');
     Route::post('/email-logs/bulk-delete', [\App\Http\Controllers\Admin\EmailLogController::class, 'bulkDelete'])->name('email-logs.bulk-delete');
     Route::get('/email-logs/export', [\App\Http\Controllers\Admin\EmailLogController::class, 'export'])->name('email-logs.export');
+    
+    // Stock Management Dashboard Routes
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\StockDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/low-stock-report', [\App\Http\Controllers\Admin\StockDashboardController::class, 'lowStockReport'])->name('low_stock_report');
+        Route::get('/out-of-stock-report', [\App\Http\Controllers\Admin\StockDashboardController::class, 'outOfStockReport'])->name('out_of_stock_report');
+        Route::get('/stock-movement-report', [\App\Http\Controllers\Admin\StockDashboardController::class, 'stockMovementReport'])->name('movement_report');
+        Route::post('/bulk-stock-update', [\App\Http\Controllers\Admin\StockDashboardController::class, 'bulkStockUpdate'])->name('bulk_update');
+        Route::get('/api/stock-alerts', [\App\Http\Controllers\Admin\StockDashboardController::class, 'getStockAlerts'])->name('api.alerts');
+        Route::post('/api/update-stock/{variation}', [\App\Http\Controllers\Admin\StockDashboardController::class, 'updateStock'])->name('api.update');
+        Route::get('/export', [\App\Http\Controllers\Admin\StockDashboardController::class, 'exportStock'])->name('export');
+    });
 });
