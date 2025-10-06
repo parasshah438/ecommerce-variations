@@ -244,6 +244,7 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     // Checkout routes
     Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
     Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');
+    Route::get('/checkout/success/{order}', [FrontCheckout::class, 'success'])->name('checkout.success');
 
     // Order routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -268,6 +269,73 @@ Route::get('/search', [FrontSearch::class, 'autocomplete'])->name('products.sear
 
 // Include admin routes
 require __DIR__.'/admin.php';
+
+// Test checkout route (remove in production)
+Route::get('/checkout-demo', function () {
+    return view('checkout.demo');
+})->name('checkout.demo');
+
+// Test success page (remove in production)
+Route::get('/checkout-success-demo', function () {
+    // Create a mock order object for demo
+    $order = (object) [
+        'id' => '12345',
+        'total' => 4497.00,
+        'payment_method' => 'cod',
+        'created_at' => now(),
+        'items' => collect([
+            (object) [
+                'quantity' => 2,
+                'price' => 999.00,
+                'productVariation' => (object) [
+                    'sku' => 'CT-BLU-M-001',
+                    'product' => (object) ['name' => 'Premium Cotton T-Shirt'],
+                    'attribute_values' => collect([
+                        (object) ['attribute' => (object) ['name' => 'Color'], 'value' => 'Blue'],
+                        (object) ['attribute' => (object) ['name' => 'Size'], 'value' => 'M']
+                    ])
+                ]
+            ],
+            (object) [
+                'quantity' => 1,
+                'price' => 2499.00,
+                'productVariation' => (object) [
+                    'sku' => 'DJ-BLK-L-002',
+                    'product' => (object) ['name' => 'Denim Jacket'],
+                    'attribute_values' => collect([
+                        (object) ['attribute' => (object) ['name' => 'Color'], 'value' => 'Black'],
+                        (object) ['attribute' => (object) ['name' => 'Size'], 'value' => 'L']
+                    ])
+                ]
+            ]
+        ]),
+        'address' => (object) [
+            'name' => 'John Doe',
+            'phone' => '+91 9876543210',
+            'address_line' => '123 Main Street, Apartment 4B',
+            'city' => 'Mumbai',
+            'state' => 'Maharashtra',
+            'zip' => '400001'
+        ]
+    ];
+    
+    return view('checkout.success', compact('order'));
+})->name('checkout.success.demo');
+
+// Test order placement route  
+Route::get('/test-order-redirect', function() {
+    return redirect()->route('checkout.success', ['order' => 1])->with('success', 'Test redirect working!');
+})->name('test.order.redirect');
+
+// Debug logs route
+Route::get('/debug-logs', function() {
+    $logFile = storage_path('logs/laravel.log');
+    if (file_exists($logFile)) {
+        $logs = file_get_contents($logFile);
+        return '<pre>' . htmlspecialchars($logs) . '</pre>';
+    }
+    return 'No log file found';
+})->name('debug.logs');
 
 // Include email preview routes (only in development)
 if (app()->environment('local', 'testing')) {

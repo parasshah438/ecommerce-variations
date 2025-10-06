@@ -55,4 +55,36 @@ class User extends Authenticatable
             'social_providers' => 'array',
         ];
     }
+
+    /**
+     * Get all addresses for the user
+     */
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    /**
+     * Get the user's cart
+     */
+    public function cart()
+    {
+        return $this->hasOne(Cart::class);
+    }
+
+    /**
+     * Get all orders for the user
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Get the mobile attribute (for backward compatibility)
+     */
+    public function getMobileAttribute()
+    {
+        return $this->mobile_number;
+    }
 }

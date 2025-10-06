@@ -107,6 +107,15 @@ class ProductVariation extends Model
     }
 
     /**
+     * Get the attribute values for this variation as a relationship.
+     */
+    public function attribute_values()
+    {
+        return $this->belongsToMany(AttributeValue::class, null, 'id', 'id')
+            ->whereIn('attribute_values.id', $this->attribute_value_ids ?? []);
+    }
+
+    /**
      * Get formatted price.
      */
     public function getFormattedPriceAttribute(): string
