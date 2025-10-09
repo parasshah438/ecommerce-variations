@@ -225,6 +225,7 @@ Route::get('/debug/product-data/{slug}', function($slug) {
 });
 
 Route::get('/products', [FrontProduct::class, 'index'])->name('products.index');
+Route::get('/products/filter', [FrontProduct::class, 'index'])->name('products.filter');
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 

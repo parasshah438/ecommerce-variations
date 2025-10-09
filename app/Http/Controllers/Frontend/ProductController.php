@@ -10,7 +10,57 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::with(['images', 'variations'])->paginate(12);
+        $query = Product::with(['images', 'variations', 'category', 'brand']);
+        
+        // Search filter
+        if ($request->has('q') && $request->q) {
+            $searchTerm = $request->q;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+        
+        // Category filter
+        if ($request->has('categories') && is_array($request->categories)) {
+            $query->whereIn('category_id', $request->categories);
+        }
+        
+        // Brand filter
+        if ($request->has('brands') && is_array($request->brands)) {
+            $query->whereIn('brand_id', $request->brands);
+        }
+        
+        // Price range filter
+        if ($request->has('min_price') && $request->min_price) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        
+        if ($request->has('max_price') && $request->max_price) {
+            $query->where('price', '<=', $request->max_price);
+        }
+        
+        // Sort options
+        $sortBy = $request->get('sort', 'created_at');
+        $sortOrder = $request->get('order', 'desc');
+        
+        switch ($sortBy) {
+            case 'price_low':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_high':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'name':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'created_at':
+            default:
+                $query->orderBy('created_at', $sortOrder);
+                break;
+        }
+        
+        $products = $query->paginate(12);
         
         // Add price range calculation for each product
         $products->getCollection()->transform(function ($product) {
@@ -34,7 +84,21 @@ class ProductController extends Controller
             return $product;
         });
         
-        return view('products.index', compact('products'));
+        // Get available categories and brands for filters
+        $categories = \App\Models\Category::has('products')->get();
+        $brands = \App\Models\Brand::has('products')->get();
+        
+        // Handle AJAX requests
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('products._list', compact('products'))->render(),
+                'has_more' => $products->hasMorePages(),
+                'current_page' => $products->currentPage(),
+                'total' => $products->total()
+            ]);
+        }
+        
+        return view('products.index', compact('products', 'categories', 'brands'));
     }
 
     public function show($slug)
