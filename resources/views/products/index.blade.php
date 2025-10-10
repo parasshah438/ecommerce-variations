@@ -17,6 +17,188 @@
 
 @section('content')
 <style>
+/* Advanced Filters Sidebar Positioning and Overlap Fix */
+.filters-sidebar {
+    position: relative;
+    z-index: 10;
+}
+
+.filters-sidebar .card {
+    position: sticky;
+    top: 20px;
+    z-index: 11;
+    border: none !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    max-height: calc(100vh - 40px);
+    background: white;
+}
+
+.filters-sidebar .card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 1.25rem 1.5rem !important;
+    position: sticky;
+    top: 0;
+    z-index: 12;
+}
+
+.filters-sidebar .card-body {
+    padding: 0 !important;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    position: relative;
+    z-index: 11;
+}
+
+/* Filter scroll containers */
+.filter-scroll-container {
+    max-height: 200px;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.filter-scroll-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.filter-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+.filter-scroll-container::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 2px;
+}
+
+.filter-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+/* Filter items styling */
+.filter-item {
+    transition: background-color 0.2s ease;
+    border-radius: 8px;
+    padding: 4px 8px;
+    margin: 2px 0;
+    position: relative;
+    z-index: 1;
+}
+
+.filter-item:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.form-check-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+    z-index: 1;
+}
+
+/* Quick filters styling */
+.quick-filter {
+    border-radius: 15px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    border: 1px solid #dee2e6;
+}
+
+.quick-filter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-filter.active {
+    background-color: #007bff !important;
+    border-color: #007bff !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Rating filter container */
+.rating-filter-container {
+    position: relative;
+    z-index: 1;
+}
+
+/* Border sections */
+.border-bottom {
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+/* Price range styling */
+.btn-outline-secondary {
+    border-color: #dee2e6;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+/* Prevent header overlap - Critical Fix */
+.main-header,
+.navbar,
+nav.navbar {
+    position: relative !important;
+    z-index: 1030 !important;
+}
+
+.breadcrumb-section,
+.bg-light {
+    position: relative !important;
+    z-index: 1020 !important;
+}
+
+/* Responsive sidebar adjustments */
+@media (max-width: 991.98px) {
+    .filters-sidebar .card {
+        position: relative !important;
+        top: 0 !important;
+        max-height: none !important;
+        margin-bottom: 2rem;
+    }
+    
+    .filters-sidebar .card-body {
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
+    
+    .filter-scroll-container {
+        max-height: 150px;
+    }
+}
+
+/* Sidebar scrollbar styling */
+.filters-sidebar .card-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filters-sidebar .card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.filters-sidebar .card-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.filters-sidebar .card-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
 /* Product Cards Styling to match Welcome page */
 .product-card {
     background: white;
@@ -109,8 +291,6 @@ body.filter-loading .container:not(.loading-container) {
         transform: translateY(0);
     }
 }
-}
-
 .product-card:hover {
     transform: translateY(-8px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
@@ -304,70 +484,172 @@ body.filter-loading .container:not(.loading-container) {
 <div class="container">
     <div class="row">
         <div class="col-lg-3 col-md-4 mb-4">
-            <!-- Filters Sidebar -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h5>
-                </div>
-                <div class="card-body">
-                    <form id="filterForm">
-                        <!-- Price Range -->
-                        <div class="mb-4">
-                            <h6 class="fw-semibold">Price Range</h6>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <input type="number" name="min_price" class="form-control form-control-sm" 
-                                           placeholder="Min" value="{{ request('min_price') }}">
-                                </div>
-                                <div class="col-6">
-                                    <input type="number" name="max_price" class="form-control form-control-sm" 
-                                           placeholder="Max" value="{{ request('max_price') }}">
-                                </div>
-                            </div>
+            <!-- Advanced Filters Sidebar -->
+            <div class="filters-sidebar">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>Filters</h5>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
+                                <i class="bi bi-x-circle me-1"></i>Clear All
+                            </button>
                         </div>
-                        
-                        <!-- Categories -->
-                        @if($categories->count() > 0)
-                        <div class="mb-4">
-                            <h6 class="fw-semibold">Categories</h6>
-                            @foreach($categories as $category)
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       name="categories[]" value="{{ $category->id }}" 
-                                       id="category_{{ $category->id }}"
-                                       {{ in_array($category->id, request('categories', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="category_{{ $category->id }}">
-                                    {{ $category->name }}
+                    </div>
+                    <div class="card-body p-0">
+                        <form id="filterForm">
+                            <!-- Search Filter -->
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-2">
+                                    <i class="bi bi-search me-2 text-primary"></i>Search Products
                                 </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchInput" name="q" placeholder="Search products..." value="{{ request('q') }}">
+                                    <button class="btn btn-outline-primary" type="button">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
                             </div>
-                            @endforeach
-                        </div>
-                        @endif
-                        
-                        <!-- Brands -->
-                        @if($brands->count() > 0)
-                        <div class="mb-4">
-                            <h6 class="fw-semibold">Brands</h6>
-                            @foreach($brands as $brand)
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       name="brands[]" value="{{ $brand->id }}" 
-                                       id="brand_{{ $brand->id }}"
-                                       {{ in_array($brand->id, request('brands', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="brand_{{ $brand->id }}">
-                                    {{ $brand->name }}
+
+                            <!-- Categories Filter -->
+                            @if($categories->count() > 0)
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Categories
                                 </label>
+                                <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
+                                    @foreach($categories as $category)
+                                    <div class="form-check mb-2 filter-item">
+                                        <input class="form-check-input category-filter" type="checkbox" 
+                                               name="categories[]" value="{{ $category->id }}" 
+                                               id="category{{ $category->id }}" data-filter-type="category"
+                                               {{ in_array($category->id, request('categories', [])) ? 'checked' : '' }}>
+                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="category{{ $category->id }}">
+                                            <span>{{ $category->name }}</span>
+                                            <span class="badge bg-light text-dark">{{ $category->products_count ?? 0 }}</span>
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
                             </div>
-                            @endforeach
-                        </div>
-                        @endif
-                        
-                        <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="clearFiltersBtn">Clear All</button>
-                    </form>
+                            @endif
+
+                            <!-- Brands Filter -->
+                            @if($brands->count() > 0)
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-award me-2 text-primary"></i>Brands
+                                </label>
+                                <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
+                                    @foreach($brands as $brand)
+                                    <div class="form-check mb-2 filter-item">
+                                        <input class="form-check-input brand-filter" type="checkbox" 
+                                               name="brands[]" value="{{ $brand->id }}" 
+                                               id="brand{{ $brand->id }}" data-filter-type="brand"
+                                               {{ in_array($brand->id, request('brands', [])) ? 'checked' : '' }}>
+                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="brand{{ $brand->id }}">
+                                            <span>{{ $brand->name }}</span>
+                                            <span class="badge bg-light text-dark">{{ $brand->products_count ?? 0 }}</span>
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+
+                            <!-- Price Range Filter -->
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-currency-rupee me-2 text-primary"></i>Price Range
+                                </label>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control form-control-sm price-filter" 
+                                               id="minPrice" name="min_price" placeholder="Min ₹" min="0" 
+                                               max="{{ $priceRange->max_price ?? 10000 }}" 
+                                               value="{{ request('min_price') }}" data-filter-type="price">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control form-control-sm price-filter" 
+                                               id="maxPrice" name="max_price" placeholder="Max ₹" min="0" 
+                                               max="{{ $priceRange->max_price ?? 10000 }}" 
+                                               value="{{ request('max_price') }}" data-filter-type="price">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">
+                                        Range: ₹{{ number_format($priceRange->min_price ?? 0) }} - ₹{{ number_format($priceRange->max_price ?? 10000) }}
+                                    </small>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="clearPriceRange()">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Rating Filter -->
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-star me-2 text-primary"></i>Customer Rating
+                                </label>
+                                <div class="rating-filter-container">
+                                    <!-- Clear rating option -->
+                                    <div class="form-check mb-2 filter-item">
+                                        <input class="form-check-input rating-filter" type="radio" name="rating" value="" id="ratingAll" data-filter-type="rating" checked>
+                                        <label class="form-check-label d-flex align-items-center" for="ratingAll">
+                                            <span class="me-2">All Ratings</span>
+                                        </label>
+                                    </div>
+                                    @for($i = 5; $i >= 1; $i--)
+                                    <div class="form-check mb-2 filter-item">
+                                        <input class="form-check-input rating-filter" type="radio" name="rating" value="{{ $i }}" id="rating{{ $i }}" data-filter-type="rating">
+                                        <label class="form-check-label d-flex align-items-center cursor-pointer" for="rating{{ $i }}">
+                                            <div class="text-warning me-2" style="min-width: 80px;">
+                                                @for($j = 1; $j <= 5; $j++)
+                                                    <i class="bi bi-star{{ $j <= $i ? '-fill' : '' }}"></i>
+                                                @endfor
+                                            </div>
+                                            <span>{{ $i }} Stars & Up</span>
+                                        </label>
+                                    </div>
+                                    @endfor
+                                </div>
+                            </div>
+
+                            <!-- Availability Filter -->
+                            <div class="border-bottom px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-box me-2 text-primary"></i>Availability
+                                </label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input stock-filter" type="checkbox" id="inStockOnly" name="in_stock" data-filter-type="stock" {{ request('in_stock') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="inStockOnly">
+                                        <i class="bi bi-check-circle text-success me-1"></i>
+                                        In Stock Only
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Quick Filters -->
+                            <div class="px-3 py-3">
+                                <label class="form-label fw-bold text-dark mb-3">
+                                    <i class="bi bi-lightning me-2 text-primary"></i>Quick Filters
+                                </label>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary btn-sm quick-filter" type="button" data-filter="discount">
+                                        <i class="bi bi-percent me-1"></i>On Sale
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm quick-filter" type="button" data-filter="new">
+                                        <i class="bi bi-star me-1"></i>New Arrivals
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm quick-filter" type="button" data-filter="trending">
+                                        <i class="bi bi-graph-up me-1"></i>Trending
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-        
+        </div>        
         <div class="col-lg-9 col-md-8">
             <!-- Sort and View Options -->
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -425,18 +707,18 @@ document.addEventListener('DOMContentLoaded', function(){
     const sortSelect = document.getElementById('sortSelect');
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
-    // Auto-apply filters on form change (checkboxes, price inputs)
+    // Auto-apply filters on form change (checkboxes, radio buttons, price inputs)
     if(filterForm) {
-        // Handle checkbox changes
+        // Handle all input changes
         filterForm.addEventListener('change', function(e) {
-            if(e.target.type === 'checkbox') {
+            if(e.target.type === 'checkbox' || e.target.type === 'radio') {
                 applyFilters();
             }
         });
 
         // Handle price input changes with debounce
         filterForm.addEventListener('input', function(e) {
-            if(e.target.type === 'number') {
+            if(e.target.type === 'number' || e.target.type === 'text') {
                 clearTimeout(filterTimeout);
                 filterTimeout = setTimeout(() => {
                     applyFilters();
@@ -450,18 +732,53 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
 
-    // Clear filters functionality
-    if(clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', function() {
+    // Clear all filters functionality
+    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
+    if(clearAllFiltersBtn) {
+        clearAllFiltersBtn.addEventListener('click', function() {
             // Clear all form inputs
             filterForm.reset();
-            searchBox.value = '';
+            
+            // Clear search input specifically
+            const searchInput = document.getElementById('searchInput');
+            if(searchInput) searchInput.value = '';
+            
+            // Clear sort select
             sortSelect.value = 'created_at';
+            
+            // Reset rating to "All Ratings"
+            const ratingAll = document.getElementById('ratingAll');
+            if(ratingAll) ratingAll.checked = true;
+            
+            // Clear quick filter buttons
+            document.querySelectorAll('.quick-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
             
             // Apply filters (which will be empty, showing all products)
             applyFilters();
         });
     }
+
+    // Quick filter buttons functionality
+    document.querySelectorAll('.quick-filter').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Toggle active state
+            this.classList.toggle('active');
+            
+            // Apply filters immediately
+            applyFilters();
+        });
+    });
+
+    // Price range clear functionality
+    window.clearPriceRange = function() {
+        document.getElementById('minPrice').value = '';
+        document.getElementById('maxPrice').value = '';
+        applyFilters();
+    };
 
     // Search functionality with debounce
     if(searchBox){
@@ -501,12 +818,24 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const formData = new FormData(filterForm);
         
-        // Add search and sort parameters
-        if(searchBox.value.trim()) {
-            formData.append('q', searchBox.value.trim());
+        // Add search parameter from search input
+        const searchInput = document.getElementById('searchInput');
+        if(searchInput && searchInput.value.trim()) {
+            formData.append('q', searchInput.value.trim());
         }
+        
+        // Add sort parameter
         if(sortSelect.value) {
             formData.append('sort', sortSelect.value);
+        }
+        
+        // Add quick filter parameters
+        const activeQuickFilters = [];
+        document.querySelectorAll('.quick-filter.active').forEach(btn => {
+            activeQuickFilters.push(btn.dataset.filter);
+        });
+        if(activeQuickFilters.length > 0) {
+            formData.append('quick_filters', activeQuickFilters.join(','));
         }
 
         const params = new URLSearchParams(formData);

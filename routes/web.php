@@ -227,6 +227,8 @@ Route::get('/debug/product-data/{slug}', function($slug) {
 Route::get('/products', [FrontProduct::class, 'index'])->name('products.index');
 Route::get('/products/filter', [FrontProduct::class, 'index'])->name('products.filter');
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
+Route::get('/new-arrivals', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals');
+Route::get('/new-arrivals/filter', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals.filter');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 
 // Authenticated routes - requiring single session
@@ -242,6 +244,7 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::get('/cart/sync-counts', [FrontCart::class, 'syncCounts'])->name('cart.sync_counts');
     Route::get('/cart', [FrontCart::class, 'index'])->name('cart.index');
 
+    ......................
     // Checkout routes
     Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
     Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');

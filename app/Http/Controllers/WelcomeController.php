@@ -76,8 +76,7 @@ class WelcomeController extends Controller
             }
             return false;
         }
-        
-        // For simple products, assume in stock (you can add stock management for simple products)
+    
         return true;
     }
 }
