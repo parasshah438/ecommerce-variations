@@ -244,15 +244,28 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::get('/cart/sync-counts', [FrontCart::class, 'syncCounts'])->name('cart.sync_counts');
     Route::get('/cart', [FrontCart::class, 'index'])->name('cart.index');
 
-    ......................
     // Checkout routes
     Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
     Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');
     Route::get('/checkout/success/{order}', [FrontCheckout::class, 'success'])->name('checkout.success');
+    
+    // Razorpay Payment routes
+    Route::post('/checkout/razorpay/create-order', [FrontCheckout::class, 'createRazorpayOrder'])->name('checkout.razorpay.create_order');
+    Route::post('/checkout/razorpay/verify-payment', [FrontCheckout::class, 'verifyRazorpayPayment'])->name('checkout.razorpay.verify_payment');
+    Route::post('/checkout/razorpay/payment-failed', [FrontCheckout::class, 'handleRazorpayFailure'])->name('checkout.razorpay.payment_failed');
 
-    // Order routes
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    // Order Management System
+    Route::get('/orders', [FrontCheckout::class, 'orderHistory'])->name('orders.index');
+    Route::get('/order/{order}', [FrontCheckout::class, 'orderDetails'])->name('order.details');
+    Route::get('/order/{order}/track', [FrontCheckout::class, 'trackOrder'])->name('order.track');
+    Route::post('/order/{order}/cancel', [FrontCheckout::class, 'cancelOrder'])->name('order.cancel');
+    Route::post('/order/{order}/reorder', [FrontCheckout::class, 'reorder'])->name('order.reorder');
+    
+    // Advanced Order Management Features
+    Route::post('/order/{order}/return', [FrontCheckout::class, 'returnOrder'])->name('order.return');
+    Route::post('/order/{order}/exchange', [FrontCheckout::class, 'exchangeOrder'])->name('order.exchange');
+    Route::get('/order/{order}/invoice', [FrontCheckout::class, 'downloadInvoice'])->name('order.invoice');
+    Route::get('/order/{order}/receipt', [FrontCheckout::class, 'downloadReceipt'])->name('order.receipt');
 
     // Wishlist routes
     Route::get('/wishlist', [FrontWishlist::class, 'index'])->name('wishlist.index');
@@ -340,6 +353,35 @@ Route::get('/debug-logs', function() {
     }
     return 'No log file found';
 })->name('debug.logs');
+
+// Test order relationships
+Route::get('/test-order-relationships', function() {
+    try {
+        $order = \App\Models\Order::with(['items.productVariation.product', 'address'])->first();
+        if ($order) {
+            $output = "<h3>Order Test: #{$order->id}</h3>";
+            $output .= "<p>Status: {$order->status}</p>";
+            $output .= "<p>Total: ₹" . number_format($order->total, 2) . "</p>";
+            $output .= "<h4>Items ({$order->items->count()}):</h4>";
+            
+            foreach ($order->items as $item) {
+                $output .= "<div style='border: 1px solid #ddd; padding: 10px; margin: 5px 0;'>";
+                $output .= "<strong>Product:</strong> " . $item->productVariation->product->name . "<br>";
+                $output .= "<strong>SKU:</strong> " . $item->productVariation->sku . "<br>";
+                $output .= "<strong>Quantity:</strong> " . $item->quantity . "<br>";
+                $output .= "<strong>Price:</strong> ₹" . number_format($item->price, 2) . "<br>";
+                $output .= "</div>";
+            }
+            
+            $output .= "<br><a href='/orders'>Go to Orders Page</a>";
+            return $output;
+        } else {
+            return "<h3>No orders found</h3><p>Please create an order first.</p>";
+        }
+    } catch (\Exception $e) {
+        return "<h3>Error:</h3><p>" . $e->getMessage() . "</p>";
+    }
+})->name('test.order.relationships');
 
 // Include email preview routes (only in development)
 if (app()->environment('local', 'testing')) {

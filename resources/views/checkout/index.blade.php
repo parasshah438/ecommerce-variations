@@ -198,6 +198,9 @@
             </div>
         </div>
 
+<!-- Razorpay SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
@@ -355,11 +358,11 @@
                                             <i class="bi bi-credit-card text-primary fs-4 me-3"></i>
                                             <div>
                                                 <h6 class="mb-1 fw-semibold">Online Payment</h6>
-                                                <p class="text-muted mb-0 small">UPI, Card, Net Banking</p>
+                                                <p class="text-muted mb-0 small">UPI, Card, Net Banking via Razorpay</p>
                                             </div>
                                         </div>
                                     </div>
-                                    <span class="badge bg-info">Coming Soon</span>
+                                    <span class="badge bg-success">Secure</span>
                                 </div>
                             </div>
 
@@ -573,6 +576,8 @@ function selectPaymentMethod(method) {
 
 // Form Validation
 document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Always prevent default form submission
+    
     const addressSelected = document.querySelector('input[name="address_id"]:checked');
     const newAddressVisible = !document.getElementById('newAddressForm').classList.contains('d-none');
     
@@ -580,7 +585,6 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
     console.log('Form submit - New address visible:', newAddressVisible);
     
     if (!addressSelected && !newAddressVisible) {
-        e.preventDefault();
         alert('Please select a delivery address or add a new one.');
         return false;
     }
@@ -599,7 +603,6 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
         });
         
         if (!allFilled) {
-            e.preventDefault();
             alert('Please fill all required address fields.');
             return false;
         }
@@ -610,7 +613,6 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
     console.log('Form submit - Payment method selected:', paymentMethodSelected);
     
     if (!paymentMethodSelected) {
-        e.preventDefault();
         alert('Please select a payment method.');
         return false;
     }
@@ -618,8 +620,180 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
     // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+    
+    // Handle payment based on selected method
+    if (paymentMethodSelected.value === 'cod') {
+        // COD - Submit form normally
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing COD Order...';
+        
+        // Create FormData and submit via fetch
+        const formData = new FormData(this);
+        
+        fetch('{{ route("checkout.place_order") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.text();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Something went wrong. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Place Order';
+        });
+    } else if (paymentMethodSelected.value === 'online') {
+        // Online payment via Razorpay
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing Payment...';
+        
+        // Create Razorpay order first
+        const formData = new FormData(this);
+        
+        fetch('{{ route("checkout.razorpay.create_order") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Initialize Razorpay payment
+                initiateRazorpayPayment(data);
+            } else {
+                throw new Error(data.error || 'Failed to create payment order');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to initialize payment: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Place Order';
+        });
+    }
 });
+
+// Function to initiate Razorpay payment
+function initiateRazorpayPayment(orderData) {
+    const options = {
+        key: orderData.razorpay_config.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: orderData.razorpay_config.name,
+        description: orderData.razorpay_config.description,
+        image: orderData.razorpay_config.image,
+        order_id: orderData.razorpay_order_id,
+        handler: function (response) {
+            // Payment successful - verify on server
+            verifyRazorpayPayment(response, orderData.order_id);
+        },
+        prefill: {
+            name: '{{ auth()->user()->name ?? "" }}',
+            email: '{{ auth()->user()->email ?? "" }}',
+            contact: '{{ auth()->user()->phone ?? "" }}'
+        },
+        theme: {
+            color: orderData.razorpay_config.theme.color
+        },
+        modal: {
+            ondismiss: function() {
+                // Payment cancelled
+                handlePaymentCancellation(orderData.order_id);
+            }
+        }
+    };
+    
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response) {
+        // Payment failed
+        handlePaymentFailure(response.error, orderData.order_id);
+    });
+    
+    rzp.open();
+}
+
+// Function to verify Razorpay payment
+function verifyRazorpayPayment(paymentResponse, orderId) {
+    const formData = new FormData();
+    formData.append('razorpay_order_id', paymentResponse.razorpay_order_id);
+    formData.append('razorpay_payment_id', paymentResponse.razorpay_payment_id);
+    formData.append('razorpay_signature', paymentResponse.razorpay_signature);
+    formData.append('order_id', orderId);
+    
+    fetch('{{ route("checkout.razorpay.verify_payment") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Redirect to success page
+            window.location.href = data.redirect_url;
+        } else {
+            throw new Error(data.error || 'Payment verification failed');
+        }
+    })
+    .catch(error => {
+        console.error('Payment verification error:', error);
+        alert('Payment verification failed: ' + error.message);
+        // Optionally redirect to checkout page
+        window.location.reload();
+    });
+}
+
+// Function to handle payment failure
+function handlePaymentFailure(error, orderId) {
+    console.error('Payment failed:', error);
+    
+    const formData = new FormData();
+    formData.append('order_id', orderId);
+    formData.append('error', JSON.stringify(error));
+    
+    fetch('{{ route("checkout.razorpay.payment_failed") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message || 'Payment failed. Please try again.');
+        if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error handling payment failure:', error);
+        alert('Payment failed. Please try again.');
+        window.location.reload();
+    });
+}
+
+// Function to handle payment cancellation
+function handlePaymentCancellation(orderId) {
+    console.log('Payment cancelled by user');
+    
+    // Re-enable the submit button
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Place Order';
+    
+    alert('Payment cancelled. You can try again.');
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {

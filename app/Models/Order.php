@@ -15,7 +15,12 @@ class Order extends Model
         'status', 
         'total', 
         'payment_method',
+        'payment_gateway',
         'payment_status',
+        'razorpay_order_id',
+        'razorpay_payment_id',
+        'razorpay_signature',
+        'payment_data',
         'notes',
         'cancelled_at',
         'returned_at',
@@ -24,6 +29,7 @@ class Order extends Model
 
     protected $casts = [
         'total' => 'decimal:2',
+        'payment_data' => 'array',
         'cancelled_at' => 'datetime',
         'returned_at' => 'datetime',
         'refunded_at' => 'datetime',
@@ -58,6 +64,21 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function latestPayment()
+    {
+        return $this->hasOne(Payment::class)->latest();
+    }
+
+    public function successfulPayments()
+    {
+        return $this->hasMany(Payment::class)->where('payment_status', Payment::PAYMENT_STATUS_PAID);
     }
 
     /**

@@ -107,12 +107,17 @@ class ProductVariation extends Model
     }
 
     /**
-     * Get the attribute values for this variation as a relationship.
+     * Get the attribute values for this variation.
      */
-    public function attribute_values()
+    public function attributeValues()
     {
-        return $this->belongsToMany(AttributeValue::class, null, 'id', 'id')
-            ->whereIn('attribute_values.id', $this->attribute_value_ids ?? []);
+        if (!$this->attribute_value_ids) {
+            return collect();
+        }
+        
+        return AttributeValue::whereIn('id', $this->attribute_value_ids)
+            ->with('attribute')
+            ->get();
     }
 
     /**
@@ -188,13 +193,5 @@ class ProductVariation extends Model
     public function scopePriceBetween($query, $min, $max)
     {
         return $query->whereBetween('price', [$min, $max]);
-    }
-
-    /**
-     * Get the attribute values for this variation.
-     */
-    public function attributeValues()
-    {
-        return AttributeValue::whereIn('id', $this->attribute_value_ids ?? [])->get();
     }
 }

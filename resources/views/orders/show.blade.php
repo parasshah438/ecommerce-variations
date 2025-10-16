@@ -2,18 +2,14 @@
 
 @section('content')
 <div class="container">
-  <h2>Order #{{ $order->id ?? '' }}</h2>
-  @if(isset($order))
-    <p>Status: {{ ucfirst($order->status) }}</p>
-    <p>Total: ₹{{ number_format($order->total,2) }}</p>
-    <h4>Items</h4>
-    <ul class="list-group">
-      @foreach($order->items as $it)
-        <li class="list-group-item">SKU: {{ $it->variation->sku ?? $it->product_variation_id }} — Qty: {{ $it->quantity }} — ₹{{ number_format($it->price,2) }}</li>
-      @endforeach
-    </ul>
-  @else
-    <p>Order not found.</p>
-  @endif
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        Redirecting to the new order details page...
+    </div>
 </div>
+
+<script>
+    // Redirect to new order details route
+    window.location.href = '{{ route("order.details", request()->route("order")) }}';
+</script>
 @endsection
