@@ -44,13 +44,26 @@
                                         <div class="col-4">
                                             @php
                                                 $product = $item->productVariation->product;
-                                                $image = $product->images->first();
+                                                // Try variation images first, then fallback to product images
+                                                $image = $item->productVariation->images->first() ?? $product->images->first();
                                             @endphp
                                             @if($image)
-                                                <img src="{{ Storage::url($image->path) }}" 
+                                                <!-- Debug: {{ $image->path }} -->
+                                                @php
+                                                    // Check if it's an external URL or local path
+                                                    $imageSrc = str_starts_with($image->path, 'http') 
+                                                        ? $image->path 
+                                                        : asset('storage/' . $image->path);
+                                                @endphp
+                                                <img src="{{ $imageSrc }}" 
                                                      class="img-fluid rounded" 
                                                      alt="{{ $product->name }}"
-                                                     style="aspect-ratio: 1; object-fit: cover;">
+                                                     style="aspect-ratio: 1; object-fit: cover;"
+                                                     onerror="console.log('Save-for-later image failed:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div class="bg-secondary rounded align-items-center justify-content-center" style="aspect-ratio: 1; display: none;">
+                                                    <i class="bi bi-image text-white"></i>
+                                                    <small class="text-white">No image</small>
+                                                </div>
                                             @else
                                                 <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="aspect-ratio: 1;">
                                                     <i class="bi bi-image text-white"></i>
@@ -121,13 +134,27 @@
                                     <div class="col-lg-2 col-md-3 col-4">
                                         @php
                                             $product = $item->productVariation->product;
-                                            $image = $product->images->first();
+                                            // Try variation images first, then fallback to product images
+                                            $image = $item->productVariation->images->first() ?? $product->images->first();
                                         @endphp
                                         @if($image)
-                                            <img src="{{ Storage::url($image->path) }}" 
+                                            <!-- Debug: {{ $image->path }} -->
+                                            @php
+                                                // Check if it's an external URL or local path
+                                                $imageSrc = str_starts_with($image->path, 'http') 
+                                                    ? $image->path 
+                                                    : asset('storage/' . $image->path);
+                                            @endphp
+                                            <!-- Debug full URL: {{ $imageSrc }} -->
+                                            <img src="{{ $imageSrc }}" 
                                                  class="img-fluid rounded shadow-sm" 
                                                  alt="{{ $product->name }}"
-                                                 style="aspect-ratio: 1; object-fit: cover;">
+                                                 style="aspect-ratio: 1; object-fit: cover;"
+                                                 onerror="console.log('Image failed to load:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <div class="bg-light rounded align-items-center justify-content-center shadow-sm" style="aspect-ratio: 1; display: none;">
+                                                <i class="bi bi-image text-muted fs-1"></i>
+                                                <small class="text-muted">Image not found</small>
+                                            </div>
                                         @else
                                             <div class="bg-light rounded d-flex align-items-center justify-content-center shadow-sm" style="aspect-ratio: 1;">
                                                 <i class="bi bi-image text-muted fs-1"></i>
