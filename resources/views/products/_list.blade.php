@@ -2,11 +2,25 @@
     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
         <div class="card product-card h-100 shadow-sm border-0">
             <div class="product-image-container position-relative">
-                @php $img = optional($product->images->first())->path ?? null; @endphp
+                @php 
+                    // Try to get image from first variation, then fallback to product images
+                    $firstVariation = $product->variations->first();
+                    $variationImage = $firstVariation ? $firstVariation->images->first() : null;
+                    $productImage = $product->images->first();
+                    $selectedImage = $variationImage ?? $productImage;
+                    
+                    // Handle both external URLs and local paths
+                    $img = null;
+                    if ($selectedImage) {
+                        $img = str_starts_with($selectedImage->path, 'http') 
+                            ? $selectedImage->path 
+                            : asset('storage/' . $selectedImage->path);
+                    }
+                @endphp
                 @if($img)
                     <img src="{{$img}}" 
                          class="card-img-top product-image" 
-                         style="height:250px;object-fit:cover;"
+                         style="height:250px;object-fit:fill;background-color:#f8f9fa;"
                          alt="{{ $product->name }}"
                          loading="lazy">
                 @else

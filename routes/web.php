@@ -231,6 +231,14 @@ Route::get('/new-arrivals', [FrontProduct::class, 'newArrivals'])->name('product
 Route::get('/new-arrivals/filter', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals.filter');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 
+// Review routes
+use App\Http\Controllers\Frontend\ReviewController;
+Route::get('/products/{product}/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+Route::get('/products/{product}/reviews/statistics', [ReviewController::class, 'statistics'])->name('reviews.statistics');
+Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->name('reviews.store')->middleware('auth');
+Route::put('/products/{product}/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update')->middleware('auth');
+Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy')->middleware('auth');
+
 // Authenticated routes - requiring single session
 Route::middleware(['auth', 'single.session'])->group(function () {
     // Cart routes
@@ -279,6 +287,7 @@ Route::middleware(['auth', 'single.session'])->group(function () {
 
     // Coupon routes
     Route::post('/coupon/apply', [FrontCoupon::class, 'apply'])->name('coupon.apply');
+    Route::post('/coupon/remove', [FrontCoupon::class, 'remove'])->name('coupon.remove');
 });
 
 // Public search route (doesn't require authentication)

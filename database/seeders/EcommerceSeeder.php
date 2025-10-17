@@ -432,18 +432,90 @@ class EcommerceSeeder extends Seeder
     private function createCoupons(): void
     {
         $coupons = [
-            ['code' => 'WELCOME50', 'discount' => 50, 'type' => 'fixed', 'valid_from' => now(), 'valid_until' => now()->addMonths(3)],
-            ['code' => 'SUMMER25', 'discount' => 25, 'type' => 'percentage', 'valid_from' => now(), 'valid_until' => now()->addMonths(2)],
-            ['code' => 'NEWUSER100', 'discount' => 100, 'type' => 'fixed', 'valid_from' => now(), 'valid_until' => now()->addMonth()],
-            ['code' => 'SAVE15', 'discount' => 15, 'type' => 'percentage', 'valid_from' => now(), 'valid_until' => now()->addMonths(6)],
-            ['code' => 'FLASH200', 'discount' => 200, 'type' => 'fixed', 'valid_from' => now(), 'valid_until' => now()->addWeeks(2)],
-            ['code' => 'WEEKEND10', 'discount' => 10, 'type' => 'percentage', 'valid_from' => now(), 'valid_until' => now()->addMonths(1)],
-            ['code' => 'MEGA30', 'discount' => 30, 'type' => 'percentage', 'valid_from' => now(), 'valid_until' => now()->addDays(30)],
-            ['code' => 'CLEARANCE500', 'discount' => 500, 'type' => 'fixed', 'valid_from' => now(), 'valid_until' => now()->addWeeks(3)],
+            [
+                'code' => 'WELCOME50', 
+                'discount' => 50, 
+                'type' => 'fixed', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addMonths(3),
+                'minimum_cart_value' => 200,
+                'maximum_discount_limit' => null,
+                'usage_limit' => 100
+            ],
+            [
+                'code' => 'SUMMER25', 
+                'discount' => 25, 
+                'type' => 'percentage', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addMonths(2),
+                'minimum_cart_value' => 300,
+                'maximum_discount_limit' => 150,
+                'usage_limit' => 50
+            ],
+            [
+                'code' => 'NEWUSER100', 
+                'discount' => 100, 
+                'type' => 'fixed', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addMonth(),
+                'minimum_cart_value' => 500,
+                'maximum_discount_limit' => null,
+                'usage_limit' => 200
+            ],
+            [
+                'code' => 'SAVE15', 
+                'discount' => 15, 
+                'type' => 'percentage', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addMonths(6),
+                'minimum_cart_value' => 100,
+                'maximum_discount_limit' => 100,
+                'usage_limit' => null
+            ],
+            [
+                'code' => 'FLASH200', 
+                'discount' => 200, 
+                'type' => 'fixed', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addWeeks(2),
+                'minimum_cart_value' => 800,
+                'maximum_discount_limit' => null,
+                'usage_limit' => 25
+            ],
+            [
+                'code' => 'WEEKEND10', 
+                'discount' => 10, 
+                'type' => 'percentage', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addMonths(1),
+                'minimum_cart_value' => 200,
+                'maximum_discount_limit' => 50,
+                'usage_limit' => null
+            ],
+            [
+                'code' => 'MEGA30', 
+                'discount' => 30, 
+                'type' => 'percentage', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addDays(30),
+                'minimum_cart_value' => 1000,
+                'maximum_discount_limit' => 300,
+                'usage_limit' => 10
+            ],
+            [
+                'code' => 'CLEARANCE500', 
+                'discount' => 500, 
+                'type' => 'fixed', 
+                'valid_from' => now(), 
+                'valid_until' => now()->addWeeks(3),
+                'minimum_cart_value' => 600, // Requires minimum ₹600 cart
+                'maximum_discount_limit' => 450, // Maximum ₹450 discount
+                'usage_limit' => 5
+            ],
         ];
 
         foreach ($coupons as $coupon) {
-            Coupon::create($coupon);
+            Coupon::updateOrCreate(['code' => $coupon['code']], $coupon);
         }
     }
 }

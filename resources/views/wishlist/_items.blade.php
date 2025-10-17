@@ -25,10 +25,19 @@
             <!-- Product Image -->
             <div class="position-relative">
                 @php
-                    $image = $item->product->images->first();
+                    // Try to get image from first variation, then fallback to product images
+                    $firstVariation = $item->product->variations->first();
+                    $variationImage = $firstVariation ? $firstVariation->images->first() : null;
+                    $productImage = $item->product->images->first();
+                    $image = $variationImage ?? $productImage;
                 @endphp
                 @if($image)
-                    <img src="{{ Storage::url($image->path) }}" 
+                    @php
+                        $imageSrc = str_starts_with($image->path, 'http') 
+                            ? $image->path 
+                            : Storage::url($image->path);
+                    @endphp
+                    <img src="{{ $imageSrc }}" 
                          class="card-img-top" 
                          alt="{{ $item->product->name }}"
                          style="height: 200px; object-fit: cover;">

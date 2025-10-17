@@ -228,8 +228,14 @@
         <div class="totals">
             <div class="total-line">
                 <span>Subtotal:</span>
-                <span>₹{{ number_format($order->total, 2) }}</span>
+                <span>{{ $order->formatted_subtotal }}</span>
             </div>
+            @if($order->hasCoupon())
+            <div class="total-line" style="color: #28a745;">
+                <span>Coupon Discount ({{ $order->coupon_code }}):</span>
+                <span>-{{ $order->formatted_coupon_discount }}</span>
+            </div>
+            @endif
             <div class="total-line">
                 <span>Shipping:</span>
                 <span>Free</span>

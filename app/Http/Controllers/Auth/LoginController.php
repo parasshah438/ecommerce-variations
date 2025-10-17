@@ -599,16 +599,42 @@ class LoginController extends Controller
      */
     protected function sendFailedLoginResponse(Request $request)
     {
-        $remainingAttempts = $this->getRemainingAttempts($request);
+        $loginField = $request->input('login_field');
         
+        // Check if user exists in database
+        $userExists = $this->checkUserExists($loginField);
+        
+        // Base message for invalid credentials
         $message = trans('auth.failed');
         
-        if ($remainingAttempts > 0) {
-            $message .= sprintf(' You have %d attempt(s) remaining.', $remainingAttempts);
+        // Only show remaining attempts if user exists in database
+        // This prevents information disclosure about non-existent accounts
+        if ($userExists) {
+            $remainingAttempts = $this->getRemainingAttempts($request);
+            
+            if ($remainingAttempts > 0) {
+                $message .= sprintf(' You have %d attempt(s) remaining.', $remainingAttempts);
+            }
         }
 
         throw ValidationException::withMessages([
             'login_field' => [$message],
         ]);
+    }
+
+    /**
+     * Check if user exists with the given login field.
+     *
+     * @param  string  $loginField
+     * @return bool
+     */
+    protected function checkUserExists($loginField)
+    {
+        if ($this->isEmail($loginField)) {
+            return User::where('email', $loginField)->exists();
+        } else {
+            $normalizedMobile = $this->normalizeMobileNumber($loginField);
+            return User::where('mobile_number', $normalizedMobile)->exists();
+        }
     }
 }

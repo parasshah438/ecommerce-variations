@@ -1,0 +1,62 @@
+/* Alternative CSS approach for better image display */
+
+/* Option 1: Flexible height container */
+.product-image-container {
+    position: relative;
+    background: #f8f9fa;
+    min-height: 200px;
+    max-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.product-image-flexible {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Option 2: Aspect ratio container (16:9 or 1:1) */
+.product-image-aspect {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Square images */
+    /* aspect-ratio: 4 / 3; */ /* 4:3 ratio */
+    /* aspect-ratio: 16 / 9; */ /* Wide ratio */
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.product-image-aspect img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Option 3: Responsive height with padding */
+.product-image-responsive {
+    position: relative;
+    width: 100%;
+    padding-top: 75%; /* 4:3 Aspect Ratio */
+    background: #f8f9fa;
+    overflow: hidden;
+}
+
+.product-image-responsive img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}

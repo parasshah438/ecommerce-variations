@@ -16,6 +16,13 @@ use App\Models\Payment;
 
 class CheckoutController extends Controller
 {
+    protected $cartService;
+
+    public function __construct(CartService $cartService)
+    {
+        $this->cartService = $cartService;
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -31,10 +38,13 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty. Add some items before checkout.');
         }
 
-        return view('checkout.index');
+        // Get cart summary with coupon information
+        $cartSummary = $this->cartService->cartSummary($user->cart);
+
+        return view('checkout.index', compact('cartSummary'));
     }
 
-    public function placeOrder(Request $request, CartService $cartService)
+    public function placeOrder(Request $request)
     {
         \Log::info('PlaceOrder method called', $request->all());
         
@@ -113,10 +123,8 @@ class CheckoutController extends Controller
                 \Log::info('New address created', ['address_id' => $address->id]);
             }
 
-            $total = 0;
-            foreach ($cart->items as $item) {
-                $total += $item->price * $item->quantity;
-            }
+            // Get cart summary with coupon information
+            $cartSummary = $this->cartService->cartSummary($cart);
 
             // Create order in PENDING status (stock not yet reserved)
             $order = Order::create([
@@ -124,7 +132,10 @@ class CheckoutController extends Controller
                 'address_id' => $address->id,
                 'status' => Order::STATUS_PENDING,
                 'payment_status' => Order::PAYMENT_PENDING,
-                'total' => $total,
+                'total' => $cartSummary['total'],
+                'coupon_code' => $cartSummary['coupon'] ? $cartSummary['coupon']['code'] : null,
+                'coupon_title' => $cartSummary['coupon'] ? $cartSummary['coupon']['code'] : null,
+                'coupon_discount' => $cartSummary['discount_amount'],
                 'payment_method' => 'cod',
             ]);
 
@@ -145,7 +156,7 @@ class CheckoutController extends Controller
                 'payment_id' => Payment::generatePaymentId(),
                 'gateway' => Payment::GATEWAY_COD,
                 'status' => Payment::STATUS_PENDING,
-                'amount' => $total,
+                'amount' => $cartSummary['total'],
                 'currency' => 'INR',
                 'payment_method' => 'cod',
                 'payment_status' => Payment::PAYMENT_STATUS_PENDING,
@@ -296,10 +307,8 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            $total = 0;
-            foreach ($cart->items as $item) {
-                $total += $item->price * $item->quantity;
-            }
+            // Get cart summary with coupon information
+            $cartSummary = $this->cartService->cartSummary($cart);
 
             // Create order with pending payment status
             $order = Order::create([
@@ -309,7 +318,10 @@ class CheckoutController extends Controller
                 'payment_status' => Order::PAYMENT_PENDING,
                 'payment_method' => 'online',
                 'payment_gateway' => 'razorpay',
-                'total' => $total,
+                'total' => $cartSummary['total'],
+                'coupon_code' => $cartSummary['coupon'] ? $cartSummary['coupon']['code'] : null,
+                'coupon_title' => $cartSummary['coupon'] ? $cartSummary['coupon']['code'] : null,
+                'coupon_discount' => $cartSummary['discount_amount'],
             ]);
 
             // Create order items
@@ -324,7 +336,7 @@ class CheckoutController extends Controller
 
             // Create Razorpay order
             $razorpayOrder = $razorpayService->createOrder(
-                $total,
+                $cartSummary['total'],
                 'INR',
                 'order_' . $order->id,
                 ['order_id' => $order->id]
@@ -343,7 +355,7 @@ class CheckoutController extends Controller
                 'gateway' => Payment::GATEWAY_RAZORPAY,
                 'gateway_order_id' => $razorpayOrder['id'],
                 'status' => Payment::STATUS_PENDING,
-                'amount' => $total,
+                'amount' => $cartSummary['total'],
                 'currency' => 'INR',
                 'payment_method' => 'online',
                 'payment_status' => Payment::PAYMENT_STATUS_PENDING,
@@ -372,7 +384,7 @@ class CheckoutController extends Controller
                 'success' => true,
                 'order_id' => $order->id,
                 'razorpay_order_id' => $razorpayOrder['id'],
-                'amount' => $total * 100, // Amount in paise
+                'amount' => $cartSummary['total'] * 100, // Amount in paise
                 'currency' => 'INR',
                 'razorpay_config' => $razorpayConfig
             ]);
@@ -745,7 +757,6 @@ class CheckoutController extends Controller
         }
 
         $order->load('items.productVariation.stock');
-        $cartService = app(CartService::class);
         $addedItems = 0;
         $unavailableItems = [];
 
@@ -756,8 +767,8 @@ class CheckoutController extends Controller
                     $requestedQty = $item->quantity;
                     
                     if ($availableQty > 0) {
-                        $qtyToAdd = min($requestedQty, $availableQty);
-                        $cartService->addToCart(Auth::id(), $item->product_variation_id, $qtyToAdd);
+                        $qtyToAdd = min($availableQty, $requestedQty);
+                        $this->cartService->addToCart(Auth::id(), $item->product_variation_id, $qtyToAdd);
                         $addedItems++;
                         
                         if ($qtyToAdd < $requestedQty) {

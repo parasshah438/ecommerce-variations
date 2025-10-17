@@ -83,6 +83,9 @@ class CartController extends Controller
         // Simple cart validation - check for out of stock items
         $cartIssues = $this->validateCartItems($cartItems);
         
+        // Set cart count in session for header badge
+        session(['cart_count' => $cartSummary['items']]);
+
         $response = response()->view('cart.index', compact(
             'cartItems', 
             'saveForLaterItems', 
@@ -151,6 +154,9 @@ class CartController extends Controller
 
         $this->cartService->addItem($cart, (int)$request->input('variation_id'), (int)$quantity);
         $summary = $this->cartService->cartSummary($cart);
+
+        // Update session cart count for header badge
+        session(['cart_count' => $summary['items']]);
 
         $response = response()->json([
             'success' => true, 
@@ -228,6 +234,9 @@ class CartController extends Controller
 
         $summary = $this->cartService->cartSummary($cart);
 
+        // Update session cart count for header badge
+        session(['cart_count' => $summary['items']]);
+
         return response()->json([
             'success' => true,
             'summary' => $summary,
@@ -284,6 +293,10 @@ class CartController extends Controller
             $cartItem->delete();
 
             $summary = $this->cartService->cartSummary($cart);
+            
+            // Update session cart count for header badge
+            session(['cart_count' => $summary['items']]);
+            
             DB::commit();
 
             // Prepare saved item data for frontend
@@ -298,7 +311,7 @@ class CartController extends Controller
                 'alt_text' => $savedItem->productVariation->product->name ?? '',
                 'quantity' => $savedItem->quantity
             ];
-
+            
             $response = response()->json([
                 'success' => true,
                 'summary' => $summary,
@@ -361,6 +374,10 @@ class CartController extends Controller
             $saveItem->delete();
 
             $summary = $this->cartService->cartSummary($cart);
+            
+            // Update session cart count for header badge
+            session(['cart_count' => $summary['items']]);
+            
             DB::commit();
 
             // Prepare cart item data for frontend
@@ -461,6 +478,10 @@ class CartController extends Controller
             $cartItem->delete();
 
             $summary = $this->cartService->cartSummary($cart);
+            
+            // Update session cart count for header badge
+            session(['cart_count' => $summary['items']]);
+            
             DB::commit();
 
             return response()->json([
@@ -540,7 +561,10 @@ class CartController extends Controller
         
         // Get actual counts from database
         $cart = $this->cartService->getOrCreateCart($user, $guestUuid);
-        $cartCount = $cart->items()->count();
+        
+        // Get cart summary to use total quantity (not unique items count)
+        $cartSummary = $this->cartService->cartSummary($cart);
+        $cartCount = $cartSummary['items']; // This is the total quantity
         
         $saveForLaterCount = SaveForLater::forUserOrGuest($user, $saveForLaterUuid)
             ->whereHas('productVariation')

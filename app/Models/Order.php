@@ -14,6 +14,9 @@ class Order extends Model
         'address_id', 
         'status', 
         'total', 
+        'coupon_code',
+        'coupon_title',
+        'coupon_discount',
         'payment_method',
         'payment_gateway',
         'payment_status',
@@ -29,6 +32,7 @@ class Order extends Model
 
     protected $casts = [
         'total' => 'decimal:2',
+        'coupon_discount' => 'decimal:2',
         'payment_data' => 'array',
         'cancelled_at' => 'datetime',
         'returned_at' => 'datetime',
@@ -144,5 +148,37 @@ class Order extends Model
     public function getFormattedPaymentStatusAttribute()
     {
         return self::getPaymentStatuses()[$this->payment_status] ?? ucfirst($this->payment_status);
+    }
+
+    /**
+     * Check if order has a coupon applied
+     */
+    public function hasCoupon(): bool
+    {
+        return !empty($this->coupon_code);
+    }
+
+    /**
+     * Get formatted coupon discount
+     */
+    public function getFormattedCouponDiscountAttribute(): string
+    {
+        return $this->coupon_discount > 0 ? '₹' . number_format($this->coupon_discount, 2) : '₹0.00';
+    }
+
+    /**
+     * Get subtotal (total before coupon discount)
+     */
+    public function getSubtotalAttribute(): float
+    {
+        return $this->total + $this->coupon_discount;
+    }
+
+    /**
+     * Get formatted subtotal
+     */
+    public function getFormattedSubtotalAttribute(): string
+    {
+        return '₹' . number_format($this->subtotal, 2);
     }
 }

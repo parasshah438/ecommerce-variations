@@ -186,6 +186,16 @@
                                 </tbody>
                                 <tfoot class="table-light">
                                     <tr>
+                                        <th colspan="4" class="text-end">Subtotal:</th>
+                                        <th>{{ $order->formatted_subtotal }}</th>
+                                    </tr>
+                                    @if($order->hasCoupon())
+                                    <tr class="text-success">
+                                        <th colspan="4" class="text-end">Coupon Discount ({{ $order->coupon_code }}):</th>
+                                        <th>-{{ $order->formatted_coupon_discount }}</th>
+                                    </tr>
+                                    @endif
+                                    <tr>
                                         <th colspan="4" class="text-end">Total:</th>
                                         <th class="text-primary">₹{{ number_format($order->total, 2) }}</th>
                                     </tr>

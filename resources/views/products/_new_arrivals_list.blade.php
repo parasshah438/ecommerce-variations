@@ -5,10 +5,22 @@
             <!-- Product Image -->
             <div class="position-relative overflow-hidden">
                 @php
-                    $mainImage = $product->images->first();
-                    $imageUrl = $mainImage ? \Illuminate\Support\Facades\Storage::url($mainImage->path) : 'https://via.placeholder.com/400x300?text=No+Image';
+                    // Try to get image from first variation, then fallback to product images
+                    $firstVariation = $product->variations->first();
+                    $variationImage = $firstVariation ? $firstVariation->images->first() : null;
+                    $productImage = $product->images->first();
+                    $selectedImage = $variationImage ?? $productImage;
+                    
+                    // Handle both external URLs and local paths
+                    if ($selectedImage) {
+                        $imageUrl = str_starts_with($selectedImage->path, 'http') 
+                            ? $selectedImage->path 
+                            : \Illuminate\Support\Facades\Storage::url($selectedImage->path);
+                    } else {
+                        $imageUrl = 'https://via.placeholder.com/400x300?text=No+Image';
+                    }
                 @endphp
-                <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-img-top product-image" style="height: 250px; object-fit: cover;">
+                <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-img-top product-image" style="height: 250px; object-fit: contain; background-color: #f8f9fa;">
                 
                 <!-- Badges -->
                 <div class="position-absolute top-0 start-0 p-2">

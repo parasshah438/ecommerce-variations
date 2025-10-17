@@ -13,7 +13,9 @@ class Cart extends Model
 
     protected $fillable = [
         'user_id', 
-        'uuid'
+        'uuid',
+        'coupon_id',
+        'discount_amount'
     ];
 
     /**
@@ -30,6 +32,14 @@ class Cart extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the coupon applied to the cart.
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /**
@@ -91,11 +101,56 @@ class Cart extends Model
     }
 
     /**
-     * Calculate total amount including shipping and tax.
+     * Get discount amount from applied coupon.
+     */
+    public function getDiscountAmountAttribute(): float
+    {
+        return $this->attributes['discount_amount'] ?? 0;
+    }
+
+    /**
+     * Calculate the actual discount based on coupon type.
+     */
+    public function calculateDiscount(): float
+    {
+        if (!$this->coupon) {
+            return 0;
+        }
+
+        if ($this->coupon->type === 'percentage') {
+            return ($this->subtotal * $this->coupon->discount) / 100;
+        }
+
+        // Fixed discount
+        return min($this->coupon->discount, $this->subtotal);
+    }
+
+    /**
+     * Apply coupon to cart.
+     */
+    public function applyCoupon(Coupon $coupon): void
+    {
+        $this->coupon_id = $coupon->id;
+        $this->discount_amount = $this->calculateDiscount();
+        $this->save();
+    }
+
+    /**
+     * Remove coupon from cart.
+     */
+    public function removeCoupon(): void
+    {
+        $this->coupon_id = null;
+        $this->discount_amount = 0;
+        $this->save();
+    }
+
+    /**
+     * Calculate total amount including shipping and tax, minus discount.
      */
     public function getTotalAmountAttribute(): float
     {
-        return $this->subtotal + $this->shipping_cost + $this->tax_amount;
+        return $this->subtotal + $this->shipping_cost + $this->tax_amount - $this->discount_amount;
     }
 
     /**

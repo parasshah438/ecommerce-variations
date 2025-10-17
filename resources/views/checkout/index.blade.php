@@ -431,21 +431,27 @@
                             <!-- Order Total -->
                             <div class="border-top pt-3 mt-3">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Subtotal ({{ $cart->items->sum('quantity') }} items)</span>
-                                    <span>₹{{ number_format($total, 2) }}</span>
+                                    <span>Subtotal ({{ $cartSummary['items'] ?? 0 }} items)</span>
+                                    <span>₹{{ number_format($cartSummary['subtotal'] ?? 0, 2) }}</span>
                                 </div>
+                                @if(isset($cartSummary['coupon']) && $cartSummary['coupon'])
+                                <div class="d-flex justify-content-between mb-2 text-success">
+                                    <span>Coupon Discount ({{ $cartSummary['coupon']['code'] }})</span>
+                                    <span>-₹{{ number_format($cartSummary['discount_amount'] ?? 0, 2) }}</span>
+                                </div>
+                                @endif
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Shipping</span>
-                                    <span class="text-success">Free</span>
+                                    <span class="text-success">{{ ($cartSummary['shipping_cost'] ?? 0) > 0 ? '₹' . number_format($cartSummary['shipping_cost'], 2) : 'Free' }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Tax</span>
-                                    <span>₹0.00</span>
+                                    <span>Tax (GST)</span>
+                                    <span>₹{{ number_format($cartSummary['tax_amount'] ?? 0, 2) }}</span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between mb-3">
                                     <h6 class="fw-bold">Total</h6>
-                                    <h6 class="fw-bold text-primary">₹{{ number_format($total, 2) }}</h6>
+                                    <h6 class="fw-bold text-primary">₹{{ number_format($cartSummary['total'] ?? 0, 2) }}</h6>
                                 </div>
 
                                 <!-- Place Order Button -->

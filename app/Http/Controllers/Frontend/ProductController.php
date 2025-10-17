@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['images', 'variations', 'category', 'brand']);
+        $query = Product::with(['images', 'variations.images', 'category', 'brand']);
         
         // Search filter
         if ($request->has('q') && $request->q) {
@@ -210,7 +210,7 @@ class ProductController extends Controller
 
     public function newArrivals(Request $request)
     {
-        $query = Product::with(['images', 'variations', 'category', 'brand'])
+        $query = Product::with(['images', 'variations.images', 'category', 'brand'])
                        ->where('created_at', '>=', now()->subDays(30)) // Products added in last 30 days
                        ->select('*') // Ensure all columns are selected
                        ->orderBy('created_at', 'desc');
@@ -346,7 +346,7 @@ class ProductController extends Controller
 
     public function loadMore(Request $request)
     {
-        $products = Product::with(['images', 'variations'])->paginate(12);
+        $products = Product::with(['images', 'variations.images'])->paginate(12);
         
         // Add price range calculation for each product
         $products->getCollection()->transform(function ($product) {

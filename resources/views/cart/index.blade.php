@@ -317,6 +317,23 @@
                             <span>Tax (GST):</span>
                             <span id="cart-tax">₹{{ number_format($cartSummary['tax_amount'] ?? 0, 2) }}</span>
                         </div>
+                        
+                        <!-- Applied Coupon Discount -->
+                        @if(isset($cartSummary['coupon']) && $cartSummary['coupon'])
+                        <div class="d-flex justify-content-between mb-3 text-success" id="coupon-discount-row">
+                            <span>
+                                <i class="bi bi-tag me-1"></i>
+                                Coupon Discount ({{ $cartSummary['coupon']['code'] }}):
+                                <button class="btn btn-sm btn-outline-danger ms-2" id="remove-coupon-btn" title="Remove coupon">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </span>
+                            <span class="fw-bold" id="cart-discount">
+                                -₹{{ number_format($cartSummary['discount_amount'] ?? 0, 2) }}
+                            </span>
+                        </div>
+                        @endif
+                        
                         <hr>
                         <div class="d-flex justify-content-between mb-3 fs-5">
                             <strong>Total:</strong>
@@ -596,6 +613,18 @@ $(document).ready(function() {
         const couponCode = $('#coupon-code').val();
         if (couponCode) {
             applyCoupon(couponCode);
+        }
+    });
+    
+    // Remove coupon functionality (using event delegation)
+    $(document).on('click', '#remove-coupon-btn', function() {
+        removeCoupon();
+    });
+    
+    // Allow Enter key to apply coupon
+    $('#coupon-code').keypress(function(e) {
+        if (e.which == 13) {
+            $('#apply-coupon').click();
         }
     });
     
@@ -890,6 +919,14 @@ $(document).ready(function() {
     }
     
     function applyCoupon(code) {
+        if (!code.trim()) {
+            toastr.error('Please enter a coupon code');
+            return;
+        }
+
+        const $applyButton = $('#apply-coupon');
+        $applyButton.prop('disabled', true).text('Applying...');
+
         $.ajax({
             url: '{{ route("coupon.apply") }}',
             method: 'POST',
@@ -899,16 +936,93 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    toastr.success('Coupon applied successfully!');
-                    // Update pricing display
+                    toastr.success(response.message || 'Coupon applied successfully!');
+                    
+                    // Update the cart summary with new totals
+                    updateCartSummary(response.summary);
+                    
+                    // Show coupon discount row
+                    showAppliedCoupon(response.coupon);
+                    
+                    // Hide coupon input section
+                    $('#coupon-section').addClass('d-none');
+                    $('#coupon-code').val('');
+                    
+                    // Change apply coupon button to show it's applied
+                    $('#apply-coupon-btn').addClass('d-none');
+                    
                 } else {
-                    toastr.error(response.message);
+                    toastr.error(response.message || 'Invalid coupon code');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                toastr.error(response?.message || 'Failed to apply coupon');
+            },
+            complete: function() {
+                $applyButton.prop('disabled', false).text('Apply');
+            }
+        });
+    }
+
+    function removeCoupon() {
+        const $removeButton = $('#remove-coupon-btn');
+        $removeButton.prop('disabled', true);
+
+        $.ajax({
+            url: '{{ route("coupon.remove") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message || 'Coupon removed successfully');
+                    
+                    // Update cart summary
+                    updateCartSummary(response.summary);
+                    
+                    // Hide coupon discount row
+                    $('#coupon-discount-row').remove();
+                    
+                    // Show apply coupon button again
+                    $('#apply-coupon-btn').removeClass('d-none');
+                    
+                } else {
+                    toastr.error(response.message || 'Failed to remove coupon');
                 }
             },
             error: function() {
-                toastr.error('Invalid coupon code');
+                toastr.error('Failed to remove coupon');
+            },
+            complete: function() {
+                $removeButton.prop('disabled', false);
             }
         });
+    }
+
+    function showAppliedCoupon(coupon) {
+        // Remove existing coupon row if any
+        $('#coupon-discount-row').remove();
+        
+        // Create new coupon discount row
+        const couponRow = `
+            <div class="d-flex justify-content-between mb-3 text-success" id="coupon-discount-row">
+                <span>
+                    <i class="bi bi-tag me-1"></i>
+                    Coupon Discount (${coupon.code}):
+                    <button class="btn btn-sm btn-outline-danger ms-2" id="remove-coupon-btn" title="Remove coupon">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </span>
+                <span class="fw-bold" id="cart-discount">
+                    -₹${coupon.discount_amount.toFixed(2)}
+                </span>
+            </div>
+        `;
+        
+        // Insert before the hr element
+        $('hr:last').before(couponRow);
     }
     
     function updateCartSummary(summary) {
@@ -920,11 +1034,16 @@ $(document).ready(function() {
         $('#cart-shipping').text(shipping === 0 ? 'Free' : '₹' + shipping.toFixed(2));
         
         // Update tax
-        const tax = summary.tax_amount || (summary.subtotal * 0.18);
+        const tax = summary.tax_amount || 0;
         $('#cart-tax').text('₹' + tax.toFixed(2));
         
+        // Update discount (if exists)
+        if (summary.discount_amount && summary.discount_amount > 0) {
+            $('#cart-discount').text('-₹' + parseFloat(summary.discount_amount).toFixed(2));
+        }
+        
         // Update total
-        const total = summary.total || (summary.subtotal + shipping + tax);
+        const total = summary.total || 0;
         $('#cart-total').text('₹' + total.toFixed(2));
         
         // Update cart badge in navigation

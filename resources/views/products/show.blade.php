@@ -484,7 +484,15 @@
                             <div class="reviews-section">
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h5>Customer Reviews</h5>
-                                    <button class="btn btn-primary btn-sm">Write a Review</button>
+                                    @auth
+                                        <button class="btn btn-primary btn-sm" id="writeReviewBtn" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                                            <i class="bi bi-pencil-square me-1"></i>Write a Review
+                                        </button>
+                                    @else
+                                        <button class="btn btn-outline-primary btn-sm" id="writeReviewGuestBtn">
+                                            <i class="bi bi-pencil-square me-1"></i>Login to Write Review
+                                        </button>
+                                    @endauth
                                 </div>
                                 
                                 @if(($product->reviews_count ?? 0) > 0)
@@ -518,17 +526,24 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Sample Reviews (you can replace this with real reviews from database) -->
+                                <!-- Reviews will be loaded dynamically via JavaScript -->
                                 <div class="reviews-list">
-                                    <p class="text-muted text-center py-4">
-                                        <i class="bi bi-clock-history me-2"></i>
-                                        Review system implementation coming soon. Currently showing {{ $product->reviews_count }} reviews.
-                                    </p>
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading reviews...</span>
+                                        </div>
+                                        <p class="text-muted mt-2">Loading reviews...</p>
+                                    </div>
                                 </div>
                                 @else
-                                <div class="review-placeholder text-center py-5 text-muted">
-                                    <i class="bi bi-chat-quote fs-1 mb-3"></i>
-                                    <p>No reviews yet. Be the first to review this product!</p>
+                                <!-- Reviews will be loaded dynamically via JavaScript -->
+                                <div class="reviews-list">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading reviews...</span>
+                                        </div>
+                                        <p class="text-muted mt-2">Loading reviews...</p>
+                                    </div>
                                 </div>
                                 @endif
                             </div>
@@ -585,6 +600,91 @@
                     <button class="btn btn-secondary btn-sm" onclick="copyToClipboard()"><i class="bi bi-link-45deg"></i></button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Write Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reviewModalLabel">
+                    <i class="bi bi-star me-2"></i>Write a Review for {{ $product->name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reviewForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center border-end">
+                            <img src="{{ $productImages[0]['path'] ?? 'https://via.placeholder.com/150' }}" 
+                                 alt="{{ $product->name }}" 
+                                 class="img-fluid rounded mb-2" 
+                                 style="max-height: 100px; object-fit: cover;">
+                            <small class="text-muted">{{ $product->name }}</small>
+                        </div>
+                        <div class="col-md-9">
+                            <!-- Rating Section -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Overall Rating <span class="text-danger">*</span></label>
+                                <div class="rating-input d-flex align-items-center gap-2">
+                                    <div class="star-rating">
+                                        <i class="bi bi-star star-input" data-rating="1"></i>
+                                        <i class="bi bi-star star-input" data-rating="2"></i>
+                                        <i class="bi bi-star star-input" data-rating="3"></i>
+                                        <i class="bi bi-star star-input" data-rating="4"></i>
+                                        <i class="bi bi-star star-input" data-rating="5"></i>
+                                    </div>
+                                    <span class="rating-text text-muted">Select a rating</span>
+                                </div>
+                                <input type="hidden" name="rating" id="reviewRating" required>
+                                <div class="invalid-feedback" id="rating-error"></div>
+                            </div>
+
+                            <!-- Review Title -->
+                            <div class="mb-3">
+                                <label for="reviewTitle" class="form-label fw-semibold">Review Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="reviewTitle" name="title" 
+                                       placeholder="Summarize your review in one line" maxlength="255" required>
+                                <div class="invalid-feedback" id="title-error"></div>
+                            </div>
+
+                            <!-- Review Comment -->
+                            <div class="mb-3">
+                                <label for="reviewComment" class="form-label fw-semibold">Your Review <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="reviewComment" name="comment" rows="4" 
+                                          placeholder="Share your experience with this product..." maxlength="1000" required></textarea>
+                                <div class="form-text">
+                                    <span id="commentCount">0</span>/1000 characters
+                                </div>
+                                <div class="invalid-feedback" id="comment-error"></div>
+                            </div>
+
+                            <!-- Guidelines -->
+                            <div class="alert alert-info">
+                                <small>
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <strong>Guidelines:</strong> Please keep your review honest, helpful, and relevant. 
+                                    Avoid profanity and personal information.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitReviewBtn">
+                        <span class="btn-text">
+                            <i class="bi bi-send me-2"></i>Submit Review
+                        </span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>Submitting...
+                        </span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -729,6 +829,79 @@
             border-color: #dee2e6;
         }
 
+        /* Review Rating System */
+        .star-rating {
+            display: inline-flex;
+            font-size: 1.5rem;
+            gap: 0.2rem;
+        }
+
+        .star-input {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .star-input.bi-star {
+            color: #ddd;
+        }
+
+        .star-input.bi-star-fill {
+            color: #ffc107;
+        }
+
+        .star-input:hover,
+        .star-input.hover {
+            color: #ffc107;
+        }
+
+        .star-input.selected {
+            color: #ffc107;
+        }
+
+        .rating-input .rating-text {
+            font-size: 0.9rem;
+            min-width: 120px;
+        }
+
+        /* Review Modal Styling */
+        #reviewModal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        #reviewModal .modal-body .col-md-3 img {
+            width: 100%;
+            max-width: 120px;
+            max-height: 120px;
+            object-fit: cover;
+        }
+
+        #reviewModal .modal-body .border-end {
+            border-color: #e9ecef !important;
+            padding-right: 1rem;
+        }
+
+        /* Review Cards */
+        .review-card {
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .review-card:hover {
+            border-left-color: #0d6efd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .review-rating {
+            color: #ffc107;
+        }
+
+        .verified-badge {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            font-size: 0.75rem;
+        }
+
         /* Animate.css integration */
         .animate__animated {
             animation-duration: 0.6s;
@@ -813,6 +986,84 @@
 @endpush
 
 @section('scripts')<script>
+// Global function for image modal (must be outside document.ready for onclick)
+function openImageModal(src) {
+    // Remove existing modal if any
+    $('#imageModal').remove();
+    
+    const modal = $(`
+        <div class="modal fade" id="imageModal" tabindex="-1">
+            <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-zoom-in me-2"></i>Product Image
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center p-2" style="background: #f8f9fa;">
+                        <div class="position-relative d-inline-block">
+                            <img src="${src}" 
+                                 class="img-fluid rounded shadow-sm zoom-image" 
+                                 style="max-height: 85vh; max-width: 100%; cursor: zoom-in; transition: transform 0.3s ease;"
+                                 id="zoomableImage">
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <button class="btn btn-sm btn-dark rounded-pill opacity-75" 
+                                        onclick="toggleZoom()" 
+                                        id="zoomToggle" 
+                                        title="Toggle Zoom">
+                                    <i class="bi bi-zoom-in"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Click the zoom button or double-click image to zoom
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(modal);
+    modal.modal('show');
+    
+    // Add zoom functionality
+    let isZoomed = false;
+    const img = modal.find('#zoomableImage');
+    const toggleBtn = modal.find('#zoomToggle');
+    
+    // Double click to zoom
+    img.on('dblclick', function() {
+        toggleZoom();
+    });
+    
+    // Global toggle zoom function
+    window.toggleZoom = function() {
+        isZoomed = !isZoomed;
+        if (isZoomed) {
+            img.css({
+                'transform': 'scale(2)',
+                'cursor': 'zoom-out'
+            });
+            toggleBtn.html('<i class="bi bi-zoom-out"></i>').attr('title', 'Zoom Out');
+        } else {
+            img.css({
+                'transform': 'scale(1)',
+                'cursor': 'zoom-in'
+            });
+            toggleBtn.html('<i class="bi bi-zoom-in"></i>').attr('title', 'Zoom In');
+        }
+    };
+    
+    modal.on('hidden.bs.modal', function() {
+        modal.remove();
+        // Clean up global function
+        delete window.toggleZoom;
+    });
+}
+
 $(document).ready(function() {
     // Product data from backend
     const product = @json($product);
@@ -1167,15 +1418,13 @@ $(document).ready(function() {
             });
             
             // Check if there are any in-stock variations with this option
-            const hasInStockVariations = testVariations.some(v => v.in_stock);
+            const hasInStockVariations = testVariations.some(v => v.in_stock && v.quantity > 0);
             
-            // If no attributes are selected yet, show all options that have stock
             if (Object.keys(selectedAttributes).length === 0) {
-                const optionVariations = variations.filter(v => {
-                    // Convert variation.values to integers for comparison
-                    const variationValues = v.values.map(val => parseInt(val));
-                    const includes = variationValues.includes(optId) && v.in_stock;
-                    return includes;
+                // Initial state - enable if any variations exist with this option
+                const optionVariations = variations.filter(variation => {
+                    const variationValues = variation.values.map(v => parseInt(v));
+                    return variationValues.includes(optId);
                 });
                 const isEnabled = optionVariations.length > 0;
                 
@@ -1562,30 +1811,6 @@ $(document).ready(function() {
         // Optional: Implement a cart preview modal or sidebar
     }
     
-    function openImageModal(src) {
-        const modal = $(`
-            <div class="modal fade" id="imageModal" tabindex="-1">
-                <div class="modal-dialog modal-xl modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Product Image</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center p-0">
-                            <img src="${src}" class="img-fluid" style="max-height: 80vh; width: auto;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `);
-        
-        $('body').append(modal);
-        modal.modal('show');
-        modal.on('hidden.bs.modal', function() {
-            modal.remove();
-        });
-    }
-    
     // Copy to clipboard function
     window.copyToClipboard = function() {
         navigator.clipboard.writeText(window.location.href).then(function() {
@@ -1594,5 +1819,435 @@ $(document).ready(function() {
             toastr.error('Failed to copy link');
         });
     };
+    
+    // =======================
+    // REVIEW FUNCTIONALITY
+    // =======================
+    
+    let selectedRating = 0;
+    const ratingLabels = {
+        1: 'Poor',
+        2: 'Fair', 
+        3: 'Good',
+        4: 'Very Good',
+        5: 'Excellent'
+    };
+    
+    // Initialize reviews when page loads
+    loadProductReviews();
+    loadReviewStatistics();
+    
+    // Rating selection in modal
+    $('.star-input').on('mouseenter', function() {
+        const rating = $(this).data('rating');
+        highlightStars(rating, 'hover');
+        $('.rating-text').text(ratingLabels[rating]).removeClass('text-muted').addClass('text-warning');
+    });
+    
+    $('.star-rating').on('mouseleave', function() {
+        highlightStars(selectedRating, 'selected');
+        if (selectedRating > 0) {
+            $('.rating-text').text(ratingLabels[selectedRating]).removeClass('text-muted').addClass('text-warning');
+        } else {
+            $('.rating-text').text('Select Rating').removeClass('text-warning').addClass('text-muted');
+        }
+    });
+    
+    $('.star-input').on('click', function() {
+        selectedRating = $(this).data('rating');
+        $('#reviewRating').val(selectedRating);
+        highlightStars(selectedRating, 'selected');
+        $('.rating-text').text(ratingLabels[selectedRating]).removeClass('text-muted').addClass('text-warning');
+    });
+    
+    function highlightStars(rating, className) {
+        $('.star-input').each(function() {
+            const starRating = $(this).data('rating');
+            $(this).removeClass('bi-star-fill bi-star hover selected');
+            
+            if (starRating <= rating) {
+                $(this).addClass('bi-star-fill ' + className);
+            } else {
+                $(this).addClass('bi-star');
+            }
+        });
+    }
+    
+    // Character counter for comment
+    $('#reviewComment').on('input', function() {
+        const length = $(this).val().length;
+        $('#commentCount').text(length);
+        
+        if (length > 900) {
+            $('#commentCount').addClass('text-warning');
+        } else if (length > 950) {
+            $('#commentCount').addClass('text-danger').removeClass('text-warning');
+        } else {
+            $('#commentCount').removeClass('text-warning text-danger');
+        }
+    });
+    
+    // Guest user trying to write review
+    $('#writeReviewGuestBtn').on('click', function() {
+        toastr.info('Please login to write a review', 'Login Required');
+        // Optionally redirect to login page
+        // window.location.href = '/login';
+    });
+
+
+    // Review form submission
+    $('#reviewForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Clear previous errors
+        $('.invalid-feedback').empty().hide();
+        $('.form-control').removeClass('is-invalid');
+        
+        const $submitBtn = $('#submitReviewBtn');
+        const $btnText = $submitBtn.find('.btn-text');
+        const $btnLoading = $submitBtn.find('.btn-loading');
+        
+        // Show loading state
+        $submitBtn.prop('disabled', true);
+        $btnText.addClass('d-none');
+        $btnLoading.removeClass('d-none');
+        
+        const formData = {
+            rating: $('#reviewRating').val(),
+            title: $('#reviewTitle').val().trim(),
+            comment: $('#reviewComment').val().trim(),
+            _token: $('input[name="_token"]').val()
+        };
+        
+        // Client-side validation
+        if (!formData.rating || formData.rating < 1 || formData.rating > 5) {
+            showError('rating-error', 'Please select a rating');
+            resetSubmitButton();
+            return;
+        }
+        
+        if (!formData.title || formData.title.length < 3) {
+            showError('title-error', 'Title must be at least 3 characters long');
+            $('#reviewTitle').addClass('is-invalid');
+            resetSubmitButton();
+            return;
+        }
+        
+        if (!formData.comment || formData.comment.length < 10) {
+            showError('comment-error', 'Review must be at least 10 characters long');
+            $('#reviewComment').addClass('is-invalid');
+            resetSubmitButton();
+            return;
+        }
+        
+        // Check if we're in edit mode
+        const isEditMode = $('#reviewForm').data('edit-mode');
+        const reviewId = $('#reviewForm').data('review-id');
+        
+        // Configure URL and method based on edit mode
+        let ajaxConfig = {
+            url: `/products/{{ $product->id }}/reviews`,
+            method: 'POST',
+            data: formData
+        };
+        
+        if (isEditMode) {
+            ajaxConfig.url = `/products/{{ $product->id }}/reviews/${reviewId}`;
+            ajaxConfig.method = 'PUT';
+        }
+        
+        // Submit review
+        $.ajax(ajaxConfig).done(function(response) {
+            if (response.success) {
+                const message = isEditMode ? 'Review Updated!' : 'Review Submitted!';
+                toastr.success(response.message, message);
+                $('#reviewModal').modal('hide');
+                resetReviewForm();
+                loadProductReviews(); // Reload reviews
+                loadReviewStatistics(); // Update statistics
+            } else {
+                toastr.error(response.message || 'Failed to submit review');
+            }
+            resetSubmitButton();
+        }).fail(function(xhr) {
+            resetSubmitButton();
+            
+            if (xhr.status === 401) {
+                toastr.error('Please login to submit a review');
+                return;
+            }
+            
+            if (xhr.status === 422) {
+                const errors = xhr.responseJSON?.errors || {};
+                if (errors.rating) showError('rating-error', errors.rating[0]);
+                if (errors.title) {
+                    showError('title-error', errors.title[0]);
+                    $('#reviewTitle').addClass('is-invalid');
+                }
+                if (errors.comment) {
+                    showError('comment-error', errors.comment[0]);
+                    $('#reviewComment').addClass('is-invalid');
+                }
+                
+                const message = xhr.responseJSON?.message || 'Please check your input and try again';
+                toastr.error(message);
+            } else {
+                toastr.error('Something went wrong. Please try again.');
+            }
+        
+        });
+    });
+    
+    
+    
+    function showError(elementId, message) {
+        $(`#${elementId}`).text(message).show();
+    }
+    
+    function resetSubmitButton() {
+        const $submitBtn = $('#submitReviewBtn');
+        $submitBtn.prop('disabled', false);
+        $submitBtn.find('.btn-text').removeClass('d-none');
+        $submitBtn.find('.btn-loading').addClass('d-none');
+    }
+    
+    function resetReviewForm() {
+        $('#reviewForm')[0].reset();
+        selectedRating = 0;
+        $('.star-input').removeClass('hover selected');
+        $('.rating-text').text('Select a rating').removeClass('text-warning').addClass('text-muted');
+        $('#commentCount').text('0').removeClass('text-warning text-danger');
+        $('.invalid-feedback').empty().hide();
+        $('.form-control').removeClass('is-invalid');
+        $('#reviewForm').removeData('edit-mode').removeData('review-id');
+        $('#submitReviewBtn .btn-text').text('Submit Review');
+        $('#reviewModalLabel').html('<i class="bi bi-star me-2"></i>Write a Review for {{ $product->name }}');
+    }
+
+    // Edit review functionality
+    $(document).on('click', '.edit-review-btn', function() {
+        const reviewId = $(this).data('review-id');
+        const $reviewCard = $(this).closest('.review-card');
+        
+        // Extract review data from the card
+        const title = $reviewCard.find('h6').text();
+        const comment = $reviewCard.find('p').text();
+        const rating = $reviewCard.find('.bi-star-fill').length;
+        
+        // Populate the form
+        $('#reviewTitle').val(title);
+        $('#reviewComment').val(comment);
+        selectedRating = rating;
+        $('#reviewRating').val(rating);
+        
+        // Update star display
+        highlightStars(rating, 'selected');
+        $('.rating-text').text(ratingLabels[rating]).removeClass('text-muted').addClass('text-warning');
+        
+        // Update comment counter
+        $('#commentCount').text(comment.length);
+        
+        // Set form to edit mode
+        $('#reviewForm').data('edit-mode', true).data('review-id', reviewId);
+        $('#submitReviewBtn .btn-text').text('Update Review');
+        $('#reviewModalLabel').html('<i class="bi bi-pencil me-2"></i>Edit Your Review');
+        
+        // Show the modal
+        $('#reviewModal').modal('show');
+    });
+
+    // Delete review functionality
+    $(document).on('click', '.delete-review-btn', function() {
+        const reviewId = $(this).data('review-id');
+        
+        if (confirm('Are you sure you want to delete your review? This action cannot be undone.')) {
+            $.ajax({
+                url: `/products/{{ $product->id }}/reviews/${reviewId}`,
+                method: 'DELETE',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message, 'Review Deleted!');
+                        loadProductReviews(); // Reload reviews
+                        loadReviewStatistics(); // Update statistics
+                    } else {
+                        toastr.error(response.message || 'Failed to delete review');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        toastr.error('Please login to delete your review');
+                    } else if (xhr.status === 403) {
+                        toastr.error('You can only delete your own reviews');
+                    } else {
+                        toastr.error('Failed to delete review. Please try again.');
+                    }
+                }
+            });
+        }
+    });
+    
+    // Load reviews for the product
+    function loadProductReviews(page = 1) {
+        $.get(`/products/{{ $product->id }}/reviews?page=${page}`)
+            .done(function(response) {
+                if (response.success) {
+                    displayReviews(response.reviews, response.pagination);
+                }
+            })
+            .fail(function() {
+                console.error('Failed to load reviews');
+            });
+    }
+    
+    // Load review statistics
+    function loadReviewStatistics() {
+        $.get(`/products/{{ $product->id }}/reviews/statistics`)
+            .done(function(response) {
+                if (response.success) {
+                    updateReviewStatistics(response.statistics);
+                }
+            })
+            .fail(function() {
+                console.error('Failed to load review statistics');
+            });
+    }
+    
+    function displayReviews(reviews, pagination) {
+        const $reviewsList = $('.reviews-list');
+        
+        if (reviews.length === 0) {
+            $reviewsList.html(`
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-chat-quote fs-1 mb-3 d-block"></i>
+                    <p>No reviews yet. Be the first to review this product!</p>
+                </div>
+            `);
+            return;
+        }
+        
+        let reviewsHtml = '';
+        reviews.forEach(review => {
+            const canEdit = {{ Auth::check() ? 'true' : 'false' }} && review.user_id === {{ Auth::id() ?? 'null' }};
+            const updatedText = review.is_updated ? ' (Updated)' : '';
+            
+            reviewsHtml += `
+                <div class="review-card mb-4 p-3 bg-light rounded" data-review-id="${review.id}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <strong>${review.user_name}</strong>
+                                ${review.verified_purchase ? '<span class="badge verified-badge">Verified Purchase</span>' : ''}
+                            </div>
+                            <div class="review-rating mb-1">
+                                ${generateStarRating(review.rating)}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <small class="text-muted">${review.created_at}${updatedText}</small>
+                            ${canEdit ? `
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary btn-sm edit-review-btn" data-review-id="${review.id}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm delete-review-btn" data-review-id="${review.id}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <h6 class="mb-2">${review.title}</h6>
+                    <p class="mb-0 text-dark">${review.comment}</p>
+                </div>
+            `;
+        });
+        
+        // Add pagination if needed
+        if (pagination.last_page > 1) {
+            reviewsHtml += generatePagination(pagination);
+        }
+        
+        $reviewsList.html(reviewsHtml);
+    }
+    
+    function generateStarRating(rating) {
+        let stars = '';
+        for (let i = 1; i <= 5; i++) {
+            stars += `<i class="bi bi-star${i <= rating ? '-fill' : ''} text-warning"></i>`;
+        }
+        return stars;
+    }
+    
+    function generatePagination(pagination) {
+        if (pagination.last_page <= 1) return '';
+        
+        let paginationHtml = '<nav class="mt-4"><ul class="pagination justify-content-center">';
+        
+        // Previous button
+        if (pagination.current_page > 1) {
+            paginationHtml += `<li class="page-item">
+                <a class="page-link" href="#" onclick="loadProductReviews(${pagination.current_page - 1})">Previous</a>
+            </li>`;
+        }
+        
+        // Page numbers
+        for (let i = 1; i <= pagination.last_page; i++) {
+            const active = i === pagination.current_page ? 'active' : '';
+            paginationHtml += `<li class="page-item ${active}">
+                <a class="page-link" href="#" onclick="loadProductReviews(${i})">${i}</a>
+            </li>`;
+        }
+        
+        // Next button
+        if (pagination.current_page < pagination.last_page) {
+            paginationHtml += `<li class="page-item">
+                <a class="page-link" href="#" onclick="loadProductReviews(${pagination.current_page + 1})">Next</a>
+            </li>`;
+        }
+        
+        paginationHtml += '</ul></nav>';
+        return paginationHtml;
+    }
+    
+    function updateReviewStatistics(statistics) {
+        // Update the reviews tab title
+        $('#reviews-tab').html(`<i class="bi bi-star me-2"></i>Reviews (${statistics.total_reviews})`);
+        
+        // Update average rating display
+        if (statistics.total_reviews > 0) {
+            $('.reviews-summary .col-md-4 h2').text(statistics.average_rating);
+            $('.reviews-summary .col-md-4 small').text(`${statistics.total_reviews} ${statistics.total_reviews === 1 ? 'review' : 'reviews'}`);
+            
+            // Update rating breakdown
+            const $breakdown = $('.rating-breakdown');
+            $breakdown.empty();
+            
+            for (let star = 5; star >= 1; star--) {
+                const data = statistics.rating_breakdown[star];
+                $breakdown.append(`
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="me-2">${star}</span>
+                        <i class="bi bi-star-fill text-warning me-2"></i>
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar bg-warning" style="width: ${data.percentage}%"></div>
+                        </div>
+                        <span class="text-muted small">${data.percentage}%</span>
+                    </div>
+                `);
+            }
+            
+            $('.reviews-summary').show();
+        } else {
+            $('.reviews-summary').hide();
+        }
+    }
+    
+    // Reset form when modal is closed
+    $('#reviewModal').on('hidden.bs.modal', function() {
+        resetReviewForm();
+    });
 });
 </script>@endsection

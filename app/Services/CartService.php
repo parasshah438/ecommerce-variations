@@ -83,6 +83,8 @@ class CartService
      */
     public function cartSummary(Cart $cart): array
     {
+        // Load cart with coupon relationship
+        $cart->load('coupon');
         $items = $cart->items()->with(['productVariation.product', 'productVariation.stock'])->get();
         
         // Handle empty cart
@@ -93,15 +95,21 @@ class CartService
                 'subtotal' => 0,
                 'shipping_cost' => 50,
                 'tax_amount' => 0,
-                'tax_rate' => 0.18,
+                'tax_rate' => config('shop.tax.rate', 0.18),
+                'tax_calculate_on' => config('shop.tax.calculate_on', 'after_discount'),
+                'tax_enabled' => config('shop.tax.enabled', true),
+                'tax_name' => config('shop.tax.name', 'GST'),
+                'discount_amount' => 0,
                 'total' => 0,
                 'savings' => 0,
                 'free_shipping_eligible' => false,
                 'free_shipping_remaining' => 500,
+                'coupon' => null,
                 'formatted' => [
                     'subtotal' => '₹0.00',
                     'shipping_cost' => '₹50.00',
                     'tax_amount' => '₹0.00',
+                    'discount_amount' => '₹0.00',
                     'total' => '₹0.00',
                     'savings' => '₹0.00',
                 ]
@@ -118,12 +126,31 @@ class CartService
         // Calculate shipping
         $shippingCost = $subtotal >= 500 ? 0 : 50;
         
-        // Calculate tax (18% GST)
-        $taxRate = 0.18;
-        $taxAmount = $subtotal * $taxRate;
+        // Get discount amount from applied coupon
+        $discountAmount = $cart->discount_amount ?? 0;
         
-        // Calculate total
-        $total = $subtotal + $shippingCost + $taxAmount;
+        // Get tax configuration
+        $taxRate = config('shop.tax.rate', 0.18);
+        $taxCalculateOn = config('shop.tax.calculate_on', 'after_discount');
+        $taxEnabled = config('shop.tax.enabled', true);
+        
+        // Calculate tax based on configuration
+        if ($taxEnabled) {
+            if ($taxCalculateOn === 'before_discount') {
+                // Option 1: Calculate tax BEFORE discount
+                $taxAmount = $subtotal * $taxRate;
+                $total = $subtotal + $shippingCost + $taxAmount - $discountAmount;
+            } else {
+                // Option 2: Calculate tax AFTER discount (default)
+                $taxableAmount = max($subtotal - $discountAmount, 0); // Ensure non-negative
+                $taxAmount = $taxableAmount * $taxRate;
+                $total = $subtotal + $shippingCost + $taxAmount - $discountAmount;
+            }
+        } else {
+            // No tax
+            $taxAmount = 0;
+            $total = $subtotal + $shippingCost - $discountAmount;
+        }
         
         // Calculate savings if any items have MRP - simplified
         $savings = 0;
@@ -141,14 +168,25 @@ class CartService
             'shipping_cost' => round($shippingCost, 2),
             'tax_amount' => round($taxAmount, 2),
             'tax_rate' => $taxRate,
+            'tax_calculate_on' => $taxCalculateOn,
+            'tax_enabled' => $taxEnabled,
+            'tax_name' => config('shop.tax.name', 'GST'),
+            'discount_amount' => round($discountAmount, 2),
             'total' => round($total, 2),
             'savings' => round($savings, 2),
             'free_shipping_eligible' => $subtotal >= 500,
             'free_shipping_remaining' => max(0, 500 - $subtotal),
+            'coupon' => $cart->coupon ? [
+                'id' => $cart->coupon->id,
+                'code' => $cart->coupon->code,
+                'discount' => $cart->coupon->discount,
+                'type' => $cart->coupon->type
+            ] : null,
             'formatted' => [
                 'subtotal' => '₹' . number_format($subtotal, 2),
                 'shipping_cost' => $shippingCost > 0 ? '₹' . number_format($shippingCost, 2) : 'Free',
                 'tax_amount' => '₹' . number_format($taxAmount, 2),
+                'discount_amount' => '₹' . number_format($discountAmount, 2),
                 'total' => '₹' . number_format($total, 2),
                 'savings' => '₹' . number_format($savings, 2),
             ]
