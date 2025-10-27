@@ -55,6 +55,7 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
             'variations' => 'nullable|array',
             'variations.*.id' => 'nullable|exists:product_variations,id',
             'variations.*.attributes' => 'required|array|min:1',
@@ -69,8 +70,8 @@ class ProductController extends Controller
         try {
             DB::beginTransaction();
 
-            // Update product
-            $product->update([
+            // Handle video upload
+            $updateData = [
                 'name' => $validated['name'],
                 'slug' => Str::slug($validated['name']) . '-' . $product->id,
                 'description' => $validated['description'],
@@ -79,7 +80,19 @@ class ProductController extends Controller
                 'price' => $validated['price'],
                 'mrp' => $validated['mrp'] ?? $validated['price'],
                 'active' => $request->boolean('active', true),
-            ]);
+            ];
+
+            if ($request->hasFile('video')) {
+                // Delete old video if exists
+                if ($product->video && Storage::disk('public')->exists($product->video)) {
+                    Storage::disk('public')->delete($product->video);
+                }
+                // Store new video
+                $updateData['video'] = $request->file('video')->store('products/videos', 'public');
+            }
+
+            // Update product
+            $product->update($updateData);
 
             // Handle new product images (add only, not delete)
             if ($request->hasFile('images')) {
@@ -204,7 +217,7 @@ class ProductController extends Controller
     }
     public function index()
     {
-        $products = Product::with(['category', 'brand', 'variations', 'images'])
+        $products = Product::with(['category', 'brand', 'variations', 'images', 'variationImages'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
             
@@ -244,6 +257,9 @@ class ProductController extends Controller
             // Main product images
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             
+            // Product video
+            'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
+            
             // Variations (optional - some products don't have variations)
             'variations' => 'nullable|array',
             'variations.*.attributes' => 'required|array|min:1',
@@ -260,11 +276,18 @@ class ProductController extends Controller
         try {
             DB::beginTransaction();
 
+            // Handle video upload
+            $videoPath = null;
+            if ($request->hasFile('video')) {
+                $videoPath = $request->file('video')->store('products/videos', 'public');
+            }
+
             // Create the product
             $product = Product::create([
                 'name' => $validated['name'],
                 'slug' => Str::slug($validated['name']) . '-' . time(),
                 'description' => $validated['description'],
+                'video' => $videoPath,
                 'category_id' => $validated['category_id'],
                 'brand_id' => $validated['brand_id'],
                 'price' => $validated['price'],

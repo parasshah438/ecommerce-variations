@@ -50,6 +50,27 @@
                 <div class="text-center mt-2">
                     <small class="text-muted" id="image-counter">1 / 1</small>
                 </div>
+                
+                <!-- Product Video Section -->
+                @if($product->video)
+                <div class="product-video mt-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-play-circle me-2"></i>
+                        Product Demo Video
+                    </h6>
+                    <div class="video-container rounded-3 overflow-hidden">
+                        <video 
+                            class="w-100" 
+                            controls 
+                            style="max-height: 300px; object-fit: cover;"
+                            poster="{{ $product->images->first()?->path ? asset('storage/' . $product->images->first()->path) : '' }}">
+                            <source src="{{ asset('storage/' . $product->video) }}" type="video/mp4">
+                            <source src="{{ asset('storage/' . $product->video) }}" type="video/webm">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
         

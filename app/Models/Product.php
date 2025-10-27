@@ -21,6 +21,11 @@ class Product extends Model
         return $this->hasMany(ProductVariation::class);
     }
 
+    public function variationImages()
+    {
+        return $this->hasMany(ProductVariationImage::class);
+    }
+
     public function brand()
     {
         return $this->belongsTo(Brand::class);
@@ -77,5 +82,56 @@ class Product extends Model
             'reviews_count' => $stats->count ?? 0,
             'average_rating' => $stats->average ? round($stats->average, 2) : null
         ]);
+    }
+
+    /**
+     * Get the best thumbnail image for display in listings
+     * Priority: variation images > product images
+     */
+    public function getThumbnailImage()
+    {
+        // 1) First try to get any variation image (using eager loaded relationship)
+        if ($this->relationLoaded('variationImages') && $this->variationImages->isNotEmpty()) {
+            return $this->variationImages->sortBy('position')->first();
+        } elseif (class_exists(ProductVariationImage::class)) {
+            $variationImage = ProductVariationImage::where('product_id', $this->id)
+                ->orderBy('position')
+                ->first();
+            if ($variationImage) {
+                return $variationImage;
+            }
+        }
+
+        // 2) Try product images attached to any variation (using eager loaded relationship)
+        if ($this->relationLoaded('images')) {
+            $variationImage = $this->images
+                ->where('product_variation_id', '!=', null)
+                ->sortBy('position')
+                ->first();
+            if ($variationImage) {
+                return $variationImage;
+            }
+        } else {
+            $variationImage = $this->images()
+                ->whereNotNull('product_variation_id')
+                ->orderBy('position')
+                ->first();
+            if ($variationImage) {
+                return $variationImage;
+            }
+        }
+
+        // 3) Fallback to product-level images (using eager loaded relationship)
+        if ($this->relationLoaded('images')) {
+            return $this->images
+                ->where('product_variation_id', null)
+                ->sortBy('position')
+                ->first();
+        } else {
+            return $this->images()
+                ->whereNull('product_variation_id')
+                ->orderBy('position')
+                ->first();
+        }
     }
 }

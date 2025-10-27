@@ -80,6 +80,23 @@
                             <textarea class="form-control" id="description" name="description" 
                                       rows="4" required placeholder="Detailed product description...">{{ old('description', $product->description) }}</textarea>
                         </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label for="video" class="form-label">Product Video</label>
+                            @if($product->video)
+                                <div class="current-video mb-2">
+                                    <p class="text-muted mb-2">Current video:</p>
+                                    <video width="200" height="120" controls>
+                                        <source src="{{ asset('storage/' . $product->video) }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
+                            @endif
+                            <input type="file" class="form-control" id="video" name="video" 
+                                   accept="video/*" onchange="previewVideo(this)">
+                            <div class="form-text">Upload a new product demonstration video (MP4, WebM, etc.) - Leave empty to keep current video</div>
+                            <div id="video-preview" class="mt-2"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -624,6 +641,53 @@ function validateForm() {
         }
     }
     return true;
+}
+
+// Video preview function
+function previewVideo(input) {
+    const container = document.getElementById('video-preview');
+    container.innerHTML = '';
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'video-preview mt-2';
+            div.innerHTML = `
+                <div class="d-flex align-items-center gap-3 p-3 border rounded">
+                    <video width="120" height="80" controls style="border-radius: 4px;">
+                        <source src="${e.target.result}" type="${file.type}">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${file.name}</h6>
+                        <small class="text-muted">${formatFileSize(file.size)} • ${file.type}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVideoPreview()">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeVideoPreview() {
+    document.getElementById('video-preview').innerHTML = '';
+    document.getElementById('video').value = '';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 </script>
 @endpush

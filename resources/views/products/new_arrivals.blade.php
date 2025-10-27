@@ -3,6 +3,48 @@
 @section('title', 'New Arrivals - ' . config('app.name'))
 
 @section('content')
+<!-- Mobile Filter Sidebar (Completely isolated - only visible on mobile) -->
+<div class="mobile-filter-sidebar d-lg-none" id="mobileFilterSidebar" style="display: none;">
+    <!-- Backdrop -->
+    <div class="mobile-filter-backdrop" id="mobileFilterBackdrop"></div>
+    
+    <!-- Sidebar Content -->
+    <div class="mobile-filter-content">
+        <!-- Sidebar Header -->
+        <div class="mobile-filter-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-dark">
+                    Filter Products
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="closeMobileFilter">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Sidebar Body -->
+        <div class="mobile-filter-body">
+            @include('products._filters', compact('categories', 'brands', 'priceRange'))
+        </div>
+        
+        <!-- Sidebar Footer -->
+        <div class="mobile-filter-footer">
+            <div class="row g-2">
+                <div class="col-6">
+                    <button class="btn btn-outline-secondary w-100" id="clearFiltersMobile">
+                        <i class="bi bi-x-circle me-1"></i>Clear All
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-primary w-100" id="applyFiltersMobile">
+                        <i class="bi bi-check-lg me-1"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Header Section -->
 <div class="bg-primary text-white py-5 mb-4">
     <div class="container">
@@ -27,45 +69,43 @@
 <div class="container-fluid px-4">
     <div class="row g-4 align-items-start">
         <!-- Filters Sidebar -->
-        <div class="col-xl-3 col-lg-4 order-2 order-lg-1">
+        <div class="col-xl-3 col-lg-4 d-none d-lg-block">
             <div class="filters-wrapper">
-                <!-- Mobile Filter Toggle -->
-                <div class="d-lg-none mb-3">
-                    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false">
-                        <i class="bi bi-funnel me-2"></i>Filters & Search
-                        <span class="badge bg-primary ms-2" id="activeFiltersCount" style="display: none;">0</span>
-                    </button>
-                </div>
-
                 <!-- Filters Container -->
-                <div class="collapse d-lg-block" id="filtersCollapse">
-                    <div class="card shadow-sm border-0 sticky-top" style="top: 2rem;">
-                        <div class="card-header bg-light border-0 py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold text-dark">
-                                    <i class="bi bi-funnel me-2 text-primary"></i>Filter Products
-                                </h6>
-                                <button class="btn btn-sm btn-outline-secondary" id="clearFilters">
-                                    <i class="bi bi-x-circle me-1"></i>Clear
-                                </button>
-                            </div>
+                <div class="card shadow-sm border-0 sticky-top" style="top: 2rem;">
+                    <div class="card-header bg-light border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-dark">
+                                <i class="bi bi-funnel me-2 text-primary"></i>Filter Products
+                            </h6>
+                            <button class="btn btn-sm btn-outline-secondary" id="clearFilters">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
                         </div>
-                        <div class="card-body p-0" id="filtersContainer">
-                            @include('products._filters', compact('categories', 'brands', 'priceRange'))
-                        </div>
+                    </div>
+                    <div class="card-body p-0" id="filtersContainer">
+                        @include('products._filters', compact('categories', 'brands', 'priceRange'))
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Products Section -->
-        <div class="col-xl-9 col-lg-8 order-1 order-lg-2">
+        <div class="col-xl-9 col-lg-8">
             <!-- Products Toolbar -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body py-3">
                     <div class="row align-items-center">
                         <div class="col-lg-6 col-md-12 mb-2 mb-lg-0">
                             <div class="d-flex align-items-center flex-wrap gap-3">
+                                <!-- Mobile Filter Toggle -->
+                                <div class="d-lg-none">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" id="mobileFilterToggle">
+                                        <i class="bi bi-funnel me-1"></i>Filters
+                                        <span class="badge bg-primary ms-1" id="activeFiltersCount" style="display: none;">0</span>
+                                    </button>
+                                </div>
+                                
                                 <div class="d-flex align-items-center">
                                     <span class="badge bg-primary px-3 py-2 fs-6">
                                         <i class="bi bi-grid me-1"></i>
@@ -158,6 +198,7 @@
         </div>
     </div>
 </div>
+
 <!-- Loading Overlay -->
 <div class="position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none align-items-center justify-content-center" style="z-index: 9999;" id="loadingOverlay">
     <div class="text-center">
@@ -392,6 +433,190 @@ div[style*="max-height"]::-webkit-scrollbar-thumb:hover {
     align-items: center;
     justify-content: center;
 }
+
+/* Newly loaded products highlight */
+.product-card.newly-loaded {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.1) 100%);
+    border: 2px solid rgba(13, 110, 253, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(13, 110, 253, 0.15) !important;
+    transform: scale(1.02);
+    transition: all 0.6s ease;
+}
+
+.product-card.newly-loaded::after {
+    content: "New";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 2;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Mobile Filter Sidebar */
+.mobile-filter-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+    display: none !important;
+    pointer-events: none;
+}
+
+.mobile-filter-sidebar.active {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+    pointer-events: auto !important;
+}
+
+.mobile-filter-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+}
+
+.mobile-filter-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 320px;
+    max-width: 85vw;
+    height: 100%;
+    background: white;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mobile-filter-sidebar.active .mobile-filter-content {
+    transform: translateX(0);
+}
+
+.mobile-filter-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+.mobile-filter-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.mobile-filter-body .card {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.mobile-filter-body .card-header {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 1.25rem;
+}
+
+.mobile-filter-body .card-body {
+    padding: 1rem 1.25rem;
+}
+
+.mobile-filter-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+/* Custom scrollbar for mobile sidebar */
+.mobile-filter-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mobile-filter-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.mobile-filter-body::-webkit-scrollbar-thumb {
+    background: var(--bs-primary);
+    border-radius: 3px;
+}
+
+.mobile-filter-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--bs-primary-rgb), 0.8);
+}
+
+/* Prevent body scroll when sidebar is open */
+body.mobile-sidebar-open {
+    overflow: hidden;
+}
+
+/* Animation for filter button */
+#mobileFilterToggle {
+    transition: all 0.2s ease;
+}
+
+#mobileFilterToggle:active {
+    transform: scale(0.95);
+}
+
+/* Better mobile filter styling */
+@media (max-width: 576px) {
+    .mobile-filter-content {
+        width: 280px;
+        max-width: 90vw;
+    }
+}
+
+/* Ensure desktop filters are completely hidden on mobile */
+@media (max-width: 991px) {
+    .filters-wrapper,
+    .filters-sidebar,
+    .d-lg-block {
+        display: none !important;
+    }
+    
+    /* Hide any remaining filter elements that might appear in content */
+    .collapse:not(.mobile-filter-sidebar *),
+    .filter-container:not(.mobile-filter-sidebar *),
+    .offcanvas:not(.mobile-filter-sidebar *) {
+        display: none !important;
+    }
+    
+    /* Ensure mobile sidebar is the only filter mechanism on mobile */
+    .mobile-filter-sidebar {
+        display: none !important; /* Hidden by default */
+    }
+    
+    .mobile-filter-sidebar.active {
+        display: block !important; /* Only show when active */
+    }
+}
 </style>
 @endpush
 
@@ -415,6 +640,9 @@ $(document).ready(function() {
     
     // Initialize price range slider
     initializePriceSlider();
+    
+    // Mobile Filter Sidebar Controls
+    initializeMobileFilterSidebar();
     
     // Filter change handlers with proper delegation
     $(document).on('change', '.category-filter, .brand-filter, .stock-filter', function() {
@@ -594,6 +822,9 @@ $(document).ready(function() {
         $btn.prop('disabled', true);
         isLoading = true;
         
+        // Get current products count to identify new ones
+        const currentProductsCount = $('#productsGrid .product-card').length;
+        
         const formData = collectFilterData();
         formData.page = currentPage;
         formData.load_more = true;
@@ -611,6 +842,26 @@ $(document).ready(function() {
                 }
                 
                 animateNewProducts();
+                
+                // Smooth scroll to the first newly loaded product
+                setTimeout(() => {
+                    const $newProducts = $('#productsGrid .product-card').slice(currentProductsCount);
+                    
+                    if ($newProducts.length > 0) {
+                        const firstNewProduct = $newProducts.first();
+                        
+                        // Smooth scroll to show the newly loaded products
+                        $('html, body').animate({
+                            scrollTop: firstNewProduct.offset().top - 120 // 120px offset from top for navbar
+                        }, 600, 'swing');
+                        
+                        // Add a subtle highlight effect to new products
+                        $newProducts.addClass('newly-loaded');
+                        setTimeout(() => {
+                            $newProducts.removeClass('newly-loaded');
+                        }, 2000);
+                    }
+                }, 200); // Reduced delay for better UX
             },
             error: function() {
                 currentPage--; // Revert page increment
@@ -694,6 +945,11 @@ $(document).ready(function() {
     function updateActiveFiltersCount(formData) {
         let count = 0;
         
+        // If no formData provided, collect current filter data
+        if (!formData) {
+            formData = collectFilterData();
+        }
+        
         // Count active filters
         if (formData.q) count++;
         if (formData.categories && formData.categories.length) count += formData.categories.length;
@@ -704,6 +960,7 @@ $(document).ready(function() {
         
         activeFiltersCount = count;
         
+        // Update both desktop and mobile counters
         const $counter = $('#activeFiltersCount');
         if (count > 0) {
             $counter.text(count).show();
@@ -807,6 +1064,93 @@ $(document).ready(function() {
         if (typeof window.showToast === 'function') {
             window.showToast(message, type);
         }
+    }
+    
+    // Mobile Filter Sidebar Functions
+    function initializeMobileFilterSidebar() {
+        const $sidebar = $('#mobileFilterSidebar');
+        const $backdrop = $('#mobileFilterBackdrop');
+        const $toggleBtn = $('#mobileFilterToggle');
+        const $closeBtn = $('#closeMobileFilter');
+        const $applyBtn = $('#applyFiltersMobile');
+        const $clearBtn = $('#clearFiltersMobile');
+        
+        console.log('Initializing mobile filter sidebar...', {
+            sidebar: $sidebar.length,
+            toggleBtn: $toggleBtn.length,
+            closeBtn: $closeBtn.length
+        });
+        
+        // Open sidebar
+        $toggleBtn.on('click', function() {
+            console.log('Mobile filter toggle clicked');
+            openMobileFilterSidebar();
+        });
+        
+        // Close sidebar
+        $closeBtn.on('click', function() {
+            closeMobileFilterSidebar();
+        });
+        
+        // Close on backdrop click
+        $backdrop.on('click', function() {
+            closeMobileFilterSidebar();
+        });
+        
+        // Apply filters and close
+        $applyBtn.on('click', function() {
+            applyFilters();
+            closeMobileFilterSidebar();
+        });
+        
+        // Clear filters
+        $clearBtn.on('click', function() {
+            clearAllFilters();
+            closeMobileFilterSidebar();
+        });
+        
+        // Close on Escape key
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $sidebar.hasClass('active')) {
+                closeMobileFilterSidebar();
+            }
+        });
+        
+        // Prevent content scroll when sidebar is open
+        function preventBodyScroll(prevent) {
+            if (prevent) {
+                $('body').addClass('mobile-sidebar-open');
+            } else {
+                $('body').removeClass('mobile-sidebar-open');
+            }
+        }
+        
+        // Open sidebar function
+        window.openMobileFilterSidebar = function() {
+            console.log('Opening mobile filter sidebar');
+            $sidebar.show(); // Ensure it's displayed
+            setTimeout(() => {
+                $sidebar.addClass('active');
+                console.log('Mobile filter sidebar activated');
+            }, 10); // Small delay to ensure display:block is applied first
+            preventBodyScroll(true);
+            
+            // Sync filter count
+            updateActiveFiltersCount();
+        };
+        
+        // Close sidebar function
+        window.closeMobileFilterSidebar = function() {
+            console.log('Closing mobile filter sidebar');
+            $sidebar.removeClass('active');
+            preventBodyScroll(false);
+            
+            // Hide after animation completes
+            setTimeout(() => {
+                $sidebar.hide();
+                console.log('Mobile filter sidebar hidden');
+            }, 400);
+        };
     }
     
     // Quick filter buttons

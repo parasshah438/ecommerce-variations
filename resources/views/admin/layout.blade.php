@@ -49,27 +49,85 @@
             transition: all 0.3s ease;
         }
         
-        /* Fix pagination arrows and design */
+        /* Pagination Design - Clean and Consistent */
         .pagination {
             margin: 0;
-        }
-        .pagination .page-link {
-            font-size: 0.875rem !important;
-            padding: 0.375rem 0.75rem !important;
-            border-radius: 6px !important;
-            margin: 0 2px;
-            border: 1px solid #dee2e6;
-            line-height: 1.25 !important;
+            gap: 2px;
         }
         
-        .pagination .page-item.active .page-link {
-            background-color: #007bff;
-            border-color: #007bff;
+        .pagination .page-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            color: #6c757d;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            min-width: 40px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        
         .pagination .page-link:hover {
             background-color: #e9ecef;
             border-color: #adb5bd;
+            color: #495057;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+            box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
+        }
+        
+        .pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            background-color: #fff;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .pagination .page-item.disabled .page-link:hover {
+            background-color: #fff;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Previous/Next arrow specific styling */
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            font-weight: 500;
+        }
+        
+        /* Bootstrap Icons in pagination */
+        .pagination .page-link .bi {
+            font-size: 12px;
+            line-height: 1;
+        }
+        
+        /* Ensure proper spacing for icons */
+        .pagination .page-link .bi-chevron-left,
+        .pagination .page-link .bi-chevron-right {
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        /* Responsive pagination */
+        @media (max-width: 768px) {
+            .pagination .page-link {
+                padding: 0.375rem 0.5rem;
+                font-size: 0.8rem;
+                min-width: 35px;
+                height: 35px;
+            }
+        }
+        
         .variation-item:hover {
             border-color: #0d6efd;
             background: #f8f9ff;
@@ -96,69 +154,6 @@
             align-items: center;
             justify-content: center;
         }
-        /* Pagination Fix */
-        .pagination {
-            margin: 0;
-        }
-        .pagination .page-link {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            border-radius: 6px;
-            margin: 0 1px;
-            border: 1px solid #dee2e6;
-            color: #6c757d;
-            transition: all 0.2s ease;
-        }
-        .pagination .page-link:hover {
-            background-color: #e9ecef;
-            border-color: #adb5bd;
-            color: #495057;
-            transform: translateY(-1px);
-        }
-        .pagination .page-item.active .page-link {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-            color: white;
-            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25);
-        }
-        .pagination .page-item.disabled .page-link {
-            color: #adb5bd;
-            background-color: #fff;
-            border-color: #dee2e6;
-            cursor: not-allowed;
-        }
-        /* Make pagination arrows smaller and cleaner */
-        .pagination .page-link i {
-            font-size: 12px;
-        }
-        /* Compact pagination */
-        .pagination-sm .page-link {
-            padding: 0.4rem 0.6rem;
-            font-size: 0.8rem;
-        }
-        
-        /* Force override for very small pagination arrows - highest specificity */
-        .card-body .pagination-sm .page-link,
-        .table-responsive .pagination-sm .page-link {
-            font-size: 10px !important;
-            padding: 4px 6px !important;
-            line-height: 1 !important;
-            min-width: 26px !important;
-            height: 26px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        
-        .card-body .pagination-sm .page-item:first-child .page-link,
-        .card-body .pagination-sm .page-item:last-child .page-link,
-        .table-responsive .pagination-sm .page-item:first-child .page-link,
-        .table-responsive .pagination-sm .page-item:last-child .page-link {
-            font-size: 9px !important;
-            width: 26px !important;
-            height: 26px !important;
-            padding: 0 !important;
-        }
     </style>
     @stack('styles')
 </head>
@@ -181,6 +176,10 @@
                         <a class="nav-link {{ request()->routeIs('admin.products*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
                             <i class="bi bi-box-seam me-2"></i>
                             Products
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.categories*') ? 'active' : '' }}" href="{{ route('admin.categories.index') }}">
+                            <i class="bi bi-folder me-2"></i>
+                            Categories
                         </a>
                         <a class="nav-link {{ request()->routeIs('admin.attributes*') ? 'active' : '' }}" href="{{ route('admin.attributes.index') }}">
                             <i class="bi bi-tags me-2"></i>

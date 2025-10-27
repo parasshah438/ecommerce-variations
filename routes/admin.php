@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\Admin\CategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     // Attributes Management
     Route::resource('attributes', AttributeController::class);
     Route::resource('attribute-values', AttributeValueController::class);
+    
+    // Categories Management
+    Route::resource('categories', CategoryController::class);
+    Route::delete('/categories/{category}/remove-image', [CategoryController::class, 'removeImage'])->name('categories.remove_image');
     
     // Order Management Routes
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
