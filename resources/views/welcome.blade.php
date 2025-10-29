@@ -2300,6 +2300,12 @@
 
         // Cart and Wishlist Functions
         function addToCart(productId) {
+            // Check if user is authenticated first
+            @guest
+                handleLoginRequired('add items to your cart');
+                return;
+            @endguest
+            
             // Find product from loaded products
             const allProductCards = document.querySelectorAll('.product-card');
             let productName = 'Product';
@@ -2314,8 +2320,45 @@
                 }
             });
             
-            showToast(`${productName} added to cart!`, 'success');
-            updateCartBadge();
+            @auth
+                // For authenticated users, make AJAX call to add to cart
+                // Note: This is a simplified version for product cards without variations
+                // For products with variations, users should use the quick view modal
+                $.ajax({
+                    url: '{{ route("cart.add") }}',
+                    method: 'POST',
+                    data: {
+                        product_id: productId,
+                        quantity: 1,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast(`${productName} added to cart successfully!`, 'success');
+                            updateCartBadge();
+                        } else {
+                            showToast(response.message || 'Failed to add product to cart', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        let message = 'Network error occurred';
+                        
+                        if (xhr.status === 401) {
+                            handleLoginRequired('manage your cart');
+                            return;
+                        }
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        } else if (xhr.status === 422) {
+                            message = 'Please select product options or use quick view';
+                        } else if (xhr.status === 404) {
+                            message = 'Product not found';
+                        }
+                        showToast(message, 'danger');
+                    }
+                });
+            @endauth
         }
 
         function addToWishlist(productId) {
@@ -2576,6 +2619,31 @@
                 case 'info': return 'info-circle';
                 default: return 'info-circle';
             }
+        }
+
+        // Handle 401 Unauthorized errors with professional login redirect
+        function handleLoginRequired(context = 'access this feature') {
+            showToast(`Please login to ${context}`, 'warning', {
+                delay: 4000,
+                onclick: function() {
+                    window.location.href = '{{ route("login") }}';
+                }
+            });
+            
+            // Show a more detailed message after a short delay
+            setTimeout(() => {
+                showToast('You will be redirected to login page. Click here to login now.', 'info', {
+                    delay: 6000,
+                    onclick: function() {
+                        window.location.href = '{{ route("login") }}';
+                    }
+                });
+            }, 1500);
+            
+            // Auto redirect after 5 seconds
+            setTimeout(() => {
+                window.location.href = '{{ route("login") }}';
+            }, 5000);
         }
 
         // Product Quick View Modal functionality
@@ -3062,6 +3130,12 @@
                     },
                     error: function(xhr) {
                         let message = 'Network error occurred';
+                        
+                        if (xhr.status === 401) {
+                            handleLoginRequired('manage your cart');
+                            return;
+                        }
+                        
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             message = xhr.responseJSON.message;
                         } else if (xhr.status === 422) {
@@ -3108,7 +3182,16 @@
                         }
                     },
                     error: function(xhr) {
-                        showToast('Failed to proceed to checkout', 'danger');
+                        if (xhr.status === 401) {
+                            handleLoginRequired('proceed with checkout');
+                            return;
+                        }
+                        
+                        let message = 'Failed to proceed to checkout';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        showToast(message, 'danger');
                     }
                 });
             });
@@ -3154,7 +3237,7 @@
                     error: function(xhr) {
                         $btn.html(originalHtml);
                         if (xhr.status === 401) {
-                            showToast('Please login to manage your wishlist', 'warning');
+                            handleLoginRequired('manage your wishlist');
                         } else {
                             showToast('Failed to update wishlist', 'danger');
                         }

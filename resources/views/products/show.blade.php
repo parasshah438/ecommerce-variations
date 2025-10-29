@@ -1618,6 +1618,11 @@ $(document).ready(function() {
                     }
                 },
                 error: function(xhr) {
+                    if (xhr.status === 401) {
+                        handleLoginRequired('add items to your cart');
+                        return;
+                    }
+                    
                     let message = 'Network error occurred';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         message = xhr.responseJSON.message;
@@ -1662,6 +1667,10 @@ $(document).ready(function() {
                     }
                 },
                 error: function(xhr) {
+                    if (xhr.status === 401) {
+                        handleLoginRequired('proceed with checkout');
+                        return;
+                    }
                     toastr.error('Failed to proceed to checkout');
                 }
             });
@@ -1732,7 +1741,7 @@ $(document).ready(function() {
                     $btn.html(`<i class="${originalIcon} me-1"></i>${originalText}`);
                     
                     if (xhr.status === 401) {
-                        toastr.error('Please login to manage your wishlist');
+                        handleLoginRequired('manage your wishlist');
                     } else {
                         toastr.error('Failed to update wishlist');
                     }
@@ -1994,7 +2003,7 @@ $(document).ready(function() {
             resetSubmitButton();
             
             if (xhr.status === 401) {
-                toastr.error('Please login to submit a review');
+                handleLoginRequired('submit a review');
                 return;
             }
             
@@ -2099,7 +2108,7 @@ $(document).ready(function() {
                 },
                 error: function(xhr) {
                     if (xhr.status === 401) {
-                        toastr.error('Please login to delete your review');
+                        handleLoginRequired('delete your review');
                     } else if (xhr.status === 403) {
                         toastr.error('You can only delete your own reviews');
                     } else {
@@ -2264,6 +2273,31 @@ $(document).ready(function() {
         } else {
             $('.reviews-summary').hide();
         }
+    }
+    
+    // Handle 401 Unauthorized errors with professional login redirect
+    function handleLoginRequired(context = 'access this feature') {
+        toastr.warning(`Please login to ${context}`, 'Login Required', {
+            timeOut: 4000,
+            onclick: function() {
+                window.location.href = '{{ route("login") }}';
+            }
+        });
+        
+        // Show a more detailed message after a short delay
+        setTimeout(() => {
+            toastr.info('You will be redirected to login page. Click here to login now.', 'Redirecting...', {
+                timeOut: 6000,
+                onclick: function() {
+                    window.location.href = '{{ route("login") }}';
+                }
+            });
+        }, 1500);
+        
+        // Auto redirect after 5 seconds
+        setTimeout(() => {
+            window.location.href = '{{ route("login") }}';
+        }, 5000);
     }
     
     // Reset form when modal is closed
