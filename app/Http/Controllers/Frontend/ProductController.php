@@ -344,6 +344,140 @@ class ProductController extends Controller
         return view('products.new_arrivals', compact('products', 'categories', 'brands', 'priceRange'));
     }
 
+    public function categoryProducts(Request $request, $slug)
+    {
+        // Find category by slug with parent relationship
+        $category = \App\Models\Category::with('parent')->where('slug', $slug)->firstOrFail();
+        
+        $query = Product::with(['images', 'variations.images', 'category', 'brand'])
+                       ->where('category_id', $category->id)
+                       ->select('*') // Ensure all columns are selected
+                       ->orderBy('created_at', 'desc');
+        
+        // Search filter
+        if ($request->has('q') && $request->q) {
+            $searchTerm = $request->q;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+        
+        // Brand filter (keep category filter disabled since we're already filtering by category)
+        if ($request->has('brands') && is_array($request->brands)) {
+            $query->whereIn('brand_id', $request->brands);
+        }
+        
+        // Price range filter
+        if ($request->has('min_price') && $request->min_price) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        
+        if ($request->has('max_price') && $request->max_price) {
+            $query->where('price', '<=', $request->max_price);
+        }
+        
+        // In stock filter
+        if ($request->has('in_stock') && $request->in_stock) {
+            $query->whereHas('variations.stock', function ($q) {
+                $q->where('quantity', '>', 0);
+            });
+        }
+        
+        // Rating filter - temporarily skip if column doesn't exist
+        if ($request->has('rating') && $request->rating) {
+            $rating = floatval($request->rating);
+            \Log::info('Applying rating filter', ['rating' => $rating]);
+            
+            // For now, skip rating filter to avoid SQL errors
+            // TODO: Add average_rating column to products table
+            \Log::info('Rating filter temporarily disabled - need to add average_rating column to products table');
+        }
+        
+        // Sort options
+        $sortBy = $request->get('sort', 'created_at');
+        $sortOrder = $request->get('order', 'desc');
+        
+        switch ($sortBy) {
+            case 'price_low':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_high':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'name':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'rating':
+                $query->orderBy('average_rating', 'desc');
+                break;
+            case 'created_at':
+            default:
+                $query->orderBy('created_at', $sortOrder);
+                break;
+        }
+        
+        $products = $query->paginate($request->get('per_page', 12));
+        
+        // Add price range calculation for each product
+        $products->getCollection()->transform(function ($product) {
+            if ($product->variations->count() > 0) {
+                $prices = $product->variations->pluck('price')->filter();
+                if ($prices->count() > 0) {
+                    $product->min_price = $prices->min();
+                    $product->max_price = $prices->max();
+                    $product->has_variations = true;
+                } else {
+                    $product->min_price = $product->price;
+                    $product->max_price = $product->price;
+                    $product->has_variations = false;
+                }
+            } else {
+                // Simple product (no variations)
+                $product->min_price = $product->price;
+                $product->max_price = $product->price;
+                $product->has_variations = false;
+            }
+            return $product;
+        });
+        
+        // Get available categories and brands for filters (for this specific category)
+        $categories = \App\Models\Category::withCount(['products' => function($query) use ($category) {
+            $query->where('category_id', $category->id);
+        }])->having('products_count', '>', 0)->get();
+        
+        $brands = \App\Models\Brand::withCount(['products' => function($query) use ($category) {
+            $query->where('category_id', $category->id);
+        }])->having('products_count', '>', 0)->get();
+        
+        // Get price range for slider from this category only
+        $priceRange = Product::where('category_id', $category->id)
+                           ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
+                           ->first();
+        
+        // Handle AJAX requests
+        if ($request->ajax()) {
+            if ($request->has('load_more')) {
+                return response()->json([
+                    'html' => view('products._category_list', compact('products'))->render(),
+                    'has_more' => $products->hasMorePages(),
+                    'current_page' => $products->currentPage(),
+                    'total' => $products->total()
+                ]);
+            }
+            
+            return response()->json([
+                'html' => view('products._category_list', compact('products'))->render(),
+                'has_more' => $products->hasMorePages(),
+                'current_page' => $products->currentPage(),
+                'total' => $products->total(),
+                'filters_html' => view('products._filters', compact('categories', 'brands', 'priceRange'))->render()
+            ]);
+        }
+        
+        return view('products.category', compact('products', 'categories', 'brands', 'priceRange', 'category'));
+    }
+
     public function loadMore(Request $request)
     {
         $products = Product::with(['images', 'variations.images'])->paginate(12);

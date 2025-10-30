@@ -229,6 +229,7 @@ Route::get('/products/filter', [FrontProduct::class, 'index'])->name('products.f
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
 Route::get('/new-arrivals', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals');
 Route::get('/new-arrivals/filter', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals.filter');
+Route::get('/category/{slug}', [FrontProduct::class, 'categoryProducts'])->name('category.products');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 
 // Review routes
@@ -288,6 +289,13 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     // Coupon routes
     Route::post('/coupon/apply', [FrontCoupon::class, 'apply'])->name('coupon.apply');
     Route::post('/coupon/remove', [FrontCoupon::class, 'remove'])->name('coupon.remove');
+
+    // Address management routes
+    Route::get('/address/{address}', [FrontCheckout::class, 'getAddress'])->name('address.get');
+    Route::post('/address/store', [FrontCheckout::class, 'storeAddress'])->name('address.store');
+    Route::put('/address/{address}', [FrontCheckout::class, 'updateAddress'])->name('address.update');
+    Route::delete('/address/{address}', [FrontCheckout::class, 'deleteAddress'])->name('address.delete');
+    Route::post('/address/{address}/set-default', [FrontCheckout::class, 'setDefaultAddress'])->name('address.set_default');
 });
 
 // Public search route (doesn't require authentication)

@@ -146,21 +146,23 @@ class GeoLocationController extends Controller
     }
 
     /**
-     * Get pincode details
+     * Get pincode details - Now supports multiple countries
      */
     public function getPincodeDetails(Request $request)
     {
         $request->validate([
-            'pincode' => 'required|string|regex:/^[0-9]{6}$/'
+            'pincode' => 'required|string|min:3|max:10', // Allow various postal code formats
+            'country_code' => 'string|size:2' // Optional country code
         ]);
 
         try {
             $pincode = $request->pincode;
+            $countryCode = strtoupper($request->country_code ?? 'IN'); // Default to India
             
-            $cacheKey = 'pincode_details_' . $pincode;
+            $cacheKey = 'pincode_details_' . $countryCode . '_' . $pincode;
             
-            $pincodeData = Cache::remember($cacheKey, 86400, function () use ($pincode) {
-                return $this->fetchPincodeDetails($pincode);
+            $pincodeData = Cache::remember($cacheKey, 86400, function () use ($pincode, $countryCode) {
+                return $this->fetchPincodeDetails($pincode, $countryCode);
             });
             
             return response()->json([
@@ -327,7 +329,7 @@ class GeoLocationController extends Controller
     {
         $services = [
             [
-                'url' => "https://nominatim.openstreetmap.org/search?format=json&q=" . urlencode($query) . "&countrycodes=in&limit=10&addressdetails=1",
+                'url' => "https://nominatim.openstreetmap.org/search?format=json&q=" . urlencode($query) . "&limit=10&addressdetails=1",
                 'parser' => 'parseNominatimSearchResponse'
             ]
         ];
@@ -359,26 +361,38 @@ class GeoLocationController extends Controller
     }
 
     /**
-     * Fetch pincode details from Indian postal API with multiple fallbacks
+     * Fetch pincode details from multiple APIs with global country support
      */
-    private function fetchPincodeDetails($pincode)
+    private function fetchPincodeDetails($pincode, $countryCode = 'IN')
     {
-        // Multiple pincode APIs for better reliability
-        $services = [
-            [
-                'url' => "https://api.postalpincode.in/pincode/{$pincode}",
-                'parser' => 'parsePostalPincodeResponse'
-            ],
-            [
-                'url' => "https://api.zippopotam.us/in/{$pincode}",
-                'parser' => 'parseZippopotamResponse'
-            ],
-            // Add HTTP fallback for postalpincode (if available)
-            [
-                'url' => "http://api.postalpincode.in/pincode/{$pincode}",
-                'parser' => 'parsePostalPincodeResponse'
-            ]
-        ];
+        $services = [];
+        
+        // Country-specific services
+        if ($countryCode === 'IN') {
+            // Indian postal code services
+            $services = [
+                [
+                    'url' => "https://api.postalpincode.in/pincode/{$pincode}",
+                    'parser' => 'parsePostalPincodeResponse'
+                ],
+                [
+                    'url' => "https://api.zippopotam.us/in/{$pincode}",
+                    'parser' => 'parseZippopotamResponse'
+                ],
+                [
+                    'url' => "http://api.postalpincode.in/pincode/{$pincode}",
+                    'parser' => 'parsePostalPincodeResponse'
+                ]
+            ];
+        } else {
+            // Global postal code service (Zippopotam supports many countries)
+            $services = [
+                [
+                    'url' => "https://api.zippopotam.us/" . strtolower($countryCode) . "/{$pincode}",
+                    'parser' => 'parseZippopotamResponse'
+                ]
+            ];
+        }
 
         foreach ($services as $service) {
             try {
@@ -425,14 +439,14 @@ class GeoLocationController extends Controller
             }
         }
 
-        // If all APIs fail, try to provide a basic response for common Indian pincodes
-        $fallbackData = $this->getFallbackPincodeData($pincode);
+        // If all APIs fail, try to provide a basic response for common pincodes
+        $fallbackData = $this->getFallbackPincodeData($pincode, $countryCode);
         if ($fallbackData) {
-            Log::info("Using fallback data for pincode: " . $pincode);
+            Log::info("Using fallback data for pincode: " . $pincode . " in country: " . $countryCode);
             return $fallbackData;
         }
 
-        throw new \Exception("Unable to fetch pincode details for {$pincode}. All services failed.");
+        throw new \Exception("Unable to fetch pincode details for {$pincode} in {$countryCode}. All services failed.");
     }
 
     /**
@@ -505,15 +519,16 @@ class GeoLocationController extends Controller
     }
 
     /**
-     * Get fallback data for common Indian pincodes
+     * Get fallback data for common pincodes globally
      */
-    private function getFallbackPincodeData($pincode)
+    private function getFallbackPincodeData($pincode, $countryCode = 'IN')
     {
-        // Common pincode patterns for major Indian cities and states
-        $fallbackData = [
-            // Maharashtra
-            '400' => ['city' => 'Mumbai', 'state' => 'Maharashtra'],
-            '401' => ['city' => 'Thane', 'state' => 'Maharashtra'],
+        if ($countryCode === 'IN') {
+            // Indian postal codes (existing data)
+            $fallbackData = [
+                // Maharashtra
+                '400' => ['city' => 'Mumbai', 'state' => 'Maharashtra'],
+                '401' => ['city' => 'Thane', 'state' => 'Maharashtra'],
             '411' => ['city' => 'Pune', 'state' => 'Maharashtra'],
             '412' => ['city' => 'Pune', 'state' => 'Maharashtra'],
             '413' => ['city' => 'Solapur', 'state' => 'Maharashtra'],
@@ -662,6 +677,67 @@ class GeoLocationController extends Controller
                 ])
             ];
         }
+        } else {
+            // Global postal code patterns for other countries
+            $globalFallbackData = [
+                'US' => [
+                    '100' => ['city' => 'New York', 'state' => 'New York'],
+                    '200' => ['city' => 'Washington', 'state' => 'District of Columbia'],
+                    '300' => ['city' => 'Philadelphia', 'state' => 'Pennsylvania'],
+                    '900' => ['city' => 'Los Angeles', 'state' => 'California'],
+                ],
+                'GB' => [
+                    'SW1' => ['city' => 'London', 'state' => 'England'],
+                    'M1' => ['city' => 'Manchester', 'state' => 'England'],
+                    'B1' => ['city' => 'Birmingham', 'state' => 'England'],
+                ],
+                'CA' => [
+                    'M5V' => ['city' => 'Toronto', 'state' => 'Ontario'],
+                    'H3A' => ['city' => 'Montreal', 'state' => 'Quebec'],
+                    'V6B' => ['city' => 'Vancouver', 'state' => 'British Columbia'],
+                ],
+                'AU' => [
+                    '200' => ['city' => 'Sydney', 'state' => 'New South Wales'],
+                    '300' => ['city' => 'Melbourne', 'state' => 'Victoria'],
+                    '400' => ['city' => 'Brisbane', 'state' => 'Queensland'],
+                ],
+                'DE' => [
+                    '10' => ['city' => 'Berlin', 'state' => 'Berlin'],
+                    '20' => ['city' => 'Hamburg', 'state' => 'Hamburg'],
+                    '80' => ['city' => 'Munich', 'state' => 'Bavaria'],
+                ],
+                'FR' => [
+                    '75' => ['city' => 'Paris', 'state' => 'Île-de-France'],
+                    '69' => ['city' => 'Lyon', 'state' => 'Auvergne-Rhône-Alpes'],
+                    '13' => ['city' => 'Marseille', 'state' => 'Provence-Alpes-Côte d\'Azur'],
+                ]
+            ];
+            
+            if (isset($globalFallbackData[$countryCode])) {
+                $countryData = $globalFallbackData[$countryCode];
+                $prefix = substr($pincode, 0, ($countryCode === 'US' ? 3 : 2));
+                
+                if (isset($countryData[$prefix])) {
+                    $data = $countryData[$prefix];
+                    $countryName = $this->getCountryName($countryCode);
+                    
+                    return [
+                        'pincode' => $pincode,
+                        'area' => $data['city'],
+                        'city' => $data['city'],
+                        'state' => $data['state'],
+                        'country' => $countryName,
+                        'region' => '',
+                        'division' => '',
+                        'formatted_address' => $this->formatAddress([
+                            $data['city'],
+                            $data['state'],
+                            $countryName
+                        ])
+                    ];
+                }
+            }
+        }
 
         return null;
     }
@@ -687,59 +763,84 @@ class GeoLocationController extends Controller
     }
 
     /**
-     * Get approximate location based on coordinates (fallback method)
+     * Get approximate location based on coordinates (global fallback method)
      */
     private function getApproximateLocationFromCoordinates($latitude, $longitude)
     {
-        // Basic coordinate-based location approximation for India
-        $indianRegions = [
-            // North India
-            ['lat_min' => 28.0, 'lat_max' => 32.0, 'lon_min' => 76.0, 'lon_max' => 78.5, 'city' => 'New Delhi', 'state' => 'Delhi'],
-            ['lat_min' => 26.5, 'lat_max' => 28.5, 'lon_min' => 80.0, 'lon_max' => 82.0, 'city' => 'Lucknow', 'state' => 'Uttar Pradesh'],
+        // Global coordinate-based location approximation
+        $globalRegions = [
+            // India
+            ['lat_min' => 28.0, 'lat_max' => 32.0, 'lon_min' => 76.0, 'lon_max' => 78.5, 'city' => 'New Delhi', 'state' => 'Delhi', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 18.8, 'lat_max' => 19.3, 'lon_min' => 72.7, 'lon_max' => 73.2, 'city' => 'Mumbai', 'state' => 'Maharashtra', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 22.9, 'lat_max' => 23.3, 'lon_min' => 72.4, 'lon_max' => 72.8, 'city' => 'Ahmedabad', 'state' => 'Gujarat', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 12.8, 'lat_max' => 13.2, 'lon_min' => 77.4, 'lon_max' => 77.8, 'city' => 'Bangalore', 'state' => 'Karnataka', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 12.8, 'lat_max' => 13.2, 'lon_min' => 80.1, 'lon_max' => 80.4, 'city' => 'Chennai', 'state' => 'Tamil Nadu', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 17.2, 'lat_max' => 17.6, 'lon_min' => 78.2, 'lon_max' => 78.7, 'city' => 'Hyderabad', 'state' => 'Telangana', 'country' => 'India', 'country_code' => 'IN'],
+            ['lat_min' => 22.4, 'lat_max' => 22.8, 'lon_min' => 88.2, 'lon_max' => 88.5, 'city' => 'Kolkata', 'state' => 'West Bengal', 'country' => 'India', 'country_code' => 'IN'],
             
-            // West India
-            ['lat_min' => 18.8, 'lat_max' => 19.3, 'lon_min' => 72.7, 'lon_max' => 73.2, 'city' => 'Mumbai', 'state' => 'Maharashtra'],
-            ['lat_min' => 18.4, 'lat_max' => 18.7, 'lon_min' => 73.7, 'lon_max' => 74.0, 'city' => 'Pune', 'state' => 'Maharashtra'],
-            ['lat_min' => 22.9, 'lat_max' => 23.3, 'lon_min' => 72.4, 'lon_max' => 72.8, 'city' => 'Ahmedabad', 'state' => 'Gujarat'],
+            // United States
+            ['lat_min' => 40.4, 'lat_max' => 40.9, 'lon_min' => -74.3, 'lon_max' => -73.7, 'city' => 'New York', 'state' => 'New York', 'country' => 'United States', 'country_code' => 'US'],
+            ['lat_min' => 34.0, 'lat_max' => 34.3, 'lon_min' => -118.7, 'lon_max' => -118.1, 'city' => 'Los Angeles', 'state' => 'California', 'country' => 'United States', 'country_code' => 'US'],
+            ['lat_min' => 41.8, 'lat_max' => 42.0, 'lon_min' => -87.8, 'lon_max' => -87.5, 'city' => 'Chicago', 'state' => 'Illinois', 'country' => 'United States', 'country_code' => 'US'],
+            ['lat_min' => 25.6, 'lat_max' => 25.9, 'lon_min' => -80.3, 'lon_max' => -80.1, 'city' => 'Miami', 'state' => 'Florida', 'country' => 'United States', 'country_code' => 'US'],
             
-            // South India
-            ['lat_min' => 12.8, 'lat_max' => 13.2, 'lon_min' => 77.4, 'lon_max' => 77.8, 'city' => 'Bangalore', 'state' => 'Karnataka'],
-            ['lat_min' => 12.8, 'lat_max' => 13.2, 'lon_min' => 80.1, 'lon_max' => 80.4, 'city' => 'Chennai', 'state' => 'Tamil Nadu'],
-            ['lat_min' => 17.2, 'lat_max' => 17.6, 'lon_min' => 78.2, 'lon_max' => 78.7, 'city' => 'Hyderabad', 'state' => 'Telangana'],
+            // United Kingdom
+            ['lat_min' => 51.3, 'lat_max' => 51.7, 'lon_min' => -0.5, 'lon_max' => 0.3, 'city' => 'London', 'state' => 'England', 'country' => 'United Kingdom', 'country_code' => 'GB'],
+            ['lat_min' => 53.3, 'lat_max' => 53.6, 'lon_min' => -2.4, 'lon_max' => -2.1, 'city' => 'Manchester', 'state' => 'England', 'country' => 'United Kingdom', 'country_code' => 'GB'],
             
-            // East India
-            ['lat_min' => 22.4, 'lat_max' => 22.8, 'lon_min' => 88.2, 'lon_max' => 88.5, 'city' => 'Kolkata', 'state' => 'West Bengal'],
+            // Canada
+            ['lat_min' => 43.6, 'lat_max' => 43.9, 'lon_min' => -79.7, 'lon_max' => -79.1, 'city' => 'Toronto', 'state' => 'Ontario', 'country' => 'Canada', 'country_code' => 'CA'],
+            ['lat_min' => 45.4, 'lat_max' => 45.6, 'lon_min' => -73.8, 'lon_max' => -73.4, 'city' => 'Montreal', 'state' => 'Quebec', 'country' => 'Canada', 'country_code' => 'CA'],
+            
+            // Australia
+            ['lat_min' => -34.0, 'lat_max' => -33.7, 'lon_min' => 151.0, 'lon_max' => 151.3, 'city' => 'Sydney', 'state' => 'New South Wales', 'country' => 'Australia', 'country_code' => 'AU'],
+            ['lat_min' => -37.9, 'lat_max' => -37.6, 'lon_min' => 144.8, 'lon_max' => 145.1, 'city' => 'Melbourne', 'state' => 'Victoria', 'country' => 'Australia', 'country_code' => 'AU'],
+            
+            // Germany
+            ['lat_min' => 52.4, 'lat_max' => 52.6, 'lon_min' => 13.2, 'lon_max' => 13.6, 'city' => 'Berlin', 'state' => 'Berlin', 'country' => 'Germany', 'country_code' => 'DE'],
+            ['lat_min' => 53.4, 'lat_max' => 53.7, 'lon_min' => 9.8, 'lon_max' => 10.2, 'city' => 'Hamburg', 'state' => 'Hamburg', 'country' => 'Germany', 'country_code' => 'DE'],
+            
+            // France
+            ['lat_min' => 48.8, 'lat_max' => 48.9, 'lon_min' => 2.2, 'lon_max' => 2.5, 'city' => 'Paris', 'state' => 'Île-de-France', 'country' => 'France', 'country_code' => 'FR'],
+            
+            // Japan
+            ['lat_min' => 35.6, 'lat_max' => 35.8, 'lon_min' => 139.6, 'lon_max' => 139.8, 'city' => 'Tokyo', 'state' => 'Tokyo', 'country' => 'Japan', 'country_code' => 'JP'],
+            
+            // China
+            ['lat_min' => 39.8, 'lat_max' => 40.0, 'lon_min' => 116.2, 'lon_max' => 116.6, 'city' => 'Beijing', 'state' => 'Beijing', 'country' => 'China', 'country_code' => 'CN'],
+            ['lat_min' => 31.1, 'lat_max' => 31.4, 'lon_min' => 121.3, 'lon_max' => 121.7, 'city' => 'Shanghai', 'state' => 'Shanghai', 'country' => 'China', 'country_code' => 'CN'],
         ];
 
-        foreach ($indianRegions as $region) {
+        foreach ($globalRegions as $region) {
             if ($latitude >= $region['lat_min'] && $latitude <= $region['lat_max'] &&
                 $longitude >= $region['lon_min'] && $longitude <= $region['lon_max']) {
                 
                 return [
-                    'country' => 'India',
-                    'country_code' => 'IN',
+                    'country' => $region['country'],
+                    'country_code' => $region['country_code'],
                     'state' => $region['state'],
                     'city' => $region['city'],
                     'area' => $region['city'],
                     'pincode' => '',
                     'latitude' => $latitude,
                     'longitude' => $longitude,
-                    'formatted_address' => $region['city'] . ', ' . $region['state'] . ', India'
+                    'formatted_address' => $region['city'] . ', ' . $region['state'] . ', ' . $region['country']
                 ];
             }
         }
 
-        // If no specific region matches, provide generic India location
+        // If no specific region matches, provide generic location based on broad coordinates
+        $continentData = $this->getContinentFromCoordinates($latitude, $longitude);
         return [
-            'country' => 'India',
-            'country_code' => 'IN',
+            'country' => $continentData['country'],
+            'country_code' => $continentData['country_code'],
             'state' => 'Unknown',
             'city' => 'Unknown',
             'area' => 'Unknown',
             'pincode' => '',
             'latitude' => $latitude,
             'longitude' => $longitude,
-            'formatted_address' => 'India'
+            'formatted_address' => $continentData['country']
         ];
     }
 
@@ -990,8 +1091,62 @@ class GeoLocationController extends Controller
             Log::error('All GeoLocation services failed: ' . $e->getMessage());
         }
         
-        // Default fallback to India since you're in India
+        // Default fallback based on environment or detected user location
         Log::info("All services failed, returning default country: in");
-        return 'in';
+        return env('DEFAULT_COUNTRY_CODE', 'in'); // You can set this in .env file
+    }
+    
+    /**
+     * Get continent and approximate country from coordinates
+     */
+    private function getContinentFromCoordinates($latitude, $longitude)
+    {
+        // Broad continental regions
+        if ($latitude >= 23.5 && $latitude <= 71 && $longitude >= 60 && $longitude <= 180) {
+            return ['country' => 'Unknown Asian Country', 'country_code' => 'AS'];
+        } elseif ($latitude >= 35 && $latitude <= 71 && $longitude >= -25 && $longitude <= 60) {
+            return ['country' => 'Unknown European Country', 'country_code' => 'EU'];
+        } elseif ($latitude >= -35 && $latitude <= 37 && $longitude >= -20 && $longitude <= 50) {
+            return ['country' => 'Unknown African Country', 'country_code' => 'AF'];
+        } elseif ($latitude >= 5 && $latitude <= 83 && $longitude >= -180 && $longitude <= -30) {
+            return ['country' => 'Unknown North American Country', 'country_code' => 'NA'];
+        } elseif ($latitude >= -60 && $latitude <= 15 && $longitude >= -85 && $longitude <= -30) {
+            return ['country' => 'Unknown South American Country', 'country_code' => 'SA'];
+        } elseif ($latitude >= -50 && $latitude <= -10 && $longitude >= 110 && $longitude <= 180) {
+            return ['country' => 'Unknown Oceanic Country', 'country_code' => 'OC'];
+        }
+        
+        return ['country' => 'Unknown', 'country_code' => 'XX'];
+    }
+    
+    /**
+     * Get country name from country code
+     */
+    private function getCountryName($countryCode)
+    {
+        $countries = [
+            'US' => 'United States',
+            'CA' => 'Canada',
+            'GB' => 'United Kingdom',
+            'AU' => 'Australia',
+            'DE' => 'Germany',
+            'FR' => 'France',
+            'JP' => 'Japan',
+            'CN' => 'China',
+            'IN' => 'India',
+            'BR' => 'Brazil',
+            'RU' => 'Russia',
+            'IT' => 'Italy',
+            'ES' => 'Spain',
+            'MX' => 'Mexico',
+            'KR' => 'South Korea',
+            'NL' => 'Netherlands',
+            'SE' => 'Sweden',
+            'NO' => 'Norway',
+            'DK' => 'Denmark',
+            'FI' => 'Finland'
+        ];
+        
+        return $countries[$countryCode] ?? 'Unknown Country';
     }
 }

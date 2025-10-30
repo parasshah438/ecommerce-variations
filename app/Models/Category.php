@@ -51,4 +51,28 @@ class Category extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    /**
+     * Get the full breadcrumb path for this category
+     */
+    public function getBreadcrumbPath()
+    {
+        $path = collect([$this]);
+        
+        $current = $this;
+        while ($current->parent) {
+            $current = $current->parent;
+            $path->prepend($current);
+        }
+        
+        return $path;
+    }
+
+    /**
+     * Get formatted breadcrumb string
+     */
+    public function getBreadcrumbString($separator = ' > ')
+    {
+        return $this->getBreadcrumbPath()->pluck('name')->implode($separator);
+    }
 }

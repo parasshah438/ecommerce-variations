@@ -15,6 +15,7 @@ class GeolocationManager {
         };
         
         this.currentLocation = null;
+        this.pincodeTimeout = null; // For debouncing pincode input
         this.callbacks = {
             onLocationDetected: [],
             onLocationError: [],
@@ -74,7 +75,10 @@ class GeolocationManager {
                     
                     this.getLocationDetails(coords.latitude, coords.longitude)
                         .then((locationData) => {
-                            this.currentLocation = { ...locationData, ...coords };
+                            // Merge coordinates with location data and normalize
+                            const fullLocation = { ...locationData, ...coords };
+                            const normalizedLocation = this.normalizeLocationData(fullLocation);
+                            this.currentLocation = normalizedLocation;
                             this.trigger('onLocationDetected', this.currentLocation);
                             resolve(this.currentLocation);
                         })
@@ -115,7 +119,8 @@ class GeolocationManager {
             const data = await response.json();
             
             if (data.success) {
-                return data.data;
+                // Normalize location data to fill missing fields
+                return this.normalizeLocationData(data.data);
             } else {
                 throw new Error(data.error || 'Failed to get location details');
             }
@@ -123,6 +128,70 @@ class GeolocationManager {
             console.error('Error getting location details:', error);
             throw error;
         }
+    }
+    
+    /**
+     * Normalize location data to extract missing fields from formatted_address
+     */
+    normalizeLocationData(location) {
+        console.log('🔧 Normalizing location data:', location);
+        
+        // If city is missing but formatted_address exists, try to extract it
+        if ((!location.city || location.city.trim() === '') && location.formatted_address) {
+            const cityFromAddress = this.extractCityFromAddress(location.formatted_address);
+            if (cityFromAddress) {
+                console.log('🏙️ Extracted city from address:', cityFromAddress);
+                location.city = cityFromAddress;
+            }
+        }
+        
+        // If area is missing but we have road, use road as area
+        if ((!location.area || location.area.trim() === '') && location.road) {
+            location.area = location.road;
+        }
+        
+        console.log('✅ Normalized location data:', location);
+        return location;
+    }
+    
+    /**
+     * Extract city from formatted address (simplified approach)
+     */
+    extractCityFromAddress(formattedAddress) {
+        console.log('🔍 Extracting city from:', formattedAddress);
+        
+        // Split by commas and clean up
+        const parts = formattedAddress.split(',').map(part => part.trim());
+        
+        // Simple pattern-based approach for Indian addresses
+        if (parts.length >= 4) {
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                
+                // Skip obvious non-cities
+                if (/^\d+$/.test(part)) continue; // Skip pincodes like "382481"
+                if (part.toLowerCase().includes('taluka')) continue; // Skip "Ghatlodiya Taluka"
+                if (part.toLowerCase().includes('district')) continue; // Skip districts
+                if (part.toLowerCase() === 'india') continue; // Skip country
+                if (/^[A-Z]{2,3}$/.test(part)) continue; // Skip state abbreviations
+                if (part.length < 3) continue; // Skip very short parts
+                
+                // Look for cities in typical positions (usually 3rd or 4th in Indian addresses)
+                // "Road, Area, Sub-district, [CITY], State, Pincode, Country"
+                if (i >= 2 && i <= 4 && part.length >= 4) {
+                    // Additional check: if it's not obviously a state name
+                    if (!part.toLowerCase().endsWith('pradesh') && 
+                        !part.toLowerCase().endsWith('bengal') &&
+                        !part.toLowerCase().includes('nadu')) {
+                        console.log('✅ Extracted city from position:', part);
+                        return part;
+                    }
+                }
+            }
+        }
+        
+        console.log('❌ Could not extract city from address');
+        return null;
     }
     
     /**
@@ -134,7 +203,7 @@ class GeolocationManager {
             const data = await response.json();
             
             if (data.success) {
-                this.currentLocation = data.data;
+                this.currentLocation = this.normalizeLocationData(data.data);
                 this.trigger('onLocationDetected', this.currentLocation);
                 return this.currentLocation;
             } else {
@@ -167,11 +236,168 @@ class GeolocationManager {
     }
     
     /**
-     * Get pincode details
+     * Check if pincode is valid for API lookup
      */
-    async getPincodeDetails(pincode) {
+    isValidPincodeForLookup(pincode) {
+        if (!pincode || pincode.length < 5) return false;
+        
+        // US ZIP codes: 5 digits exactly (10001, 90210)
+        if (pincode.length === 5 && /^\d{5}$/.test(pincode)) {
+            return true;
+        }
+        
+        // US ZIP+4: 9 digits (123456789)
+        if (pincode.length === 9 && /^\d{9}$/.test(pincode)) {
+            return true;
+        }
+        
+        // Indian PIN codes: 6 digits exactly (380001, 110001)
+        if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+            return true;
+        }
+        
+        // Canadian postal codes: A1A1A1 format
+        if (pincode.length === 6 && /^[A-Z]\d[A-Z]\d[A-Z]\d$/i.test(pincode)) {
+            return true;
+        }
+        
+        // UK postal codes: Various formats (SW1A1AA, M11AA, etc.)
+        if (pincode.length >= 5 && pincode.length <= 8 && /^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i.test(pincode)) {
+            return true;
+        }
+        
+        // Don't lookup incomplete or invalid patterns
+        return false;
+    }
+    
+    /**
+     * Get validation reason for debugging
+     */
+    getPincodeValidationReason(pincode) {
+        if (!pincode) return 'Empty pincode';
+        if (pincode.length < 5) return 'Too short (minimum 5 characters)';
+        if (pincode.length > 10) return 'Too long (maximum 10 characters)';
+        
+        // Check for incomplete patterns
+        if (pincode.length === 5 && !/^\d{5}$/.test(pincode)) {
+            return '5-digit codes must be all numeric (US ZIP)';
+        }
+        if (pincode.length === 6 && !/^\d{6}$/.test(pincode)) {
+            return '6-digit codes must be all numeric (Indian PIN)';
+        }
+        
+        return 'Invalid format for known postal code patterns';
+    }
+    
+    /**
+     * Handle pincode change with proper error handling
+     */
+    async handlePincodeChange(pincode, locationInfo, locationDisplay) {
         try {
-            const response = await fetch(`/api/pincode-details?pincode=${pincode}`);
+            // Detect country from pincode pattern
+            let countryCode = this.detectCountryFromPincode(pincode);
+            
+            console.log('🌍 Detected country for pincode:', {
+                pincode: pincode,
+                detectedCountry: countryCode
+            });
+            
+            const location = await this.getPincodeDetails(pincode, countryCode);
+            console.log('✅ Pincode lookup successful:', location);
+            this.setLocation(location);
+            this.showLocationInfo(locationInfo, locationDisplay, location);
+            
+        } catch (error) {
+            console.error('❌ Initial pincode lookup failed:', error);
+            
+            // Try with fallback countries
+            const fallbackCountries = this.getFallbackCountries(pincode);
+            
+            if (fallbackCountries.length > 0) {
+                console.log('🔄 Trying fallback countries:', fallbackCountries);
+                await this.tryPincodeWithFallbacks(pincode, fallbackCountries, locationInfo, locationDisplay);
+            } else {
+                console.warn('⚠️ No fallback countries available for pincode:', pincode);
+                this.showLocationError(locationInfo, locationDisplay, `Invalid postal code: ${pincode}`);
+            }
+        }
+    }
+    
+    /**
+     * Detect country from pincode pattern
+     */
+    detectCountryFromPincode(pincode) {
+        // US ZIP codes: 5 or 9 digits
+        if (/^\d{5}$/.test(pincode) || /^\d{9}$/.test(pincode)) {
+            return 'US';
+        }
+        
+        // Indian PIN codes: 6 digits
+        if (/^\d{6}$/.test(pincode)) {
+            return 'IN';
+        }
+        
+        // Canadian postal codes: A1A1A1
+        if (/^[A-Z]\d[A-Z]\d[A-Z]\d$/i.test(pincode)) {
+            return 'CA';
+        }
+        
+        // UK postal codes: Various formats
+        if (/^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i.test(pincode)) {
+            return 'GB';
+        }
+        
+        // Default to India for unknown patterns
+        return 'IN';
+    }
+    
+    /**
+     * Get fallback countries based on pincode
+     */
+    getFallbackCountries(pincode) {
+        const detected = this.detectCountryFromPincode(pincode);
+        const allCountries = ['US', 'IN', 'GB', 'CA', 'AU', 'DE', 'FR'];
+        
+        // Return other countries excluding the already detected one
+        return allCountries.filter(country => country !== detected);
+    }
+    
+    /**
+     * Show location error message
+     */
+    showLocationError(locationInfo, locationDisplay, message) {
+        if (locationInfo) {
+            locationInfo.innerHTML = `
+                <div class="alert alert-warning alert-sm">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    ${message}
+                </div>
+            `;
+        }
+    }
+    async tryPincodeWithFallbacks(pincode, countries, locationInfo, locationDisplay) {
+        for (const countryCode of countries) {
+            try {
+                console.log(`🔍 Trying pincode ${pincode} with country ${countryCode}`);
+                const location = await this.getPincodeDetails(pincode, countryCode);
+                console.log(`✅ Success with country ${countryCode}:`, location);
+                this.setLocation(location);
+                this.showLocationInfo(locationInfo, locationDisplay, location);
+                return; // Success, stop trying
+            } catch (error) {
+                console.log(`❌ Failed with country ${countryCode}:`, error.message);
+                continue; // Try next country
+            }
+        }
+        console.warn('⚠️ All fallback countries failed for pincode:', pincode);
+    }
+
+    /**
+     * Get pincode details with country support
+     */
+    async getPincodeDetails(pincode, countryCode = 'IN') {
+        try {
+            const response = await fetch(`/api/pincode-details?pincode=${pincode}&country_code=${countryCode}`);
             const data = await response.json();
             
             if (data.success) {
@@ -190,7 +416,8 @@ class GeolocationManager {
      */
     setLocation(locationData) {
         const oldLocation = this.currentLocation;
-        this.currentLocation = locationData;
+        // Normalize location data before setting
+        this.currentLocation = this.normalizeLocationData(locationData);
         this.trigger('onLocationChanged', { old: oldLocation, new: this.currentLocation });
     }
     
@@ -305,7 +532,8 @@ class GeolocationManager {
                     ${config.showPincodeInput ? `
                         <div class="col-md-4 mb-3">
                             <input type="text" class="form-control location-pincode-input" 
-                                   placeholder="${config.pincodePlaceholder}" maxlength="6" pattern="[0-9]{6}">
+                                   placeholder="${config.pincodePlaceholder}" maxlength="10" 
+                                   title="Enter postal/ZIP code (5-10 characters)">
                         </div>
                     ` : ''}
                 </div>
@@ -395,22 +623,42 @@ class GeolocationManager {
         
         // Pincode input
         if (pincodeInput) {
+            // Clear any existing timeout when creating new listener
+            if (this.pincodeTimeout) {
+                clearTimeout(this.pincodeTimeout);
+            }
+            
             pincodeInput.addEventListener('input', (e) => {
-                // Only allow numbers
-                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                // Remove non-alphanumeric for international support
+                e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
                 
                 const pincode = e.target.value.trim();
+                console.log('📮 Pincode input:', {
+                    value: pincode,
+                    length: pincode.length,
+                    shouldTrigger: this.isValidPincodeForLookup(pincode)
+                });
                 
-                if (pincode.length === 6) {
-                    this.getPincodeDetails(pincode)
-                        .then((location) => {
-                            this.setLocation(location);
-                            this.showLocationInfo(locationInfo, locationDisplay, location);
-                        })
-                        .catch((error) => {
-                            console.error('Pincode lookup failed:', error);
-                            alert('Invalid pincode or lookup failed');
-                        });
+                // Clear previous timeout
+                if (this.pincodeTimeout) {
+                    clearTimeout(this.pincodeTimeout);
+                }
+                
+                // Validate pincode before making API call
+                if (this.isValidPincodeForLookup(pincode)) {
+                    console.log('⏱️ Scheduling pincode lookup with 800ms delay...');
+                    
+                    // Add debouncing to prevent excessive API calls
+                    this.pincodeTimeout = setTimeout(() => {
+                        console.log('🚀 Executing pincode lookup for:', pincode);
+                        this.handlePincodeChange(pincode, locationInfo, locationDisplay);
+                    }, 800); // 800ms delay to reduce API calls while typing
+                } else {
+                    console.log('❌ Pincode not valid for lookup:', {
+                        value: pincode,
+                        length: pincode.length,
+                        reason: this.getPincodeValidationReason(pincode)
+                    });
                 }
             });
         }

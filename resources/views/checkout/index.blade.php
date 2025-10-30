@@ -247,19 +247,70 @@
                                 <div class="row g-3 mb-4">
                                     @foreach(auth()->user()->addresses as $address)
                                         <div class="col-md-6">
-                                            <div class="address-card" onclick="selectAddress({{ $address->id }})">
+                                            <div class="address-card position-relative {{ $address->is_default ? 'selected' : '' }}" onclick="selectAddress({{ $address->id }})">
                                                 <input type="radio" name="address_id" value="{{ $address->id }}" 
-                                                       class="form-check-input" id="address_{{ $address->id }}" hidden>
+                                                       class="form-check-input" id="address_{{ $address->id }}" 
+                                                       {{ $address->is_default ? 'checked' : '' }} hidden>
+                                                
+                                                <!-- Address Header -->
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <span class="badge bg-primary">{{ $address->label }}</span>
-                                                    <i class="bi bi-check-circle-fill text-primary address-check" style="display: none;"></i>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-{{ $address->type === 'home' ? 'primary' : ($address->type === 'work' ? 'success' : 'secondary') }}">
+                                                            <i class="{{ $address->typeIcon }} me-1"></i>{{ $address->typeLabel }}
+                                                        </span>
+                                                        @if($address->is_default)
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="bi bi-star-fill me-1"></i>Default
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <i class="bi bi-check-circle-fill text-primary address-check" style="display: none;"></i>
+                                                        <!-- Action Buttons -->
+                                                        <div class="btn-group" role="group">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                                    onclick="event.stopPropagation(); editAddress({{ $address->id }})" 
+                                                                    title="Edit Address">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </button>
+                                                            @if(!$address->is_default)
+                                                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                                        onclick="event.stopPropagation(); setDefaultAddress({{ $address->id }})" 
+                                                                        title="Set as Default">
+                                                                    <i class="bi bi-star"></i>
+                                                                </button>
+                                                            @endif
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                                    onclick="event.stopPropagation(); deleteAddress({{ $address->id }})" 
+                                                                    title="Delete Address">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <h6 class="fw-semibold">{{ $address->name }}</h6>
-                                                <p class="text-muted mb-1">{{ $address->phone }}</p>
-                                                <p class="text-muted mb-0">
-                                                    {{ $address->address_line }}<br>
-                                                    {{ $address->city }}, {{ $address->state }} {{ $address->zip }}
+                                                
+                                                <!-- Address Details -->
+                                                <h6 class="fw-semibold mb-1">{{ $address->name }}</h6>
+                                                <div class="small text-muted mb-2">
+                                                    <i class="bi bi-telephone me-1"></i>{{ $address->phone }}
+                                                    @if($address->alternate_phone)
+                                                        <br><i class="bi bi-telephone-plus me-1"></i>{{ $address->alternate_phone }}
+                                                    @endif
+                                                </div>
+                                                
+                                                <p class="text-muted mb-1 small">
+                                                    {{ $address->address_line }}
+                                                    @if($address->landmark)
+                                                        <br><i class="bi bi-geo-alt me-1"></i>Near {{ $address->landmark }}
+                                                    @endif
+                                                    <br>{{ $address->city }}, {{ $address->state }} {{ $address->zip }}
                                                 </p>
+                                                
+                                                @if($address->delivery_instructions)
+                                                    <div class="small text-info">
+                                                        <i class="bi bi-info-circle me-1"></i>{{ Str::limit($address->delivery_instructions, 50) }}
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach
@@ -276,6 +327,7 @@
                             <div id="newAddressForm" class="{{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'd-none' : '' }}">
                                 <h6 class="fw-semibold mb-3">{{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'Add new address:' : 'Enter delivery address:' }}</h6>
                                 <div class="row g-3">
+                                    <!-- Basic Information -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="name" name="name" 
@@ -286,12 +338,35 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating">
+                                            <select class="form-select" id="type" name="type" 
+                                                    {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
+                                                <option value="home" {{ old('type') == 'home' ? 'selected' : '' }}>Home</option>
+                                                <option value="work" {{ old('type') == 'work' ? 'selected' : '' }}>Work</option>
+                                                <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
+                                            </select>
+                                            <label for="type">Address Type *</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Phone Numbers -->
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
                                             <input type="tel" class="form-control" id="phone" name="phone" 
                                                    value="{{ old('phone', auth()->user()->mobile) }}" 
                                                    {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
                                             <label for="phone">Phone Number *</label>
                                         </div>
                                     </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input type="tel" class="form-control" id="alternate_phone" name="alternate_phone" 
+                                                   value="{{ old('alternate_phone') }}" 
+                                                   {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : '' }}>
+                                            <label for="alternate_phone">Alternate Phone</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Address Details -->
                                     <div class="col-12">
                                         <div class="form-floating">
                                             <textarea class="form-control" id="address_line" name="address_line" 
@@ -299,27 +374,57 @@
                                             <label for="address_line">Address Line *</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="landmark" name="landmark" 
+                                                   value="{{ old('landmark') }}" 
+                                                   {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : '' }}>
+                                            <label for="landmark">Landmark</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="city" name="city" 
                                                    value="{{ old('city') }}" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
                                             <label for="city">City *</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="state" name="state" 
                                                    value="{{ old('state') }}" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
                                             <label for="state">State *</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="zip" name="zip" 
                                                    value="{{ old('zip') }}" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
                                             <label for="zip">PIN Code *</label>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Additional Information -->
+                                    <div class="col-12">
+                                        <div class="form-floating">
+                                            <textarea class="form-control" id="delivery_instructions" name="delivery_instructions" 
+                                                      style="height: 80px" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : '' }}>{{ old('delivery_instructions') }}</textarea>
+                                            <label for="delivery_instructions">Delivery Instructions</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Default Address Checkbox -->
+                                    @if(auth()->user()->addresses && auth()->user()->addresses->count() > 0)
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_default" name="is_default" value="1" 
+                                                   {{ old('is_default') ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="is_default">
+                                                Set as default address
+                                            </label>
+                                        </div>
+                                    </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -474,6 +579,117 @@
         </form>
     </div>
 </div>
+
+<!-- Edit Address Modal -->
+<div class="modal fade" id="editAddressModal" tabindex="-1" aria-labelledby="editAddressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAddressModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Address
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editAddressForm">
+                @csrf
+                @method('PUT')
+                <input type="hidden" id="edit_address_id" name="address_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="edit_name" name="name" required>
+                                <label for="edit_name">Full Name *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" id="edit_type" name="type" required>
+                                    <option value="home">Home</option>
+                                    <option value="work">Work</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <label for="edit_type">Address Type *</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Phone Numbers -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="tel" class="form-control" id="edit_phone" name="phone" required>
+                                <label for="edit_phone">Phone Number *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="tel" class="form-control" id="edit_alternate_phone" name="alternate_phone">
+                                <label for="edit_alternate_phone">Alternate Phone</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Address Details -->
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <textarea class="form-control" id="edit_address_line" name="address_line" style="height: 100px" required></textarea>
+                                <label for="edit_address_line">Address Line *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="edit_landmark" name="landmark">
+                                <label for="edit_landmark">Landmark</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="edit_city" name="city" required>
+                                <label for="edit_city">City *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="edit_state" name="state" required>
+                                <label for="edit_state">State *</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="edit_zip" name="zip" required>
+                                <label for="edit_zip">PIN Code *</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Information -->
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <textarea class="form-control" id="edit_delivery_instructions" name="delivery_instructions" style="height: 80px"></textarea>
+                                <label for="edit_delivery_instructions">Delivery Instructions</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Default Address Checkbox -->
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_is_default" name="is_default" value="1">
+                                <label class="form-check-label" for="edit_is_default">
+                                    Set as default address
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateAddress()">
+                        <i class="bi bi-check-lg me-1"></i>Update Address
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -808,6 +1024,182 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedAddresses === 0) {
         addNewAddressRequirements();
     }
+    
+    // Show check icon for default address on page load
+    const defaultAddressCard = document.querySelector('.address-card.selected');
+    if (defaultAddressCard) {
+        const checkIcon = defaultAddressCard.querySelector('.address-check');
+        if (checkIcon) {
+            checkIcon.style.display = 'block';
+        }
+    }
 });
+
+// Address Management Functions
+function editAddress(addressId) {
+    // Get address data via AJAX
+    fetch(`/address/${addressId}`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(address => {
+            console.log('Address data loaded:', address);
+            // Populate edit modal
+            fillEditModal(address);
+            // Show modal
+            const editModal = new bootstrap.Modal(document.getElementById('editAddressModal'));
+            editModal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching address:', error);
+            toastr.error('Failed to load address details: ' + error.message);
+        });
+}
+
+function deleteAddress(addressId) {
+    if (confirm('Are you sure you want to delete this address?')) {
+        const formData = new FormData();
+        formData.append('_method', 'DELETE');
+        formData.append('_token', '{{ csrf_token() }}');
+        
+        fetch(`/address/${addressId}`, {
+            method: 'POST', // Use POST with method spoofing
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                toastr.success(data.message);
+                // Delay reload to allow user to read the message
+                setTimeout(() => {
+                    location.reload();
+                }, 2000); // 2 seconds delay
+            } else {
+                toastr.error(data.message || 'Failed to delete address');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting address:', error);
+            toastr.error('Failed to delete address');
+        });
+    }
+}
+
+function setDefaultAddress(addressId) {
+    fetch(`/address/${addressId}/set-default`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toastr.success(data.message);
+            // Delay reload to allow user to read the message
+            setTimeout(() => {
+                location.reload();
+            }, 2000); // 2 seconds delay
+        } else {
+            toastr.error(data.message || 'Failed to set default address');
+        }
+    })
+    .catch(error => {
+        console.error('Error setting default address:', error);
+        toastr.error('Failed to set default address');
+    });
+}
+
+function fillEditModal(address) {
+    document.getElementById('edit_address_id').value = address.id;
+    document.getElementById('edit_name').value = address.name;
+    document.getElementById('edit_phone').value = address.phone;
+    document.getElementById('edit_alternate_phone').value = address.alternate_phone || '';
+    document.getElementById('edit_type').value = address.type;
+    document.getElementById('edit_address_line').value = address.address_line;
+    document.getElementById('edit_landmark').value = address.landmark || '';
+    document.getElementById('edit_city').value = address.city;
+    document.getElementById('edit_state').value = address.state;
+    document.getElementById('edit_zip').value = address.zip;
+    document.getElementById('edit_delivery_instructions').value = address.delivery_instructions || '';
+    document.getElementById('edit_is_default').checked = address.is_default;
+}
+
+function updateAddress() {
+    const form = document.getElementById('editAddressForm');
+    const formData = new FormData(form);
+    const addressId = document.getElementById('edit_address_id').value;
+    
+    // Add method spoofing for PUT request
+    formData.append('_method', 'PUT');
+    
+    console.log('Updating address:', addressId);
+    
+    fetch(`/address/${addressId}`, {
+        method: 'POST', // Use POST with method spoofing
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers.get('content-type'));
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // If not JSON, get text to see what was returned
+            return response.text().then(text => {
+                console.error('Non-JSON response:', text);
+                throw new Error('Server returned non-JSON response');
+            });
+        }
+    })
+    .then(data => {
+        console.log('Update response:', data);
+        if (data.success) {
+            // Close modal first
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editAddressModal'));
+            if (editModal) {
+                editModal.hide();
+            }
+            
+            // Show success message
+            toastr.success(data.message);
+            
+            // Delay reload to allow user to read the message
+            setTimeout(() => {
+                location.reload();
+            }, 2000); // 2 seconds delay
+        } else {
+            toastr.error(data.message || 'Failed to update address');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating address:', error);
+        toastr.error('Failed to update address: ' + error.message);
+    });
+}
 </script>
 @endsection

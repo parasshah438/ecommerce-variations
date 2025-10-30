@@ -114,11 +114,16 @@ class CheckoutController extends Controller
                     'label' => $request->input('label', 'Home'),
                     'name' => $request->input('name'),
                     'phone' => $request->input('phone'),
+                    'alternate_phone' => $request->input('alternate_phone'),
                     'address_line' => $request->input('address_line'),
                     'city' => $request->input('city'),
                     'state' => $request->input('state'),
                     'zip' => $request->input('zip'),
                     'country' => $request->input('country', 'India'),
+                    'type' => $request->input('type', 'home'),
+                    'is_default' => $request->input('is_default', false),
+                    'delivery_instructions' => $request->input('delivery_instructions'),
+                    'landmark' => $request->input('landmark'),
                 ]);
                 \Log::info('New address created', ['address_id' => $address->id]);
             }
@@ -936,5 +941,252 @@ class CheckoutController extends Controller
 
         // For now, return HTML view that can be printed as PDF
         return view('orders.receipt', compact('order'));
+    }
+
+    /**
+     * Get an address for editing
+     */
+    public function getAddress(Address $address)
+    {
+        // Ensure user can only access their own addresses
+        if ($address->user_id !== Auth::id()) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to address.'
+                ], 403);
+            }
+            abort(403, 'Unauthorized access to address.');
+        }
+
+        return response()->json($address);
+    }
+
+    /**
+     * Store a new address
+     */
+    public function storeAddress(Request $request)
+    {
+        $request->validate([
+            'label' => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'alternate_phone' => 'nullable|string|max:20',
+            'address_line' => 'required|string',
+            'city' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'zip' => 'required|string|max:10',
+            'country' => 'nullable|string|max:255',
+            'type' => 'required|in:home,work,other',
+            'is_default' => 'boolean',
+            'delivery_instructions' => 'nullable|string',
+            'landmark' => 'nullable|string|max:255',
+        ]);
+
+        $user = Auth::user();
+        
+        // If this is set as default, unset other default addresses
+        if ($request->is_default) {
+            $user->addresses()->update(['is_default' => false]);
+        }
+
+        $address = $user->addresses()->create([
+            'label' => $request->label,
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'alternate_phone' => $request->alternate_phone,
+            'address_line' => $request->address_line,
+            'city' => $request->city,
+            'state' => $request->state,
+            'zip' => $request->zip,
+            'country' => $request->country ?? 'India',
+            'type' => $request->type,
+            'is_default' => $request->is_default ?? false,
+            'delivery_instructions' => $request->delivery_instructions,
+            'landmark' => $request->landmark,
+        ]);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Address added successfully',
+                'address' => $address
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Address added successfully');
+    }
+
+    /**
+     * Update an existing address
+     */
+    public function updateAddress(Request $request, Address $address)
+    {
+        // Ensure user can only update their own addresses
+        if ($address->user_id !== Auth::id()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to address.'
+                ], 403);
+            }
+            abort(403, 'Unauthorized access to address.');
+        }
+
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'alternate_phone' => 'nullable|string|max:20',
+                'address_line' => 'required|string',
+                'city' => 'required|string|max:255',
+                'state' => 'required|string|max:255',
+                'zip' => 'required|string|max:10',
+                'country' => 'nullable|string|max:255',
+                'type' => 'required|in:home,work,other',
+                'is_default' => 'nullable|boolean',
+                'delivery_instructions' => 'nullable|string',
+                'landmark' => 'nullable|string|max:255',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
+
+        try {
+            $user = Auth::user();
+            
+            // Handle default address logic
+            $isDefault = $request->has('is_default') && $request->is_default;
+            if ($isDefault && !$address->is_default) {
+                $user->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
+            }
+
+            $address->update([
+                'name' => $validatedData['name'],
+                'phone' => $validatedData['phone'],
+                'alternate_phone' => $validatedData['alternate_phone'] ?? null,
+                'address_line' => $validatedData['address_line'],
+                'city' => $validatedData['city'],
+                'state' => $validatedData['state'],
+                'zip' => $validatedData['zip'],
+                'country' => $validatedData['country'] ?? 'India',
+                'type' => $validatedData['type'],
+                'is_default' => $isDefault,
+                'delivery_instructions' => $validatedData['delivery_instructions'] ?? null,
+                'landmark' => $validatedData['landmark'] ?? null,
+            ]);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Address updated successfully',
+                    'address' => $address->fresh()
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Address updated successfully');
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating address: ' . $e->getMessage());
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while updating the address'
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'An error occurred while updating the address');
+        }
+    }
+
+    /**
+     * Delete an address
+     */
+    public function deleteAddress(Address $address)
+    {
+        // Ensure user can only delete their own addresses
+        if ($address->user_id !== Auth::id()) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to address.'
+                ], 403);
+            }
+            abort(403, 'Unauthorized access to address.');
+        }
+
+        // Don't allow deletion if this is the only address
+        $user = Auth::user();
+        if ($user->addresses()->count() <= 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete the only address. Please add another address first.'
+            ], 400);
+        }
+
+        try {
+            // If this was the default address, set another address as default
+            if ($address->is_default) {
+                $nextAddress = $user->addresses()->where('id', '!=', $address->id)->first();
+                if ($nextAddress) {
+                    $nextAddress->update(['is_default' => true]);
+                }
+            }
+
+            $address->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Address deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting address: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting the address'
+            ], 500);
+        }
+    }
+
+    /**
+     * Set an address as default
+     */
+    public function setDefaultAddress(Address $address)
+    {
+        // Ensure user can only modify their own addresses
+        if ($address->user_id !== Auth::id()) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to address.'
+                ], 403);
+            }
+            abort(403, 'Unauthorized access to address.');
+        }
+
+        try {
+            $address->setAsDefault();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Default address updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error setting default address: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while setting default address'
+            ], 500);
+        }
     }
 }
