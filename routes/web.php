@@ -301,6 +301,13 @@ Route::middleware(['auth', 'single.session'])->group(function () {
 // Public search route (doesn't require authentication)
 Route::get('/search', [FrontSearch::class, 'autocomplete'])->name('products.search');
 
+// Sales routes (public access)
+Route::prefix('sales')->name('sales.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Frontend\SaleController::class, 'index'])->name('index');
+    Route::get('/{sale:slug}', [App\Http\Controllers\Frontend\SaleController::class, 'show'])->name('show');
+    Route::get('/{sale:slug}/products', [App\Http\Controllers\Frontend\SaleController::class, 'products'])->name('products');
+});
+
 // Include admin routes
 require __DIR__.'/admin.php';
 

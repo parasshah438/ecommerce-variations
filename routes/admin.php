@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\TaxSettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,5 +85,29 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/api/stock-alerts', [\App\Http\Controllers\Admin\StockDashboardController::class, 'getStockAlerts'])->name('api.alerts');
         Route::post('/api/update-stock/{variation}', [\App\Http\Controllers\Admin\StockDashboardController::class, 'updateStock'])->name('api.update');
         Route::get('/export', [\App\Http\Controllers\Admin\StockDashboardController::class, 'exportStock'])->name('export');
+    });
+    
+    // Sales Management Routes
+    Route::prefix('sales')->name('sales.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SaleController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\SaleController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\SaleController::class, 'store'])->name('store');
+        Route::get('/{sale}', [\App\Http\Controllers\Admin\SaleController::class, 'show'])->name('show');
+        Route::get('/{sale}/edit', [\App\Http\Controllers\Admin\SaleController::class, 'edit'])->name('edit');
+        Route::put('/{sale}', [\App\Http\Controllers\Admin\SaleController::class, 'update'])->name('update');
+        Route::delete('/{sale}', [\App\Http\Controllers\Admin\SaleController::class, 'destroy'])->name('destroy');
+        Route::post('/{sale}/toggle-status', [\App\Http\Controllers\Admin\SaleController::class, 'toggleStatus'])->name('toggle_status');
+        
+        // AJAX endpoints for product management
+        Route::get('/api/search-products', [\App\Http\Controllers\Admin\SaleController::class, 'searchProducts'])->name('search-products');
+        Route::get('/api/get-product', [\App\Http\Controllers\Admin\SaleController::class, 'getProduct'])->name('get-product');
+        Route::post('/api/products-by-category', [\App\Http\Controllers\Admin\SaleController::class, 'productsByCategory'])->name('products-by-category');
+    });
+
+    // Tax Settings Routes
+    Route::prefix('tax-settings')->name('tax-settings.')->group(function () {
+        Route::get('/', [TaxSettingsController::class, 'index'])->name('index');
+        Route::put('/', [TaxSettingsController::class, 'update'])->name('update');
+        Route::post('/test-calculation', [TaxSettingsController::class, 'testCalculation'])->name('test');
     });
 });

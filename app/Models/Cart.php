@@ -223,4 +223,35 @@ class Cart extends Model
             return !$item->is_in_stock;
         });
     }
+
+    /**
+     * Clean up orphaned cart items (items with missing product variations or products).
+     */
+    public function cleanupOrphanedItems(): int
+    {
+        $orphanedCount = 0;
+        
+        foreach ($this->items as $item) {
+            // Check if product variation exists and has a valid product
+            if (!$item->productVariation || !$item->productVariation->product) {
+                $item->delete();
+                $orphanedCount++;
+            }
+        }
+        
+        // Refresh the items relationship
+        $this->load('items');
+        
+        return $orphanedCount;
+    }
+
+    /**
+     * Get valid items (items with existing product variations and products).
+     */
+    public function getValidItems()
+    {
+        return $this->items->filter(function ($item) {
+            return $item->productVariation && $item->productVariation->product;
+        });
+    }
 }

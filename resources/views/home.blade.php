@@ -27,6 +27,9 @@
     </div>
 </section>
 
+<!-- Sales Banner Section -->
+@include('components.sale-banner')
+
 <!-- Features Section -->
 <section id="features" class="py-5 mb-5">
     <div class="container">

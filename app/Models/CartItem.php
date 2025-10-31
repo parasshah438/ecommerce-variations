@@ -83,7 +83,7 @@ class CartItem extends Model
      */
     public function getIsInStockAttribute(): bool
     {
-        $stock = optional($this->productVariation->stock)->quantity ?? 0;
+        $stock = $this->productVariation?->stock?->quantity ?? 0;
         return $stock > 0;
     }
 
@@ -92,7 +92,7 @@ class CartItem extends Model
      */
     public function getAvailableStockAttribute(): int
     {
-        return optional($this->productVariation->stock)->quantity ?? 0;
+        return $this->productVariation?->stock?->quantity ?? 0;
     }
 
     /**
@@ -108,7 +108,7 @@ class CartItem extends Model
      */
     public function getProductNameAttribute(): string
     {
-        return $this->productVariation->product->name ?? 'Unknown Product';
+        return $this->productVariation?->product?->name ?? 'Unknown Product';
     }
 
     /**
@@ -116,7 +116,7 @@ class CartItem extends Model
      */
     public function getProductImageAttribute()
     {
-        return $this->productVariation->product->images->first() ?? null;
+        return $this->productVariation?->product?->images->first() ?? null;
     }
 
     /**
@@ -124,7 +124,7 @@ class CartItem extends Model
      */
     public function getProductBrandAttribute()
     {
-        return $this->productVariation->product->brand ?? null;
+        return $this->productVariation?->product?->brand ?? null;
     }
 
     /**
@@ -132,6 +132,30 @@ class CartItem extends Model
      */
     public function getProductCategoryAttribute()
     {
-        return $this->productVariation->product->category ?? null;
+        return $this->productVariation?->product?->category ?? null;
+    }
+
+    /**
+     * Check if this cart item is valid (has valid product variation and product).
+     */
+    public function isValid(): bool
+    {
+        return $this->productVariation && $this->productVariation->product;
+    }
+
+    /**
+     * Get the product SKU safely.
+     */
+    public function getProductSkuAttribute(): string
+    {
+        return $this->productVariation?->sku ?? 'N/A';
+    }
+
+    /**
+     * Get the product slug safely.
+     */
+    public function getProductSlugAttribute(): ?string
+    {
+        return $this->productVariation?->product?->slug;
     }
 }

@@ -188,6 +188,64 @@ class ProductVariation extends Model
     }
 
     /**
+     * Get the best sale price for this variation
+     */
+    public function getBestSalePrice()
+    {
+        $activeSales = $this->product->activeSales;
+        
+        if ($activeSales->isEmpty()) {
+            return $this->price;
+        }
+        
+        $bestPrice = $this->price;
+        
+        foreach ($activeSales as $sale) {
+            $discount = $sale->getDiscountForProduct($this->product);
+            $salePrice = $sale->calculateSalePrice($this->price, $discount);
+            $bestPrice = min($bestPrice, $salePrice);
+        }
+        
+        return $bestPrice;
+    }
+
+    /**
+     * Get discount percentage for this variation
+     */
+    public function getDiscountPercentage()
+    {
+        $salePrice = $this->getBestSalePrice();
+        if ($salePrice < $this->price) {
+            return round((($this->price - $salePrice) / $this->price) * 100);
+        }
+        return 0;
+    }
+
+    /**
+     * Check if this variation has active sale
+     */
+    public function hasActiveSale()
+    {
+        return $this->product->hasActiveSale();
+    }
+
+    /**
+     * Get active sale for this variation
+     */
+    public function getActiveSale()
+    {
+        return $this->product->getActiveSale();
+    }
+
+    /**
+     * Get formatted sale price.
+     */
+    public function getFormattedSalePriceAttribute(): string
+    {
+        return '₹' . number_format($this->getBestSalePrice(), 2);
+    }
+
+    /**
      * Scope to filter variations by price range.
      */
     public function scopePriceBetween($query, $min, $max)

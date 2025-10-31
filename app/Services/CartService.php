@@ -28,6 +28,9 @@ class CartService
         $variation = ProductVariation::findOrFail($variationId);
         $stock = optional($variation->stock)->quantity ?? 0;
 
+        // Get the best sale price for this variation
+        $currentPrice = $variation->getBestSalePrice();
+
         $item = $cart->items()->where('product_variation_id', $variationId)->first();
         if ($item) {
             // Calculate new total quantity
@@ -39,7 +42,7 @@ class CartService
             }
             
             $item->quantity = $newQuantity;
-            $item->price = $variation->price;
+            $item->price = $currentPrice; // Update to current sale price
             $item->save();
         } else {
             // New item - validate quantity doesn't exceed stock
@@ -50,7 +53,7 @@ class CartService
             $cart->items()->create([
                 'product_variation_id' => $variationId,
                 'quantity' => $qty,
-                'price' => $variation->price,
+                'price' => $currentPrice, // Use sale price
             ]);
         }
 
@@ -152,12 +155,25 @@ class CartService
             $total = $subtotal + $shippingCost - $discountAmount;
         }
         
-        // Calculate savings if any items have MRP - simplified
+        // Calculate savings including sale discounts
         $savings = 0;
         foreach ($items as $item) {
-            $product = $item->productVariation->product ?? null;
-            if ($product && $product->mrp && $product->mrp > $item->price) {
-                $savings += ($product->mrp - $item->price) * $item->quantity;
+            $variation = $item->productVariation ?? null;
+            if ($variation) {
+                // Calculate sale savings (original price vs sale price)
+                $originalPrice = $variation->price;
+                $currentSalePrice = $variation->getBestSalePrice();
+                
+                if ($currentSalePrice < $originalPrice) {
+                    // Sale discount savings
+                    $savings += ($originalPrice - $currentSalePrice) * $item->quantity;
+                }
+                
+                // Additional MRP savings if applicable
+                $product = $variation->product ?? null;
+                if ($product && $product->mrp && $product->mrp > $originalPrice) {
+                    $savings += ($product->mrp - $originalPrice) * $item->quantity;
+                }
             }
         }
         

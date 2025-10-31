@@ -98,21 +98,51 @@
                     <span class="rating-text">4.0 (150)</span>
                 </div>
                 
-                <!-- Price Display (Amazon style) -->
+                <!-- Price Display (with Sale Support) -->
                 <div class="product-price mb-3">
-                    @if($product->has_variations ?? false)
-                        <!-- Show starting price only (like Amazon) -->
-                        <span class="current-price">₹{{ number_format($product->min_price, 0) }}</span>
-                        @if($product->min_price != $product->max_price)
-                            <small class="text-muted"> onwards</small>
-                        @endif
-                    @else
-                        <!-- Simple product price -->
-                        <span class="current-price">₹{{ number_format($product->price ?? 0, 0) }}</span>
-                    @endif
+                    @php
+                        // Check for active sales
+                        $activeSale = $product->getActiveSale();
+                        $salePrice = $activeSale ? $product->getBestSalePrice() : null;
+                        $discountPercentage = $product->getDiscountPercentage();
+                        $originalPrice = $product->has_variations ? $product->min_price : $product->price;
+                    @endphp
                     
-                    @if($product->mrp && $product->mrp > ($product->min_price ?? $product->price))
-                    <span class="original-price">₹{{ number_format($product->mrp, 0) }}</span>
+                    @if($activeSale && $salePrice && $salePrice < $originalPrice)
+                        <!-- Sale Price Display -->
+                        <div class="sale-price-container">
+                            @if($product->has_variations ?? false)
+                                <span class="current-price text-danger fw-bold">₹{{ number_format($salePrice, 0) }}</span>
+                                <small class="text-muted"> onwards</small>
+                            @else
+                                <span class="current-price text-danger fw-bold">₹{{ number_format($salePrice, 0) }}</span>
+                            @endif
+                            <span class="original-price ms-2">₹{{ number_format($originalPrice, 0) }}</span>
+                            @if($discountPercentage > 0)
+                                <span class="discount-percentage bg-success text-white rounded-pill px-2 py-1 ms-2 small">
+                                    {{ $discountPercentage }}% OFF
+                                </span>
+                            @endif
+                        </div>
+                        <div class="sale-info mt-1">
+                            <small class="text-success fw-bold">
+                                <i class="bi bi-lightning-fill me-1"></i>{{ $activeSale->name }}
+                            </small>
+                        </div>
+                    @else
+                        <!-- Regular Price Display -->
+                        @if($product->has_variations ?? false)
+                            <span class="current-price">₹{{ number_format($product->min_price, 0) }}</span>
+                            @if($product->min_price != $product->max_price)
+                                <small class="text-muted"> onwards</small>
+                            @endif
+                        @else
+                            <span class="current-price">₹{{ number_format($product->price ?? 0, 0) }}</span>
+                        @endif
+                        
+                        @if($product->mrp && $product->mrp > ($product->min_price ?? $product->price))
+                        <span class="original-price">₹{{ number_format($product->mrp, 0) }}</span>
+                        @endif
                     @endif
                 </div>
                 

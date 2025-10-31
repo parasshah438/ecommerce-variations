@@ -41,6 +41,52 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function activeSales()
+    {
+        return $this->belongsToMany(Sale::class, 'sale_products')
+                    ->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
+    }
+
+    public function getBestSalePrice()
+    {
+        $activeSales = $this->activeSales;
+        
+        if ($activeSales->isEmpty()) {
+            return $this->price;
+        }
+        
+        $bestPrice = $this->price;
+        
+        foreach ($activeSales as $sale) {
+            $discount = $sale->getDiscountForProduct($this);
+            $salePrice = $sale->calculateSalePrice($this->price, $discount);
+            $bestPrice = min($bestPrice, $salePrice);
+        }
+        
+        return $bestPrice;
+    }
+
+    public function getDiscountPercentage()
+    {
+        $salePrice = $this->getBestSalePrice();
+        if ($salePrice < $this->price) {
+            return round((($this->price - $salePrice) / $this->price) * 100);
+        }
+        return 0;
+    }
+
+    public function hasActiveSale()
+    {
+        return $this->activeSales()->exists();
+    }
+
+    public function getActiveSale()
+    {
+        return $this->activeSales()->first();
+    }
+
     /**
      * Return images for a given variation id, or product-level images as fallback.
      * @param int|null $variationId

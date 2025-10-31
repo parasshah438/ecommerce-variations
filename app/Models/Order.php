@@ -13,7 +13,12 @@ class Order extends Model
         'user_id', 
         'address_id', 
         'status', 
-        'total', 
+        'total',
+        'subtotal',
+        'tax_amount',
+        'tax_rate',
+        'tax_name',
+        'shipping_cost',
         'coupon_code',
         'coupon_title',
         'coupon_discount',
@@ -32,6 +37,10 @@ class Order extends Model
 
     protected $casts = [
         'total' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'tax_rate' => 'decimal:4',
+        'shipping_cost' => 'decimal:2',
         'coupon_discount' => 'decimal:2',
         'payment_data' => 'array',
         'cancelled_at' => 'datetime',
@@ -167,11 +176,17 @@ class Order extends Model
     }
 
     /**
-     * Get subtotal (total before coupon discount)
+     * Get subtotal (from database field or calculated)
      */
-    public function getSubtotalAttribute(): float
+    public function getSubtotalAttribute($value): float
     {
-        return $this->total + $this->coupon_discount;
+        // If subtotal is stored in database, use it
+        if (isset($this->attributes['subtotal']) && $this->attributes['subtotal'] > 0) {
+            return (float) $this->attributes['subtotal'];
+        }
+        
+        // Fallback to calculated subtotal for old orders
+        return $this->total + ($this->coupon_discount ?? 0);
     }
 
     /**

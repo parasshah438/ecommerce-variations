@@ -125,20 +125,44 @@
                 
                 <!-- Price Section -->
                 <div class="price-section mb-4 p-3 bg-light rounded-3">
+                    @php
+                        $salePrice = $product->getBestSalePrice();
+                        $hasActiveSale = $product->hasActiveSale();
+                        $discountPercentage = $product->getDiscountPercentage();
+                        $originalPrice = $product->price;
+                        $mrp = $product->mrp;
+                    @endphp
+                    
                     <div class="d-flex align-items-baseline gap-3 flex-wrap">
-                        <h3 id="product-price" class="text-primary fw-bold mb-0 h2">₹{{ number_format($product->price, 2) }}</h3>
+                        <h3 id="product-price" class="text-primary fw-bold mb-0 h2">₹{{ number_format($salePrice, 2) }}</h3>
                         
-                        @if($product->mrp && $product->mrp > $product->price)
-                        <span class="text-muted text-decoration-line-through h5" id="product-mrp">₹{{ number_format($product->mrp, 2) }}</span>
+                        @if($hasActiveSale && $salePrice < $originalPrice)
+                        <span class="text-muted text-decoration-line-through h5" id="product-original-price">₹{{ number_format($originalPrice, 2) }}</span>
+                        <span class="badge bg-danger fs-6" id="sale-discount-percentage">
+                            {{ $discountPercentage }}% OFF
+                        </span>
+                        @elseif($mrp && $mrp > $salePrice)
+                        <span class="text-muted text-decoration-line-through h5" id="product-mrp">₹{{ number_format($mrp, 2) }}</span>
                         <span class="badge bg-success fs-6" id="discount-percentage">
-                            {{ round((($product->mrp - $product->price) / $product->mrp) * 100) }}% OFF
+                            {{ round((($mrp - $salePrice) / $mrp) * 100) }}% OFF
                         </span>
                         @endif
                     </div>
                     
-                    @if($product->mrp && $product->mrp > $product->price)
+                    @if($hasActiveSale && $salePrice < $originalPrice)
+                    <div class="mt-2">
+                        <small class="text-danger fw-semibold d-block" id="sale-savings-amount">
+                            <i class="bi bi-fire me-1"></i>Sale Price! You save ₹{{ number_format($originalPrice - $salePrice, 2) }}
+                        </small>
+                        @if($product->getActiveSale())
+                        <small class="text-muted d-block">
+                            <i class="bi bi-clock me-1"></i>{{ $product->getActiveSale()->name }} - Limited time offer
+                        </small>
+                        @endif
+                    </div>
+                    @elseif($mrp && $mrp > $salePrice)
                     <small class="text-success fw-semibold mt-2 d-block" id="savings-amount">
-                        <i class="bi bi-piggy-bank me-1"></i>You save ₹{{ number_format($product->mrp - $product->price, 2) }}
+                        <i class="bi bi-piggy-bank me-1"></i>You save ₹{{ number_format($mrp - $salePrice, 2) }}
                     </small>
                     @endif
                 </div>
@@ -1301,7 +1325,22 @@ $(document).ready(function() {
     function updateProductDetails(variation) {
         if (!variation) {
             $('#selected-sku').text('Select variation');
-            $('#product-price').text('₹' + parseFloat(product.price).toFixed(2));
+            // Show product-level sale price when no variation selected
+            @php
+                $productSalePrice = $product->getBestSalePrice();
+                $productHasSale = $product->hasActiveSale();
+                $productOriginalPrice = $product->price;
+            @endphp
+            $('#product-price').text('₹{{ number_format($productSalePrice, 2) }}');
+            @if($productHasSale && $productSalePrice < $productOriginalPrice)
+                $('#product-original-price').text('₹{{ number_format($productOriginalPrice, 2) }}').show();
+                $('#sale-discount-percentage').text('{{ round((($productOriginalPrice - $productSalePrice) / $productOriginalPrice) * 100) }}% OFF').show();
+                $('#sale-savings-amount').text('Sale Price! You save ₹{{ number_format($productOriginalPrice - $productSalePrice, 2) }}').show();
+            @else
+                $('#product-original-price').hide();
+                $('#sale-discount-percentage').hide();
+                $('#sale-savings-amount').hide();
+            @endif
             $('#product-stock').addClass('d-none');
             renderImageGallery(productImages);
             return;
@@ -1310,8 +1349,61 @@ $(document).ready(function() {
         // Update SKU
         $('#selected-sku').text(variation.sku);
         
-        // Update price
-        $('#product-price').text('₹' + parseFloat(variation.price).toFixed(2));
+        // Update prices - check if variation has sale
+        if (variation.has_sale && variation.sale_price < variation.price) {
+            // Show sale price
+            $('#product-price').text('₹' + parseFloat(variation.sale_price).toFixed(2));
+            
+            // Show original price with strikethrough
+            if ($('#product-original-price').length === 0) {
+                $('#product-price').after('<span class="text-muted text-decoration-line-through h5 ms-3" id="product-original-price"></span>');
+            }
+            $('#product-original-price').text('₹' + parseFloat(variation.price).toFixed(2)).show();
+            
+            // Show sale discount badge
+            if ($('#sale-discount-percentage').length === 0) {
+                $('#product-original-price').after('<span class="badge bg-danger fs-6 ms-2" id="sale-discount-percentage"></span>');
+            }
+            $('#sale-discount-percentage').text(variation.discount_percentage + '% OFF').show();
+            
+            // Show savings amount
+            const savings = variation.price - variation.sale_price;
+            if ($('#sale-savings-amount').length === 0) {
+                $('.price-section .d-flex').after('<div class="mt-2"><small class="text-danger fw-semibold d-block" id="sale-savings-amount"></small></div>');
+            }
+            $('#sale-savings-amount').html('<i class="bi bi-fire me-1"></i>Sale Price! You save ₹' + savings.toFixed(2)).show();
+            
+            // Hide regular MRP elements if they exist
+            $('#product-mrp, #discount-percentage, #savings-amount').hide();
+        } else {
+            // Show regular price
+            $('#product-price').text('₹' + parseFloat(variation.price).toFixed(2));
+            
+            // Hide sale elements
+            $('#product-original-price, #sale-discount-percentage, #sale-savings-amount').hide();
+            
+            // Show MRP if it exists and is higher than variation price
+            if (variation.mrp && variation.mrp > variation.price) {
+                if ($('#product-mrp').length === 0) {
+                    $('#product-price').after('<span class="text-muted text-decoration-line-through h5 ms-3" id="product-mrp"></span>');
+                }
+                $('#product-mrp').text('₹' + parseFloat(variation.mrp).toFixed(2)).show();
+                
+                if ($('#discount-percentage').length === 0) {
+                    $('#product-mrp').after('<span class="badge bg-success fs-6 ms-2" id="discount-percentage"></span>');
+                }
+                const discountPerc = Math.round(((variation.mrp - variation.price) / variation.mrp) * 100);
+                $('#discount-percentage').text(discountPerc + '% OFF').show();
+                
+                if ($('#savings-amount').length === 0) {
+                    $('.price-section .d-flex').after('<div class="mt-2"><small class="text-success fw-semibold d-block" id="savings-amount"></small></div>');
+                }
+                const savings = variation.mrp - variation.price;
+                $('#savings-amount').html('<i class="bi bi-piggy-bank me-1"></i>You save ₹' + savings.toFixed(2)).show();
+            } else {
+                $('#product-mrp, #discount-percentage, #savings-amount').hide();
+            }
+        }
         
         // Update stock status
         const $stockAlert = $('#product-stock');

@@ -84,6 +84,28 @@
         border-radius: 8px;
         margin: 0.5rem;
     }
+    
+    .tax-highlight {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .payment-summary-item {
+        padding: 0.5rem 0;
+        border-bottom: 1px dashed #e9ecef;
+    }
+    
+    .payment-summary-item:last-child {
+        border-bottom: none;
+        padding-top: 0.75rem;
+        margin-top: 0.5rem;
+        border-top: 2px solid #0d6efd;
+    }
+    
+    .tax-info-card {
+        background: linear-gradient(135deg, #f8f9fa, #ffffff);
+        border: 1px solid rgba(13, 110, 253, 0.1);
+    }
 </style>
 @endsection
 
@@ -187,17 +209,34 @@
                                 <tfoot class="table-light">
                                     <tr>
                                         <th colspan="4" class="text-end">Subtotal:</th>
-                                        <th>{{ $order->formatted_subtotal }}</th>
+                                        <th>₹{{ number_format($order->subtotal ?? 0, 2) }}</th>
                                     </tr>
-                                    @if($order->hasCoupon())
+                                    @if($order->coupon_discount > 0)
                                     <tr class="text-success">
                                         <th colspan="4" class="text-end">Coupon Discount ({{ $order->coupon_code }}):</th>
-                                        <th>-{{ $order->formatted_coupon_discount }}</th>
+                                        <th>-₹{{ number_format($order->coupon_discount, 2) }}</th>
                                     </tr>
                                     @endif
+                                    @if($order->shipping_cost > 0)
                                     <tr>
-                                        <th colspan="4" class="text-end">Total:</th>
-                                        <th class="text-primary">₹{{ number_format($order->total, 2) }}</th>
+                                        <th colspan="4" class="text-end">Shipping:</th>
+                                        <th>₹{{ number_format($order->shipping_cost, 2) }}</th>
+                                    </tr>
+                                    @else
+                                    <tr class="text-success">
+                                        <th colspan="4" class="text-end">Shipping:</th>
+                                        <th>Free</th>
+                                    </tr>
+                                    @endif
+                                    @if($order->tax_amount > 0)
+                                    <tr class="text-info">
+                                        <th colspan="4" class="text-end">{{ $order->tax_name ?? 'Tax' }} ({{ number_format(($order->tax_rate ?? 0) * 100, 0) }}%):</th>
+                                        <th>₹{{ number_format($order->tax_amount, 2) }}</th>
+                                    </tr>
+                                    @endif
+                                    <tr class="table-primary">
+                                        <th colspan="4" class="text-end fs-5">Total Amount:</th>
+                                        <th class="text-primary fs-5">₹{{ number_format($order->total, 2) }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -226,6 +265,153 @@
             
             <!-- Right Column - Next Steps -->
             <div class="col-lg-4">
+                <!-- Tax & Payment Summary -->
+                @if($order->tax_amount > 0 || $order->shipping_cost > 0 || $order->coupon_discount > 0)
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calculator text-primary me-2"></i>
+                            Payment Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="payment-summary-item">
+                            <div class="d-flex justify-content-between">
+                                <span>Items Subtotal:</span>
+                                <strong>₹{{ number_format($order->subtotal ?? 0, 2) }}</strong>
+                            </div>
+                        </div>
+                        
+                        @if($order->coupon_discount > 0)
+                        <div class="payment-summary-item">
+                            <div class="d-flex justify-content-between text-success">
+                                <span>
+                                    <i class="bi bi-tag-fill me-1"></i>
+                                    Discount ({{ $order->coupon_code }}):
+                                </span>
+                                <strong>-₹{{ number_format($order->coupon_discount, 2) }}</strong>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        @if($order->shipping_cost > 0)
+                        <div class="payment-summary-item">
+                            <div class="d-flex justify-content-between">
+                                <span>
+                                    <i class="bi bi-truck me-1"></i>
+                                    Shipping:
+                                </span>
+                                <strong>₹{{ number_format($order->shipping_cost, 2) }}</strong>
+                            </div>
+                        </div>
+                        @else
+                        <div class="payment-summary-item">
+                            <div class="d-flex justify-content-between text-success">
+                                <span>
+                                    <i class="bi bi-truck me-1"></i>
+                                    Shipping:
+                                </span>
+                                <strong>Free</strong>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        @if($order->tax_amount > 0)
+                        <div class="payment-summary-item tax-highlight p-2 rounded">
+                            <div class="d-flex justify-content-between text-info">
+                                <span>
+                                    <i class="bi bi-receipt me-1"></i>
+                                    {{ $order->tax_name ?? 'Tax' }} ({{ number_format(($order->tax_rate ?? 0) * 100, 0) }}%):
+                                </span>
+                                <strong>₹{{ number_format($order->tax_amount, 2) }}</strong>
+                            </div>
+                            
+                            <!-- Tax Calculation Method Info -->
+                            <div class="small text-muted mt-1">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Tax calculated on {{ $order->coupon_discount > 0 ? 'discounted amount' : 'subtotal' }}
+                            </div>
+                        </div>
+                        @endif
+                        
+                        <div class="payment-summary-item">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="fw-bold mb-0">Total Paid:</h6>
+                                <h6 class="fw-bold text-primary mb-0">₹{{ number_format($order->total, 2) }}</h6>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Method Info -->
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-{{ $order->payment_method === 'cod' ? 'cash-coin' : 'credit-card' }} text-success me-2"></i>
+                                <div>
+                                    <small class="fw-semibold">Payment Method</small>
+                                    <div class="small text-muted">
+                                        {{ $order->payment_method === 'cod' ? 'Cash on Delivery' : 'Online Payment' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+                
+                <!-- Tax Information Card (for tax compliance) -->
+                @if($order->tax_amount > 0)
+                <div class="card shadow-sm mb-4 tax-info-card">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                            Tax Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="h6 text-primary mb-1">{{ number_format(($order->tax_rate ?? 0) * 100, 0) }}%</div>
+                                    <small class="text-muted">{{ $order->tax_name ?? 'Tax' }} Rate</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="h6 text-success mb-1">₹{{ number_format($order->tax_amount, 2) }}</div>
+                                    <small class="text-muted">Tax Amount</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6 class="small fw-semibold mb-2">Tax Calculation Details:</h6>
+                            <div class="small text-muted">
+                                <div class="d-flex justify-content-between">
+                                    <span>Taxable Amount:</span>
+                                    <span>₹{{ number_format(($order->subtotal ?? 0) - ($order->coupon_discount ?? 0), 2) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Tax Rate Applied:</span>
+                                    <span>{{ number_format(($order->tax_rate ?? 0) * 100, 2) }}%</span>
+                                </div>
+                                <div class="d-flex justify-content-between fw-semibold">
+                                    <span>Tax Amount:</span>
+                                    <span>₹{{ number_format($order->tax_amount, 2) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tax Invoice Note -->
+                        <div class="mt-3 p-2 border rounded bg-info bg-opacity-10">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-info-circle text-info me-2 mt-1"></i>
+                                <div class="small">
+                                    <strong>Tax Invoice:</strong> A detailed tax invoice will be generated and sent to your email for GST compliance purposes.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
                 <!-- Order Timeline -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-white py-3">

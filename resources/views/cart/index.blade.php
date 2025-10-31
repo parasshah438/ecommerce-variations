@@ -37,15 +37,16 @@
                 <div class="card-body" id="save-for-later-content">
                     <div class="row g-3">
                         @foreach($saveForLaterItems as $item)
+                        @if($item->productVariation && $item->productVariation->product)
                         <div class="col-lg-6 col-md-6 col-12" data-save-item-id="{{ $item->id }}">
                             <div class="card border-0 bg-light">
                                 <div class="card-body p-3">
                                     <div class="row g-3">
                                         <div class="col-4">
                                             @php
-                                                $product = $item->productVariation->product;
+                                                $product = $item->productVariation?->product;
                                                 // Try variation images first, then fallback to product images
-                                                $image = $item->productVariation->images->first() ?? $product->images->first();
+                                                $image = $item->productVariation?->images->first() ?? $product?->images->first();
                                             @endphp
                                             @if($image)
                                                 <!-- Debug: {{ $image->path }} -->
@@ -71,8 +72,8 @@
                                             @endif
                                         </div>
                                         <div class="col-8">
-                                            <h6 class="mb-2">{{ Str::limit($product->name, 40) }}</h6>
-                                            <p class="text-muted small mb-1">{{ $item->productVariation->sku }}</p>
+                                            <h6 class="mb-2">{{ Str::limit($product?->name ?? 'Product Unavailable', 40) }}</h6>
+                                            <p class="text-muted small mb-1">{{ $item->productVariation?->sku ?? 'N/A' }}</p>
                                             <p class="fw-bold text-primary mb-2">{{ $item->formatted_price }} × {{ $item->quantity }}</p>
                                             <div class="d-flex gap-1 flex-wrap">
                                                 <button class="btn btn-primary btn-sm move-to-cart-btn" data-save-id="{{ $item->id }}">
@@ -87,6 +88,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
                         @endforeach
                     </div>
                 </div>
@@ -128,14 +130,15 @@
                     @if($cartItems->count() > 0)
                         <div id="cart-items-container">
                             @foreach($cartItems as $item)
+                            @if($item->productVariation && $item->productVariation->product)
                             <div class="cart-item border-bottom py-4" data-cart-item-id="{{ $item->id }}">
                                 <div class="row g-4">
                                     <!-- Product Image -->
                                     <div class="col-lg-2 col-md-3 col-4">
                                         @php
-                                            $product = $item->productVariation->product;
+                                            $product = $item->productVariation?->product;
                                             // Try variation images first, then fallback to product images
-                                            $image = $item->productVariation->images->first() ?? $product->images->first();
+                                            $image = $item->productVariation?->images->first() ?? $product?->images->first();
                                         @endphp
                                         @if($image)
                                             <!-- Debug: {{ $image->path }} -->
@@ -165,19 +168,23 @@
                                     <!-- Product Details -->
                                     <div class="col-lg-4 col-md-5 col-8">
                                         <h5 class="mb-2">
+                                            @if($product?->slug)
                                             <a href="{{ route('products.show', $product->slug) }}" 
                                                class="text-decoration-none text-dark">
                                                 {{ $product->name }}
                                             </a>
+                                            @else
+                                                Product Unavailable
+                                            @endif
                                         </h5>
                                         <div class="text-muted small mb-2">
-                                            <p class="mb-1"><strong>SKU:</strong> {{ $item->productVariation->sku }}</p>
-                                            @if($product->brand)
+                                            <p class="mb-1"><strong>SKU:</strong> {{ $item->productVariation?->sku ?? 'N/A' }}</p>
+                                            @if($product?->brand)
                                             <p class="mb-1"><strong>Brand:</strong> {{ $product->brand->name }}</p>
                                             @endif
                                             
                                             <!-- Variation Attributes -->
-                                            @if($item->productVariation->attribute_value_ids)
+                                            @if($item->productVariation?->attribute_value_ids)
                                                 @php
                                                     $attributeIds = $item->productVariation->attribute_value_ids;
                                                     $attributeValues = \App\Models\AttributeValue::whereIn('id', $attributeIds)->with('attribute')->get();
@@ -191,7 +198,7 @@
                                         </div>
                                         
                                         <!-- Stock Status -->
-                                        @php $stock = $item->productVariation->stock->quantity ?? 0; @endphp
+                                        @php $stock = $item->productVariation?->stock?->quantity ?? 0; @endphp
                                         <div class="stock-status mb-2">
                                             @if($stock > 0)
                                                 <small class="text-success">
@@ -236,13 +243,38 @@
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <small class="text-muted">Price:</small>
-                                                        <div class="fw-bold text-primary">₹{{ number_format($item->price, 2) }}</div>
+                                                        @php
+                                                            $variation = $item->productVariation;
+                                                            $originalPrice = $variation->price;
+                                                            $salePrice = $item->price;
+                                                            $hasSale = $variation->hasActiveSale() && $salePrice < $originalPrice;
+                                                        @endphp
+                                                        
+                                                        @if($hasSale)
+                                                            <!-- Sale Price Display -->
+                                                            <div class="fw-bold text-primary">₹{{ number_format($salePrice, 2) }}</div>
+                                                            <div class="d-flex align-items-center gap-2 mt-1">
+                                                                <span class="text-muted text-decoration-line-through small">₹{{ number_format($originalPrice, 2) }}</span>
+                                                                <span class="badge bg-danger small">{{ round((($originalPrice - $salePrice) / $originalPrice) * 100) }}% OFF</span>
+                                                            </div>
+                                                            <small class="text-success">
+                                                                <i class="bi bi-fire me-1"></i>Save ₹{{ number_format($originalPrice - $salePrice, 2) }}
+                                                            </small>
+                                                        @else
+                                                            <!-- Regular Price Display -->
+                                                            <div class="fw-bold text-primary">₹{{ number_format($salePrice, 2) }}</div>
+                                                        @endif
                                                     </div>
                                                     <div class="text-end">
                                                         <small class="text-muted">Total:</small>
-                                                        <div class="fw-bold fs-5 item-total" data-price="{{ $item->price }}">
-                                                            ₹{{ number_format($item->price * $item->quantity, 2) }}
+                                                        <div class="fw-bold fs-5 item-total" data-price="{{ $salePrice }}">
+                                                            ₹{{ number_format($salePrice * $item->quantity, 2) }}
                                                         </div>
+                                                        @if($hasSale)
+                                                            <small class="text-muted text-decoration-line-through">
+                                                                ₹{{ number_format($originalPrice * $item->quantity, 2) }}
+                                                            </small>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -264,6 +296,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @endif
                             @endforeach
                         </div>
                         
