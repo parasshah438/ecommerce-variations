@@ -49,6 +49,11 @@ class Product extends Model
                     ->where('end_date', '>=', now());
     }
 
+    public function orderItems()
+    {
+        return $this->hasManyThrough(OrderItem::class, ProductVariation::class);
+    }
+
     public function getBestSalePrice()
     {
         $activeSales = $this->activeSales;

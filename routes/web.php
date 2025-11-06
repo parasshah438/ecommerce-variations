@@ -94,10 +94,10 @@ Route::get('/test-single-login', function () {
     return view('test-single-login');
 })->name('test.single.login');
 
-// Dashboard route (protected)
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'single.session'])->name('dashboard');
+// Dashboard route (protected) - Fixed Version
+Route::get('/dashboard', [\App\Http\Controllers\Frontend\DashboardController::class, 'index'])
+    ->middleware(['auth', 'single.session'])
+    ->name('dashboard');
 
 // Test OTP system
 Route::get('/test-otp', function () {

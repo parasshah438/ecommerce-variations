@@ -3,9 +3,10 @@
 @section('title', 'Order Details - #' . $order->id)
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -223,6 +224,7 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Cancel Modal -->
 @if(in_array($order->status, ['pending', 'confirmed']))
@@ -334,22 +336,152 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    .font-monospace {
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 0.85rem;
-    }
-    
+    /* Dark Mode Support for Order Details */
     .card {
-        border: none;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: var(--shadow);
     }
     
     .card-header {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        background: var(--sidebar-hover) !important;
+        border-color: var(--border-color);
+        color: var(--text-primary);
     }
     
+    .card-title {
+        color: var(--text-primary);
+    }
+    
+    .card-body {
+        color: var(--text-primary);
+    }
+    
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--text-primary);
+    }
+    
+    .bg-light {
+        background-color: var(--sidebar-hover) !important;
+    }
+    
+    .badge.bg-light {
+        background-color: var(--sidebar-hover) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Form elements */
+    .form-control, .form-select {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: var(--card-bg);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+    }
+    
+    .form-label {
+        color: var(--text-primary);
+    }
+    
+    .form-check-input {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .form-check-label {
+        color: var(--text-primary);
+    }
+    
+    /* Modal */
+    .modal-content {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .modal-header, .modal-footer {
+        border-color: var(--border-color);
+    }
+    
+    .modal-title, .modal-body {
+        color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    /* Alert */
+    .alert {
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .alert-warning {
+        background: rgba(251, 146, 60, 0.1);
+        border-color: rgba(251, 146, 60, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+        color: var(--text-primary);
+    }
+    
+    /* Toast */
+    .toast {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .toast-header {
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .toast-body {
+        background: var(--card-bg);
+        color: var(--text-primary);
+    }
+    
+    /* Border colors */
+    .border, .border-bottom {
+        border-color: var(--border-color) !important;
+    }
+    
+    hr {
+        border-color: var(--border-color);
+        opacity: 0.3;
+    }
+    
+    /* Address element */
     address {
+        color: var(--text-primary);
         line-height: 1.6;
+    }
+    
+    .font-monospace {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.85rem;
+        color: var(--text-primary);
     }
     
     @media (max-width: 768px) {

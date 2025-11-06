@@ -3,9 +3,10 @@
 @section('title', 'Track Order - #' . $order->id)
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -189,9 +190,11 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Support Information -->
-<div class="container-fluid mt-4">
+<div class="content-wrapper">
+    <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
             <div class="alert alert-light border">
@@ -228,6 +231,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <!-- Return Modal -->
@@ -278,6 +282,40 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
+    /* Dark Mode Support for Order Tracking */
+    .card {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+        box-shadow: var(--shadow);
+    }
+    
+    .card-header {
+        background: var(--sidebar-hover) !important;
+        border-color: var(--border-color);
+    }
+    
+    .card-title {
+        color: var(--text-primary);
+    }
+    
+    .card-body {
+        color: var(--text-primary);
+    }
+    
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--text-primary);
+    }
+    
+    .bg-light {
+        background-color: var(--sidebar-hover) !important;
+    }
+    
+    /* Tracking Timeline Dark Mode */
     .tracking-timeline {
         position: relative;
         padding-left: 2rem;
@@ -290,7 +328,7 @@
         top: 0;
         bottom: 0;
         width: 2px;
-        background: #e9ecef;
+        background: var(--border-color);
     }
     
     .timeline-item {
@@ -308,7 +346,7 @@
         top: 0;
         width: 2rem;
         height: 2rem;
-        background: white;
+        background: var(--card-bg);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -334,8 +372,8 @@
     }
     
     .timeline-item.pending .timeline-marker {
-        color: #6c757d;
-        border: 2px solid #6c757d;
+        color: var(--text-secondary);
+        border: 2px solid var(--border-color);
     }
     
     .timeline-content {
@@ -345,15 +383,16 @@
     .timeline-title {
         margin-bottom: 0.25rem;
         font-weight: 600;
+        color: var(--text-primary);
     }
     
     .timeline-description {
         margin-bottom: 0.5rem;
-        color: #6c757d;
+        color: var(--text-secondary);
     }
     
     .timeline-time {
-        color: #6c757d;
+        color: var(--text-secondary);
         font-size: 0.875rem;
     }
     
@@ -361,7 +400,98 @@
         color: #198754;
     }
     
+    /* Alert Dark Mode */
+    .alert {
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .alert-success {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .alert-light {
+        background: var(--sidebar-hover) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Modal Dark Mode */
+    .modal-content {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .modal-header, .modal-footer {
+        border-color: var(--border-color);
+    }
+    
+    .modal-title, .modal-body {
+        color: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    /* Form Elements */
+    .form-control, .form-select {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: var(--card-bg);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+    }
+    
+    .form-label {
+        color: var(--text-primary);
+    }
+    
+    .form-check-input {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .form-check-label {
+        color: var(--text-primary);
+    }
+    
+    /* Borders */
+    .border, .border-bottom {
+        border-color: var(--border-color) !important;
+    }
+    
+    hr {
+        border-color: var(--border-color);
+        opacity: 0.3;
+    }
+    
     address {
+        color: var(--text-primary);
         line-height: 1.6;
     }
     

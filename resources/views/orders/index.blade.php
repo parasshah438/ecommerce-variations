@@ -2,6 +2,178 @@
 
 @section('title', 'My Orders')
 
+
+@push('styles')
+<style>
+    /* Orders Page Dark Mode Support */
+    .card {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        transition: transform 0.2s ease-in-out, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .card-title {
+        color: var(--text-primary);
+    }
+    
+    .card-body {
+        color: var(--text-primary);
+    }
+    
+    .text-muted {
+        color: var(--text-secondary) !important;
+    }
+    
+    .form-label {
+        color: var(--text-primary);
+    }
+    
+    .form-control, .form-select {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: var(--card-bg);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+    
+    .form-control::placeholder {
+        color: var(--text-secondary);
+    }
+    
+    .input-group .btn {
+        border-color: var(--border-color);
+    }
+    
+    /* Badge Styling */
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    .badge.bg-light {
+        background-color: var(--sidebar-hover) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color);
+    }
+    
+    /* Modal Dark Mode */
+    .modal-content {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .modal-header, .modal-footer {
+        border-color: var(--border-color);
+    }
+    
+    .modal-title, .modal-body {
+        color: var(--text-primary);
+    }
+    
+    .btn-close {
+        filter: var(--text-primary);
+    }
+    
+    [data-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+    
+    /* Alert Dark Mode */
+    .alert {
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .alert-warning {
+        background: rgba(251, 146, 60, 0.1);
+        border-color: rgba(251, 146, 60, 0.3);
+        color: var(--text-primary);
+    }
+    
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+        color: var(--text-primary);
+    }
+    
+    /* Form Check Dark Mode */
+    .form-check-input {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .form-check-label {
+        color: var(--text-primary);
+    }
+    
+    /* Toast Dark Mode */
+    .toast {
+        min-width: 300px;
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .toast-header {
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .toast-body {
+        background: var(--card-bg);
+        color: var(--text-primary);
+    }
+    
+    /* Empty State Icon */
+    [data-theme="dark"] .fa-shopping-bag {
+        opacity: 0.5;
+    }
+    
+    /* Pagination Dark Mode */
+    .pagination {
+        --bs-pagination-bg: var(--card-bg);
+        --bs-pagination-border-color: var(--border-color);
+        --bs-pagination-color: var(--text-primary);
+        --bs-pagination-hover-bg: var(--sidebar-hover);
+        --bs-pagination-hover-border-color: var(--border-color);
+        --bs-pagination-active-bg: var(--primary-color);
+        --bs-pagination-active-border-color: var(--primary-color);
+    }
+    
+    /* Smooth transitions for theme switching */
+    .card, .form-control, .form-select, .modal-content, .alert, .toast {
+        transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    
+    @media (max-width: 768px) {
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+        
+        .d-flex.gap-2 > * {
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+@endpush
+
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -289,39 +461,9 @@
 @endif
 @endsection
 
-@push('styles')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<style>
-    .card {
-        transition: transform 0.2s ease-in-out;
-    }
-    .card:hover {
-        transform: translateY(-2px);
-    }
-    
-    .badge {
-        font-size: 0.75rem;
-    }
-    
-    .toast {
-        min-width: 300px;
-    }
-    
-    @media (max-width: 768px) {
-        .d-flex.gap-2 {
-            flex-direction: column;
-        }
-        
-        .d-flex.gap-2 > * {
-            margin-bottom: 0.5rem;
-        }
-    }
-</style>
-@endpush
 
 @push('scripts')
 <script>
-    // Auto-hide toasts after 5 seconds
     document.addEventListener('DOMContentLoaded', function() {
         const toasts = document.querySelectorAll('.toast');
         toasts.forEach(toast => {
