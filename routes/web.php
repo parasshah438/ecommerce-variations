@@ -407,6 +407,35 @@ Route::get('/test-order-relationships', function() {
     }
 })->name('test.order.relationships');
 
+// Pages routes
+Route::get('/about', [App\Http\Controllers\PagesController::class, 'about'])->name('pages.about');
+Route::get('/faq', [App\Http\Controllers\PagesController::class, 'faq'])->name('pages.faq');
+Route::get('/help', [App\Http\Controllers\PagesController::class, 'help'])->name('pages.help');
+Route::get('/support', [App\Http\Controllers\PagesController::class, 'support'])->name('pages.support');
+Route::get('/privacy-policy', [App\Http\Controllers\PagesController::class, 'privacy'])->name('pages.privacy');
+Route::get('/terms-conditions', [App\Http\Controllers\PagesController::class, 'terms'])->name('pages.terms');
+Route::get('/shipping-policy', [App\Http\Controllers\PagesController::class, 'shipping'])->name('pages.shipping');
+Route::get('/return-refund-policy', [App\Http\Controllers\PagesController::class, 'returnRefund'])->name('pages.return.refund');
+Route::get('/cookie-policy', [App\Http\Controllers\PagesController::class, 'cookiePolicy'])->name('pages.cookie.policy');
+Route::get('/cookie-preferences', [App\Http\Controllers\PagesController::class, 'cookiePreferences'])->name('pages.cookie.preferences');
+Route::get('/size-guide', [App\Http\Controllers\PagesController::class, 'sizeGuide'])->name('pages.size.guide');
+Route::get('/product-care-guide', [App\Http\Controllers\PagesController::class, 'productCareGuide'])->name('pages.product.care');
+Route::get('/lookbook', [App\Http\Controllers\PagesController::class, 'lookbook'])->name('pages.lookbook');
+Route::get('/gallery', [App\Http\Controllers\PagesController::class, 'gallery'])->name('pages.gallery');
+Route::get('/maintenance', [App\Http\Controllers\PagesController::class, 'maintenance'])->name('pages.maintenance');
+Route::get('/sitemap', [App\Http\Controllers\PagesController::class, 'sitemap'])->name('pages.sitemap');
+Route::get('/virtual-try-on', [App\Http\Controllers\PagesController::class, 'virtualTryOn'])->name('pages.virtual.try.on');
+Route::get('/accessibility', [App\Http\Controllers\PagesController::class, 'accessibility'])->name('pages.accessibility');
+Route::get('/security-data-protection', [App\Http\Controllers\PagesController::class, 'securityDataProtection'])->name('pages.security.data.protection');
+Route::get('/ai-personal-shopper', [App\Http\Controllers\PagesController::class, 'aiPersonalShopper'])->name('pages.ai.personal.shopper');
+Route::post('/ai-personal-shopper/recommendations', [App\Http\Controllers\PagesController::class, 'getAiRecommendations'])->name('pages.ai.recommendations');
+
+// Sitemap XML route
+Route::get('/sitemap.xml', [App\Http\Controllers\PagesController::class, 'sitemapXml'])->name('sitemap.xml');
+
+// Custom 404 route (should be at the end)
+Route::fallback([App\Http\Controllers\PagesController::class, 'error404']);
+
 // Include email preview routes (only in development)
 if (app()->environment('local', 'testing')) {
     require __DIR__.'/email-preview.php';
