@@ -26,9 +26,21 @@ class AttributeValue extends Model
         return $this->belongsTo(Attribute::class);
     }
 
-    public function productVariations()
+    /**
+     * Get product variations that contain this attribute value
+     * Since attribute_value_ids is stored as JSON, this returns a query builder
+     */
+    public function getProductVariationsQuery()
     {
-        return $this->belongsToMany(ProductVariation::class, 'product_variation_attribute_values');
+        return \App\Models\ProductVariation::whereRaw('JSON_CONTAINS(attribute_value_ids, ?)', [json_encode([$this->id])]);
+    }
+    
+    /**
+     * Get count of products that have variations with this attribute value
+     */
+    public function getProductsCountAttribute()
+    {
+        return $this->getProductVariationsQuery()->count();
     }
 
     // Scope for default values

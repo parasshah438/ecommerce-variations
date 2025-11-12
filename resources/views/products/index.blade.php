@@ -17,40 +17,6 @@
 
 @section('content')
 <style>
-/* Advanced Filters Sidebar Positioning and Overlap Fix */
-.filters-sidebar {
-    position: relative;
-    z-index: 10;
-}
-
-.filters-sidebar .card {
-    position: sticky;
-    top: 20px;
-    z-index: 11;
-    border: none !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-    border-radius: 16px !important;
-    overflow: hidden;
-    max-height: calc(100vh - 40px);
-    background: white;
-}
-
-.filters-sidebar .card-header {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
-    border-bottom: 1px solid #dee2e6 !important;
-    padding: 1.25rem 1.5rem !important;
-    position: sticky;
-    top: 0;
-    z-index: 12;
-}
-
-.filters-sidebar .card-body {
-    padding: 0 !important;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    position: relative;
-    z-index: 11;
-}
 
 /* Filter scroll containers */
 .filter-scroll-container {
@@ -235,6 +201,24 @@ nav.navbar {
     to {
         opacity: 1;
     }
+}
+
+/* Color swatch styling */
+.color-swatch {
+    transition: all 0.2s ease;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Size and color filter styling */
+.size-filter:checked + label,
+.color-filter:checked + label {
+    background-color: rgba(0, 123, 255, 0.1);
+    font-weight: 600;
+    border-radius: 8px;
 }
 
 /* Custom spinner design */
@@ -479,200 +463,254 @@ body.filter-loading .container:not(.loading-container) {
     box-shadow: 0 8px 20px rgba(247, 102, 49, 0.3);
     color: white;
 }
+
+/* Active Filter Tags Styling */
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #bbdefb;
+    transition: all 0.2s ease;
+}
+
+.filter-tag:hover {
+    background: #bbdefb;
+    border-color: #90caf9;
+}
+
+.filter-tag .remove-filter {
+    background: none;
+    border: none;
+    color: #1976d2;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    padding: 2px;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-left: 4px;
+}
+
+.filter-tag .remove-filter:hover {
+    background: #1976d2;
+    color: white;
+    transform: scale(1.1);
+}
+
+#activeFiltersSection {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+#clearAllFilters {
+    border-radius: 20px;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+}
+
+/* Mobile Filter Panel Styles */
+.mobile-filter-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    backdrop-filter: blur(2px);
+}
+
+.mobile-filter-panel {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 90%;
+    max-width: 400px;
+    height: 100%;
+    background: white;
+    z-index: 1050;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    transition: left 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-filter-panel.show {
+    left: 0;
+}
+
+.mobile-filter-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.mobile-filter-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.mobile-filter-footer {
+    padding: 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 10px;
+    background: #f8f9fa;
+}
+
+.mobile-filter-footer .btn {
+    flex: 1;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Mobile Filter Button */
+#mobileFilterBtn {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#mobileFilterBtn:hover {
+    background: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+/* Mobile optimizations */
+@media (max-width: 767.98px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .mobile-filter-panel {
+        width: 95%;
+    }
+    
+    /* Adjust product grid for mobile */
+    #product-grid .col {
+        padding: 0.5rem;
+    }
+    
+    /* Make filter sections more compact on mobile */
+    .mobile-filter-content .filter-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .mobile-filter-content .filter-section h6 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-filter-content .form-check {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Animation for smooth mobile experience */
+.mobile-filter-panel,
+.mobile-filter-overlay {
+    will-change: transform, opacity;
+}
+
+body.mobile-filter-open {
+    overflow: hidden;
+}
 </style>
 
 <div class="container">
+    <!-- Mobile-First Layout -->
     <div class="row">
-        <div class="col-lg-3 col-md-4 mb-4">
+        <!-- Desktop Sidebar (Hidden on Mobile) -->
+        <div class="col-lg-3 col-md-4 d-none d-md-block mb-4">
             <!-- Advanced Filters Sidebar -->
-            <div class="filters-sidebar">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0 fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>Filters</h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
-                                <i class="bi bi-x-circle me-1"></i>Clear All
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <form id="filterForm">
-                            <!-- Search Filter -->
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-2">
-                                    <i class="bi bi-search me-2 text-primary"></i>Search Products
-                                </label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="searchInput" name="q" placeholder="Search products..." value="{{ request('q') }}">
-                                    <button class="btn btn-outline-primary" type="button">
-                                        <i class="bi bi-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Categories Filter -->
-                            @if($categories->count() > 0)
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Categories
-                                </label>
-                                <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
-                                    @foreach($categories as $category)
-                                    <div class="form-check mb-2 filter-item">
-                                        <input class="form-check-input category-filter" type="checkbox" 
-                                               name="categories[]" value="{{ $category->id }}" 
-                                               id="category{{ $category->id }}" data-filter-type="category"
-                                               {{ in_array($category->id, request('categories', [])) ? 'checked' : '' }}>
-                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="category{{ $category->id }}">
-                                            <span>{{ $category->name }}</span>
-                                            <span class="badge bg-light text-dark">{{ $category->products_count ?? 0 }}</span>
-                                        </label>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                            @endif
-
-                            <!-- Brands Filter -->
-                            @if($brands->count() > 0)
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-award me-2 text-primary"></i>Brands
-                                </label>
-                                <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
-                                    @foreach($brands as $brand)
-                                    <div class="form-check mb-2 filter-item">
-                                        <input class="form-check-input brand-filter" type="checkbox" 
-                                               name="brands[]" value="{{ $brand->id }}" 
-                                               id="brand{{ $brand->id }}" data-filter-type="brand"
-                                               {{ in_array($brand->id, request('brands', [])) ? 'checked' : '' }}>
-                                        <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="brand{{ $brand->id }}">
-                                            <span>{{ $brand->name }}</span>
-                                            <span class="badge bg-light text-dark">{{ $brand->products_count ?? 0 }}</span>
-                                        </label>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                            @endif
-
-                            <!-- Price Range Filter -->
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-currency-rupee me-2 text-primary"></i>Price Range
-                                </label>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <input type="number" class="form-control form-control-sm price-filter" 
-                                               id="minPrice" name="min_price" placeholder="Min ₹" min="0" 
-                                               max="{{ $priceRange->max_price ?? 10000 }}" 
-                                               value="{{ request('min_price') }}" data-filter-type="price">
-                                    </div>
-                                    <div class="col-6">
-                                        <input type="number" class="form-control form-control-sm price-filter" 
-                                               id="maxPrice" name="max_price" placeholder="Max ₹" min="0" 
-                                               max="{{ $priceRange->max_price ?? 10000 }}" 
-                                               value="{{ request('max_price') }}" data-filter-type="price">
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <small class="text-muted">
-                                        Range: ₹{{ number_format($priceRange->min_price ?? 0) }} - ₹{{ number_format($priceRange->max_price ?? 10000) }}
-                                    </small>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="clearPriceRange()">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Rating Filter -->
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-star me-2 text-primary"></i>Customer Rating
-                                </label>
-                                <div class="rating-filter-container">
-                                    <!-- Clear rating option -->
-                                    <div class="form-check mb-2 filter-item">
-                                        <input class="form-check-input rating-filter" type="radio" name="rating" value="" id="ratingAll" data-filter-type="rating" checked>
-                                        <label class="form-check-label d-flex align-items-center" for="ratingAll">
-                                            <span class="me-2">All Ratings</span>
-                                        </label>
-                                    </div>
-                                    @for($i = 5; $i >= 1; $i--)
-                                    <div class="form-check mb-2 filter-item">
-                                        <input class="form-check-input rating-filter" type="radio" name="rating" value="{{ $i }}" id="rating{{ $i }}" data-filter-type="rating">
-                                        <label class="form-check-label d-flex align-items-center cursor-pointer" for="rating{{ $i }}">
-                                            <div class="text-warning me-2" style="min-width: 80px;">
-                                                @for($j = 1; $j <= 5; $j++)
-                                                    <i class="bi bi-star{{ $j <= $i ? '-fill' : '' }}"></i>
-                                                @endfor
-                                            </div>
-                                            <span>{{ $i }} Stars & Up</span>
-                                        </label>
-                                    </div>
-                                    @endfor
-                                </div>
-                            </div>
-
-                            <!-- Availability Filter -->
-                            <div class="border-bottom px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-box me-2 text-primary"></i>Availability
-                                </label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input stock-filter" type="checkbox" id="inStockOnly" name="in_stock" data-filter-type="stock" {{ request('in_stock') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="inStockOnly">
-                                        <i class="bi bi-check-circle text-success me-1"></i>
-                                        In Stock Only
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Quick Filters -->
-                            <div class="px-3 py-3">
-                                <label class="form-label fw-bold text-dark mb-3">
-                                    <i class="bi bi-lightning me-2 text-primary"></i>Quick Filters
-                                </label>
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-primary btn-sm quick-filter" type="button" data-filter="discount">
-                                        <i class="bi bi-percent me-1"></i>On Sale
-                                    </button>
-                                    <button class="btn btn-outline-success btn-sm quick-filter" type="button" data-filter="new">
-                                        <i class="bi bi-star me-1"></i>New Arrivals
-                                    </button>
-                                    <button class="btn btn-outline-warning btn-sm quick-filter" type="button" data-filter="trending">
-                                        <i class="bi bi-graph-up me-1"></i>Trending
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+            @include('products._product_filter')
+            <!-- Advanced Filters Sidebar End -->
         </div>        
-        <div class="col-lg-9 col-md-8">
-            <!-- Sort and View Options -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+        
+        <!-- Main Content Area -->
+        <div class="col-lg-9 col-md-8 col-12">
+            <!-- Mobile Header with Filter Button -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h4 mb-0">All Products</h2>
-                <div class="d-flex gap-2">
-                    <input id="searchBox" class="form-control" placeholder="Search products..." 
-                           style="min-width:250px;" value="{{ request('q') }}">
+                
+                <!-- Mobile/Desktop Controls -->
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Mobile Filter Button (Only visible on mobile) -->
+                    <button class="btn btn-outline-primary d-md-none" type="button" id="mobileFilterBtn">
+                        <i class="bi bi-funnel"></i> Filters
+                    </button>
+                    
+                    <!-- Sort Dropdown -->
                     <select class="form-select form-select-sm" style="width: auto;" id="sortSelect">
                         <option value="created_at" {{ request('sort') == 'created_at' ? 'selected' : '' }}>Sort by: Featured</option>
                         <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High</option>
                         <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low</option>
                         <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Name A-Z</option>
+                        <option value="rating" {{ request('sort') == 'rating' ? 'selected' : '' }}>Sort by: Highest Rated</option>
+                        <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Sort by: Newest</option>
+                        <option value="featured" {{ request('sort') == 'featured' ? 'selected' : '' }}>Sort by: Featured</option>
+                        <option value="in_stock" {{ request('sort') == 'in_stock' ? 'selected' : '' }}>Sort by: In Stock</option>
+                        <option value="best_selling" {{ request('sort') == 'best_selling' ? 'selected' : '' }}>Sort by: Best Selling</option>
+                        <option value="brand" {{ request('sort') == 'brand' ? 'selected' : '' }}>Sort by: Brand</option>
+                        <option value="discount" {{ request('sort') == 'discount' ? 'selected' : '' }}>Sort by: Discount</option>
                     </select>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-secondary btn-sm active">
-                            <i class="bi bi-grid-3x3-gap"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-list"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
+
+            <!-- Active Filters Section -->
+            <div id="activeFiltersSection" class="mb-3" style="display: none;">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <span class="fw-semibold text-muted me-2">Active Filters:</span>
+                    <div id="activeFilterTags" class="d-flex flex-wrap gap-2">
+                        <!-- Filter tags will be dynamically added here -->
+                    </div>
+                    <button type="button" id="clearAllFilters" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="bi bi-x-circle"></i> Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Filter Panel (Hidden by default) -->
+            <div id="mobileFilterPanel" class="d-md-none mobile-filter-panel" style="display: none;">
+                <div class="mobile-filter-header">
+                    <h5 class="mb-0">Filters</h5>
+                    <button type="button" class="btn-close" id="closeMobileFilter" aria-label="Close"></button>
+                </div>
+                <div class="mobile-filter-content">
+                    @include('products._product_filter')
+                </div>
+                <div class="mobile-filter-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="clearMobileFilters">Clear All</button>
+                    <button type="button" class="btn btn-primary" id="applyMobileFilters">Apply Filters</button>
+                </div>
+            </div>
+
+            <!-- Overlay for mobile filter -->
+            <div id="mobileFilterOverlay" class="mobile-filter-overlay d-md-none" style="display: none;"></div>
             
             <div id="product-grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
                 @include('products._list', ['products' => $products])
@@ -703,7 +741,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const loadMoreBtn = document.getElementById('loadMoreBtn');
     const grid = document.getElementById('product-grid');
     const filterForm = document.getElementById('filterForm');
-    const searchBox = document.getElementById('searchBox');
+    const searchInputs = document.querySelectorAll('input[name="q"]'); // Get all search inputs (desktop + mobile)
     const sortSelect = document.getElementById('sortSelect');
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 
@@ -712,6 +750,10 @@ document.addEventListener('DOMContentLoaded', function(){
         // Handle all input changes
         filterForm.addEventListener('change', function(e) {
             if(e.target.type === 'checkbox' || e.target.type === 'radio') {
+                // Add specific handling for size and color filters
+                if(e.target.classList.contains('size-filter') || e.target.classList.contains('color-filter')) {
+                    console.log('Size/Color filter changed:', e.target.name, e.target.value, e.target.checked);
+                }
                 applyFilters();
             }
         });
@@ -732,33 +774,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
 
-    // Clear all filters functionality
-    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
-    if(clearAllFiltersBtn) {
-        clearAllFiltersBtn.addEventListener('click', function() {
-            // Clear all form inputs
-            filterForm.reset();
-            
-            // Clear search input specifically
-            const searchInput = document.getElementById('searchInput');
-            if(searchInput) searchInput.value = '';
-            
-            // Clear sort select
-            sortSelect.value = 'created_at';
-            
-            // Reset rating to "All Ratings"
-            const ratingAll = document.getElementById('ratingAll');
-            if(ratingAll) ratingAll.checked = true;
-            
-            // Clear quick filter buttons
-            document.querySelectorAll('.quick-filter').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Apply filters (which will be empty, showing all products)
-            applyFilters();
-        });
-    }
+
 
     // Quick filter buttons functionality
     document.querySelectorAll('.quick-filter').forEach(btn => {
@@ -780,9 +796,17 @@ document.addEventListener('DOMContentLoaded', function(){
         applyFilters();
     };
 
-    // Search functionality with debounce
-    if(searchBox){
-        searchBox.addEventListener('input', function(e) {
+    // Search functionality with debounce - handle both desktop and mobile search inputs
+    searchInputs.forEach(function(searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            // Sync all search inputs with the same value
+            const searchValue = e.target.value;
+            searchInputs.forEach(input => {
+                if (input !== e.target) {
+                    input.value = searchValue;
+                }
+            });
+            
             clearTimeout(filterTimeout);
             filterTimeout = setTimeout(() => {
                 applyFilters();
@@ -790,14 +814,14 @@ document.addEventListener('DOMContentLoaded', function(){
         });
 
         // Also handle Enter key for immediate search
-        searchBox.addEventListener('keypress', function(e){
+        searchInput.addEventListener('keypress', function(e){
             if(e.key === 'Enter') {
                 e.preventDefault();
                 clearTimeout(filterTimeout);
                 applyFilters();
             }
         });
-    }
+    });
 
     // Sort functionality
     if(sortSelect) {
@@ -818,10 +842,19 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const formData = new FormData(filterForm);
         
-        // Add search parameter from search input
-        const searchInput = document.getElementById('searchInput');
-        if(searchInput && searchInput.value.trim()) {
-            formData.append('q', searchInput.value.trim());
+        // Add search parameter from any search input - with debug logging
+        let searchValue = '';
+        searchInputs.forEach(input => {
+            if (input.value.trim()) {
+                searchValue = input.value.trim();
+            }
+        });
+        
+        if(searchValue) {
+            console.log('Adding search parameter:', searchValue);
+            formData.append('q', searchValue);
+        } else {
+            console.log('No search value found');
         }
         
         // Add sort parameter
@@ -840,6 +873,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const params = new URLSearchParams(formData);
         const url = '/products/filter?' + params.toString();
+        
+        // Debug logging
+        console.log('FormData contents:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+        console.log('Final URL:', url);
 
         fetch(url, {
             headers: {
@@ -907,6 +947,255 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
 
+    // Active Filter Tags Management
+    function updateActiveFilterTags() {
+        const activeFiltersSection = document.getElementById('activeFiltersSection');
+        const activeFilterTags = document.getElementById('activeFilterTags');
+        const filterTags = [];
+
+        // Get selected categories
+        const selectedCategories = document.querySelectorAll('input[name="categories[]"]:checked');
+        selectedCategories.forEach(input => {
+            const label = input.closest('.form-check').querySelector('label').textContent.trim();
+            filterTags.push({
+                type: 'category',
+                value: input.value,
+                label: label.replace(/\(\d+\)$/, '').trim(),
+                displayName: 'Category: ' + label.replace(/\(\d+\)$/, '').trim()
+            });
+        });
+
+        // Get selected brands
+        const selectedBrands = document.querySelectorAll('input[name="brands[]"]:checked');
+        selectedBrands.forEach(input => {
+            const label = input.closest('.form-check').querySelector('label').textContent.trim();
+            filterTags.push({
+                type: 'brand',
+                value: input.value,
+                label: label.replace(/\(\d+\)$/, '').trim(),
+                displayName: 'Brand: ' + label.replace(/\(\d+\)$/, '').trim()
+            });
+        });
+
+        // Get selected sizes
+        const selectedSizes = document.querySelectorAll('input[name="sizes[]"]:checked');
+        selectedSizes.forEach(input => {
+            const label = input.closest('.form-check').querySelector('label').textContent.trim();
+            filterTags.push({
+                type: 'size',
+                value: input.value,
+                label: label.replace(/\(\d+\)$/, '').trim(),
+                displayName: label.replace(/\(\d+\)$/, '').trim()
+            });
+        });
+
+        // Get selected colors
+        const selectedColors = document.querySelectorAll('input[name="colors[]"]:checked');
+        selectedColors.forEach(input => {
+            const label = input.closest('.form-check').querySelector('.color-name').textContent.trim();
+            filterTags.push({
+                type: 'color',
+                value: input.value,
+                label: label,
+                displayName: label
+            });
+        });
+
+        // Get price range
+        const minPrice = document.getElementById('minPrice').value;
+        const maxPrice = document.getElementById('maxPrice').value;
+        if (minPrice || maxPrice) {
+            let priceLabel = 'Price: ';
+            if (minPrice && maxPrice) {
+                priceLabel += `₹${minPrice} - ₹${maxPrice}`;
+            } else if (minPrice) {
+                priceLabel += `₹${minPrice}+`;
+            } else if (maxPrice) {
+                priceLabel += `Under ₹${maxPrice}`;
+            }
+            filterTags.push({
+                type: 'price',
+                value: 'price_range',
+                label: priceLabel,
+                displayName: priceLabel
+            });
+        }
+
+        // Get search query from any search input
+        let currentSearchValue = '';
+        searchInputs.forEach(input => {
+            if (input.value.trim()) {
+                currentSearchValue = input.value.trim();
+            }
+        });
+        
+        if (currentSearchValue) {
+            filterTags.push({
+                type: 'search',
+                value: 'search_query',
+                label: currentSearchValue,
+                displayName: 'Search: "' + currentSearchValue + '"'
+            });
+        }
+
+        // Generate HTML for filter tags
+        if (filterTags.length > 0) {
+            activeFilterTags.innerHTML = filterTags.map(tag => `
+                <span class="filter-tag" data-filter-type="${tag.type}" data-filter-value="${tag.value}">
+                    ${tag.displayName}
+                    <button type="button" class="remove-filter" onclick="removeFilter('${tag.type}', '${tag.value}')">
+                        ✕
+                    </button>
+                </span>
+            `).join('');
+            activeFiltersSection.style.display = 'block';
+        } else {
+            activeFiltersSection.style.display = 'none';
+        }
+    }
+
+    // Remove individual filter
+    window.removeFilter = function(type, value) {
+        switch(type) {
+            case 'category':
+                const categoryInput = document.querySelector(`input[name="categories[]"][value="${value}"]`);
+                if (categoryInput) categoryInput.checked = false;
+                break;
+            case 'brand':
+                const brandInput = document.querySelector(`input[name="brands[]"][value="${value}"]`);
+                if (brandInput) brandInput.checked = false;
+                break;
+            case 'size':
+                const sizeInput = document.querySelector(`input[name="sizes[]"][value="${value}"]`);
+                if (sizeInput) sizeInput.checked = false;
+                break;
+            case 'color':
+                const colorInput = document.querySelector(`input[name="colors[]"][value="${value}"]`);
+                if (colorInput) colorInput.checked = false;
+                break;
+            case 'price':
+                document.getElementById('minPrice').value = '';
+                document.getElementById('maxPrice').value = '';
+                break;
+            case 'search':
+                searchInputs.forEach(input => {
+                    input.value = '';
+                });
+                break;
+        }
+        applyFilters();
+    };
+
+    // Clear all filters function
+    function clearAllFilters() {
+        // Clear all form inputs
+        filterForm.reset();
+        
+        // Clear all search inputs
+        searchInputs.forEach(input => {
+            input.value = '';
+        });
+        
+        // Clear sort select
+        sortSelect.value = 'created_at';
+        
+        // Clear price inputs
+        document.getElementById('minPrice').value = '';
+        document.getElementById('maxPrice').value = '';
+        
+        // Apply filters (which will be empty, showing all products)
+        applyFilters();
+    }
+
+    // Clear all filters - main button in active filters section
+    document.getElementById('clearAllFilters').addEventListener('click', clearAllFilters);
+    
+    // Clear all filters - button in sidebar (if exists)
+    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
+    if (clearAllFiltersBtn) {
+        clearAllFiltersBtn.addEventListener('click', clearAllFilters);
+    }
+
+    // Override the existing applyFilters function to include active filter tags update
+    const originalApplyFilters = applyFilters;
+    applyFilters = function() {
+        updateActiveFilterTags();
+        originalApplyFilters();
+    };
+
+    // Initial load - update active filter tags
+    updateActiveFilterTags();
+
+    // Mobile Filter Panel Management
+    const mobileFilterBtn = document.getElementById('mobileFilterBtn');
+    const mobileFilterPanel = document.getElementById('mobileFilterPanel');
+    const mobileFilterOverlay = document.getElementById('mobileFilterOverlay');
+    const closeMobileFilter = document.getElementById('closeMobileFilter');
+    const applyMobileFilters = document.getElementById('applyMobileFilters');
+    const clearMobileFilters = document.getElementById('clearMobileFilters');
+
+    // Open mobile filter panel
+    if (mobileFilterBtn) {
+        mobileFilterBtn.addEventListener('click', function() {
+            mobileFilterPanel.style.display = 'flex';
+            mobileFilterOverlay.style.display = 'block';
+            document.body.classList.add('mobile-filter-open');
+            
+            // Trigger animation
+            setTimeout(() => {
+                mobileFilterPanel.classList.add('show');
+            }, 10);
+        });
+    }
+
+    // Close mobile filter panel
+    function closeMobileFilterPanel() {
+        mobileFilterPanel.classList.remove('show');
+        document.body.classList.remove('mobile-filter-open');
+        
+        setTimeout(() => {
+            mobileFilterPanel.style.display = 'none';
+            mobileFilterOverlay.style.display = 'none';
+        }, 300);
+    }
+
+    // Close filter panel events
+    if (closeMobileFilter) {
+        closeMobileFilter.addEventListener('click', closeMobileFilterPanel);
+    }
+    
+    if (mobileFilterOverlay) {
+        mobileFilterOverlay.addEventListener('click', closeMobileFilterPanel);
+    }
+
+    // Apply mobile filters
+    if (applyMobileFilters) {
+        applyMobileFilters.addEventListener('click', function() {
+            applyFilters();
+            closeMobileFilterPanel();
+        });
+    }
+
+    // Clear mobile filters
+    if (clearMobileFilters) {
+        clearMobileFilters.addEventListener('click', function() {
+            clearAllFilters();
+            closeMobileFilterPanel();
+        });
+    }
+
+    // Handle escape key for mobile filter
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileFilterPanel.classList.contains('show')) {
+            closeMobileFilterPanel();
+        }
+    });
+
+    // Prevent body scroll when mobile filter is open
+    mobileFilterPanel.addEventListener('touchmove', function(e) {
+        e.stopPropagation();
+    });
+
     // Load more functionality (updated to work with filters)
     if(loadMoreBtn) {
         loadMoreBtn.addEventListener('click', function(){
@@ -919,9 +1208,9 @@ document.addEventListener('DOMContentLoaded', function(){
             
             // Get current filter parameters
             const formData = new FormData(filterForm);
-            if(searchBox.value.trim()) {
-                formData.append('q', searchBox.value.trim());
-            }
+            // if(searchBox.value.trim()) {
+            //     formData.append('q', searchBox.value.trim());
+            // }
             if(sortSelect.value) {
                 formData.append('sort', sortSelect.value);
             }

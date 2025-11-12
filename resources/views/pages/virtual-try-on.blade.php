@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="user-authenticated" content="{{ $isAuthenticated ? 'true' : 'false' }}">
     <title>Virtual Try-On - Try Before You Buy</title>
     
     <!-- Bootstrap 5 CSS CDN -->
@@ -10,6 +12,14 @@
     
     <!-- Bootstrap Icons CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- AR.js and Three.js Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     
     <!-- Custom CSS -->
     <style>
@@ -413,6 +423,130 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        /* Loading Spinner */
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Enhanced Product Cards */
+        .product-card.selected {
+            border: 2px solid var(--bs-primary);
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            transform: scale(1.02);
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* AR Overlay System */
+        .ar-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .tracking-points {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00ff00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.7;
+            z-index: 20;
+        }
+
+        .body-outline {
+            position: absolute;
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* AR Control Panel */
+        .ar-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 10px 20px;
+            z-index: 25;
+        }
+
+        .ar-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ar-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .ar-toggle.active {
+            background: var(--bs-primary);
+            border-color: var(--bs-primary);
+        }
+
+        /* Performance Indicators */
+        .performance-stats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 30;
+        }
+
+        /* 3D Product Renderer */
+        .product-3d-renderer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 12;
+        }
     </style>
 </head>
 <body>
@@ -558,16 +692,48 @@
                 <!-- Camera/Try-On Area -->
                 <div class="col-lg-8">
                     <div class="try-on-interface">
-                        <div class="camera-container" id="cameraContainer">
+                        <div class="camera-container ar-container" id="cameraContainer">
                             <div class="camera-placeholder" id="cameraPlaceholder">
                                 <i class="bi bi-camera display-1 text-secondary mb-3"></i>
-                                <h5 class="text-muted">Click "Start Camera" to begin</h5>
+                                <h5 class="text-muted">Click "Start AR Camera" to begin</h5>
                                 <p class="small text-muted">Make sure to allow camera access when prompted</p>
+                                <div class="mt-3">
+                                    <small class="text-info">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Enhanced with AI body tracking for realistic try-on experience
+                                    </small>
+                                </div>
                             </div>
                             
-                            <!-- Product overlay will be added here -->
-                            <div class="product-overlay" id="productOverlay" style="display: none;">
-                                <img src="" alt="Virtual Product" style="max-width: 200px; height: auto;">
+                            <!-- AR Canvas for Three.js rendering -->
+                            <canvas class="ar-canvas" id="arCanvas" style="display: none;"></canvas>
+                            
+                            <!-- Body tracking overlay -->
+                            <div class="ar-overlay" id="arOverlay" style="display: none;">
+                                <!-- Tracking points will be added here dynamically -->
+                            </div>
+                            
+                            <!-- 3D Product Renderer -->
+                            <div class="product-3d-renderer" id="product3dRenderer" style="display: none;"></div>
+                            
+                            <!-- Performance Stats -->
+                            <div class="performance-stats" id="performanceStats" style="display: none;">
+                                <div>FPS: <span id="fpsCounter">0</span></div>
+                                <div>Tracking: <span id="trackingStatus">Inactive</span></div>
+                                <div>Quality: <span id="renderQuality">High</span></div>
+                            </div>
+                            
+                            <!-- AR Controls -->
+                            <div class="ar-controls" id="arControls" style="display: none;">
+                                <button class="ar-toggle" id="bodyTrackingToggle" onclick="toggleBodyTracking()">
+                                    <i class="bi bi-person-bounding-box me-1"></i>Body Tracking
+                                </button>
+                                <button class="ar-toggle" id="faceTrackingToggle" onclick="toggleFaceTracking()">
+                                    <i class="bi bi-person-circle me-1"></i>Face Tracking
+                                </button>
+                                <button class="ar-toggle" id="arRenderingToggle" onclick="toggleARRendering()">
+                                    <i class="bi bi-cube me-1"></i>3D Rendering
+                                </button>
                             </div>
                         </div>
 
@@ -576,7 +742,7 @@
                             <div class="row align-items-center">
                                 <div class="col-md-6">
                                     <div class="d-flex gap-3 justify-content-center justify-content-md-start">
-                                        <button class="control-btn btn-success" onclick="startCamera()" id="startBtn">
+                                        <button class="control-btn btn-success" onclick="startCamera()" id="startBtn" title="Start AR Camera">
                                             <i class="bi bi-camera-video"></i>
                                         </button>
                                         <button class="control-btn btn-danger" onclick="stopCamera()" id="stopBtn" disabled>
@@ -606,26 +772,51 @@
                         <div class="row mt-4">
                             <div class="col-md-6">
                                 <h6 class="text-center mb-3">Select Size</h6>
-                                <div class="size-selector">
-                                    <div class="size-btn" onclick="selectSize(this, 'XS')">XS</div>
-                                    <div class="size-btn" onclick="selectSize(this, 'S')">S</div>
-                                    <div class="size-btn selected" onclick="selectSize(this, 'M')">M</div>
-                                    <div class="size-btn" onclick="selectSize(this, 'L')">L</div>
-                                    <div class="size-btn" onclick="selectSize(this, 'XL')">XL</div>
-                                    <div class="size-btn" onclick="selectSize(this, 'XXL')">XXL</div>
+                                <div class="size-selector" id="sizeSelector">
+                                    @if($products->isNotEmpty() && $products->first()->available_sizes->isNotEmpty())
+                                        @foreach($products->first()->available_sizes->take(6) as $index => $size)
+                                            <div class="size-btn {{ $index === 0 ? 'selected' : '' }}" onclick="selectSize(this, '{{ $size }}')">{{ $size }}</div>
+                                        @endforeach
+                                    @else
+                                        <div class="size-btn selected" onclick="selectSize(this, 'M')">M</div>
+                                        <div class="size-btn" onclick="selectSize(this, 'L')">L</div>
+                                        <div class="size-btn" onclick="selectSize(this, 'XL')">XL</div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <h6 class="text-center mb-3">Select Color</h6>
-                                <div class="color-picker">
-                                    <div class="color-btn selected" style="background: #dc3545;" onclick="selectColor(this, '#dc3545')"></div>
-                                    <div class="color-btn" style="background: #007bff;" onclick="selectColor(this, '#007bff')"></div>
-                                    <div class="color-btn" style="background: #28a745;" onclick="selectColor(this, '#28a745')"></div>
-                                    <div class="color-btn" style="background: #ffc107;" onclick="selectColor(this, '#ffc107')"></div>
-                                    <div class="color-btn" style="background: #6f42c1;" onclick="selectColor(this, '#6f42c1')"></div>
-                                    <div class="color-btn" style="background: #fd7e14;" onclick="selectColor(this, '#fd7e14')"></div>
-                                    <div class="color-btn" style="background: #20c997;" onclick="selectColor(this, '#20c997')"></div>
-                                    <div class="color-btn" style="background: #6c757d;" onclick="selectColor(this, '#6c757d')"></div>
+                                <div class="color-picker" id="colorPicker">
+                                    @if($products->isNotEmpty() && $products->first()->available_colors->isNotEmpty())
+                                        @foreach($products->first()->available_colors->take(8) as $index => $color)
+                                            @php
+                                                $colorCode = match(strtolower($color)) {
+                                                    'red' => '#dc3545',
+                                                    'blue' => '#007bff',
+                                                    'green' => '#28a745',
+                                                    'yellow' => '#ffc107',
+                                                    'purple' => '#6f42c1',
+                                                    'orange' => '#fd7e14',
+                                                    'teal' => '#20c997',
+                                                    'gray', 'grey' => '#6c757d',
+                                                    'black' => '#000000',
+                                                    'white' => '#ffffff',
+                                                    'pink' => '#e83e8c',
+                                                    'brown' => '#8b4513',
+                                                    default => '#' . dechex(crc32($color) & 0xFFFFFF)
+                                                };
+                                            @endphp
+                                            <div class="color-btn {{ $index === 0 ? 'selected' : '' }}" 
+                                                 style="background: {{ $colorCode }}; {{ $color === 'white' || $colorCode === '#ffffff' ? 'border: 2px solid #dee2e6;' : '' }}" 
+                                                 onclick="selectColor(this, '{{ $colorCode }}', '{{ $color }}')"
+                                                 title="{{ ucfirst($color) }}"></div>
+                                        @endforeach
+                                    @else
+                                        <div class="color-btn selected" style="background: #dc3545;" onclick="selectColor(this, '#dc3545', 'Red')"></div>
+                                        <div class="color-btn" style="background: #007bff;" onclick="selectColor(this, '#007bff', 'Blue')"></div>
+                                        <div class="color-btn" style="background: #28a745;" onclick="selectColor(this, '#28a745', 'Green')"></div>
+                                        <div class="color-btn" style="background: #ffc107;" onclick="selectColor(this, '#ffc107', 'Yellow')"></div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -635,59 +826,69 @@
                 <!-- Product Selection -->
                 <div class="col-lg-4">
                     <h5 class="mb-3">Choose Product</h5>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <div class="product-card selected" onclick="selectProduct(this, 'T-Shirt')">
-                                <div class="text-center">
-                                    <i class="bi bi-person display-4 text-primary mb-2"></i>
-                                    <h6 class="mb-1">Classic T-Shirt</h6>
-                                    <p class="small text-muted mb-2">$29.99</p>
-                                    <div class="d-flex justify-content-center">
-                                        <span class="badge bg-success me-1">4.8★</span>
-                                        <span class="small text-muted">(324 reviews)</span>
+                    <div class="row g-3" style="max-height: 400px; overflow-y: auto;">
+                        @forelse($products->take(6) as $index => $product)
+                            <div class="col-12">
+                                <div class="product-card {{ $index === 0 ? 'selected' : '' }}" 
+                                     onclick="selectProduct(this, {{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->default_variation ? $product->default_variation->id : 'null' }})">
+                                    <div class="text-center">
+                                        @if($product->thumbnail)
+                                            <img src="{{ asset('storage/' . $product->thumbnail->image_path) }}" 
+                                                 alt="{{ $product->name }}" 
+                                                 class="img-fluid mb-2" 
+                                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                        @else
+                                            <i class="bi bi-person display-4 text-primary mb-2"></i>
+                                        @endif
+                                        <h6 class="mb-1">{{ $product->name }}</h6>
+                                        <p class="small text-muted mb-2">
+                                            @if($product->discount_percentage > 0)
+                                                <span class="text-decoration-line-through">₹{{ number_format($product->price, 2) }}</span>
+                                                <span class="text-success fw-bold">₹{{ number_format($product->sale_price, 2) }}</span>
+                                            @else
+                                                ₹{{ number_format($product->price, 2) }}
+                                            @endif
+                                        </p>
+                                        <div class="d-flex justify-content-center">
+                                            @if($product->average_rating)
+                                                <span class="badge bg-success me-1">{{ number_format($product->average_rating, 1) }}★</span>
+                                                <span class="small text-muted">({{ $product->reviews_count }} reviews)</span>
+                                            @else
+                                                <span class="small text-muted">New Product</span>
+                                            @endif
+                                        </div>
+                                        
+                                        @if($product->discount_percentage > 0)
+                                            <div class="mt-1">
+                                                <span class="badge bg-danger">{{ $product->discount_percentage }}% OFF</span>
+                                            </div>
+                                        @endif
+                                        
+                                        <!-- Hidden data for JavaScript -->
+                                        <div class="d-none product-data">
+                                            <span class="product-id">{{ $product->id }}</span>
+                                            <span class="product-name">{{ $product->name }}</span>
+                                            <span class="product-price">{{ $product->sale_price }}</span>
+                                            <span class="product-slug">{{ $product->slug }}</span>
+                                            <span class="default-variation-id">{{ $product->default_variation ? $product->default_variation->id : '' }}</span>
+                                            <span class="available-sizes">{{ $product->available_sizes->implode(',') }}</span>
+                                            <span class="available-colors">{{ $product->available_colors->implode(',') }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="product-card" onclick="selectProduct(this, 'Hoodie')">
-                                <div class="text-center">
-                                    <i class="bi bi-person-arms-up display-4 text-primary mb-2"></i>
-                                    <h6 class="mb-1">Comfy Hoodie</h6>
-                                    <p class="small text-muted mb-2">$59.99</p>
-                                    <div class="d-flex justify-content-center">
-                                        <span class="badge bg-success me-1">4.9★</span>
-                                        <span class="small text-muted">(189 reviews)</span>
-                                    </div>
+                        @empty
+                            <div class="col-12">
+                                <div class="text-center py-4">
+                                    <i class="bi bi-box-seam display-4 text-muted mb-3"></i>
+                                    <h6 class="text-muted">No products available for virtual try-on</h6>
+                                    <p class="small text-muted">Please check back later or browse our full catalog.</p>
+                                    <a href="{{ route('products.index') }}" class="btn btn-outline-primary btn-sm">
+                                        Browse All Products
+                                    </a>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="product-card" onclick="selectProduct(this, 'Jacket')">
-                                <div class="text-center">
-                                    <i class="bi bi-person-standing display-4 text-primary mb-2"></i>
-                                    <h6 class="mb-1">Winter Jacket</h6>
-                                    <p class="small text-muted mb-2">$129.99</p>
-                                    <div class="d-flex justify-content-center">
-                                        <span class="badge bg-success me-1">4.7★</span>
-                                        <span class="small text-muted">(256 reviews)</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="product-card" onclick="selectProduct(this, 'Dress')">
-                                <div class="text-center">
-                                    <i class="bi bi-person-dress display-4 text-primary mb-2"></i>
-                                    <h6 class="mb-1">Summer Dress</h6>
-                                    <p class="small text-muted mb-2">$79.99</p>
-                                    <div class="d-flex justify-content-center">
-                                        <span class="badge bg-success me-1">4.6★</span>
-                                        <span class="small text-muted">(432 reviews)</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        @endforelse
                     </div>
 
                     <!-- Add to Cart -->
@@ -785,102 +986,77 @@
             </div>
 
             <div class="row g-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="product-card h-100">
-                        <div class="position-relative mb-3">
-                            <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-person display-1 text-primary"></i>
+                @forelse($products->take(8) as $product)
+                    <div class="col-lg-3 col-md-6">
+                        <div class="product-card h-100">
+                            <div class="position-relative mb-3">
+                                @if($product->thumbnail)
+                                    <img src="{{ asset('storage/' . $product->thumbnail->image_path) }}" 
+                                         alt="{{ $product->name }}" 
+                                         class="img-fluid rounded-3" 
+                                         style="width: 100%; height: 200px; object-fit: cover;">
+                                @else
+                                    <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-person display-1 text-primary"></i>
+                                    </div>
+                                @endif
+                                
+                                @if($product->discount_percentage > 0)
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-danger">{{ $product->discount_percentage }}% OFF</span>
+                                    </div>
+                                @elseif($product->created_at->diffInDays() < 30)
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-success">New</span>
+                                    </div>
+                                @endif
                             </div>
-                            <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-success">New</span>
+                            
+                            <h5 class="mb-2">{{ Str::limit($product->name, 30) }}</h5>
+                            <p class="text-muted small mb-2">{{ Str::limit($product->description, 60) }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                @if($product->discount_percentage > 0)
+                                    <div>
+                                        <span class="h6 mb-0 text-muted text-decoration-line-through">₹{{ number_format($product->price, 2) }}</span>
+                                        <span class="h5 mb-0 text-primary">₹{{ number_format($product->sale_price, 2) }}</span>
+                                    </div>
+                                @else
+                                    <span class="h5 mb-0 text-primary">₹{{ number_format($product->price, 2) }}</span>
+                                @endif
+                                
+                                <div>
+                                    @if($product->average_rating)
+                                        <span class="badge bg-warning text-dark me-1">{{ number_format($product->average_rating, 1) }}★</span>
+                                        <span class="small text-muted">({{ $product->reviews_count }})</span>
+                                    @else
+                                        <span class="small text-muted">New Product</span>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="tryProduct({{ $product->id }}, '{{ addslashes($product->name) }}')">
+                                    <i class="bi bi-camera me-2"></i>Try On
+                                </button>
+                                <a href="{{ route('products.show', $product->slug) }}" class="btn btn-sm btn-outline-secondary">
+                                    View Details
+                                </a>
                             </div>
                         </div>
-                        <h5 class="mb-2">Premium Cotton T-Shirt</h5>
-                        <p class="text-muted small mb-2">100% organic cotton, perfect for everyday wear</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5 mb-0 text-primary">$34.99</span>
-                            <div>
-                                <span class="badge bg-warning text-dark me-1">4.8★</span>
-                                <span class="small text-muted">(156)</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-primary w-100 mb-2" onclick="tryProduct('premium-tshirt')">
-                            <i class="bi bi-camera me-2"></i>Try On
-                        </button>
                     </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="product-card h-100">
-                        <div class="position-relative mb-3">
-                            <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-person-arms-up display-1 text-primary"></i>
-                            </div>
-                            <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-danger">Hot</span>
-                            </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="bi bi-box-seam display-4 text-muted mb-3"></i>
+                            <h5 class="text-muted">No products available</h5>
+                            <p class="text-muted">Check back later for new arrivals!</p>
+                            <a href="{{ route('products.index') }}" class="btn btn-primary">
+                                Browse All Products
+                            </a>
                         </div>
-                        <h5 class="mb-2">Cozy Pullover Hoodie</h5>
-                        <p class="text-muted small mb-2">Soft fleece interior, adjustable drawstring hood</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5 mb-0 text-primary">$64.99</span>
-                            <div>
-                                <span class="badge bg-warning text-dark me-1">4.9★</span>
-                                <span class="small text-muted">(203)</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-primary w-100 mb-2" onclick="tryProduct('cozy-hoodie')">
-                            <i class="bi bi-camera me-2"></i>Try On
-                        </button>
                     </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="product-card h-100">
-                        <div class="position-relative mb-3">
-                            <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-person-standing display-1 text-primary"></i>
-                            </div>
-                        </div>
-                        <h5 class="mb-2">Weather Shield Jacket</h5>
-                        <p class="text-muted small mb-2">Waterproof, breathable, perfect for outdoor activities</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5 mb-0 text-primary">$149.99</span>
-                            <div>
-                                <span class="badge bg-warning text-dark me-1">4.7★</span>
-                                <span class="small text-muted">(89)</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-primary w-100 mb-2" onclick="tryProduct('weather-jacket')">
-                            <i class="bi bi-camera me-2"></i>Try On
-                        </button>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <div class="product-card h-100">
-                        <div class="position-relative mb-3">
-                            <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-person-dress display-1 text-primary"></i>
-                            </div>
-                            <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-info">Trending</span>
-                            </div>
-                        </div>
-                        <h5 class="mb-2">Elegant Summer Dress</h5>
-                        <p class="text-muted small mb-2">Lightweight fabric, perfect for warm weather</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5 mb-0 text-primary">$89.99</span>
-                            <div>
-                                <span class="badge bg-warning text-dark me-1">4.6★</span>
-                                <span class="small text-muted">(142)</span>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-primary w-100 mb-2" onclick="tryProduct('summer-dress')">
-                            <i class="bi bi-camera me-2"></i>Try On
-                        </button>
-                    </div>
-                </div>
+                @endforelse
             </div>
 
             <div class="text-center mt-5">
@@ -959,10 +1135,56 @@
     <script>
         // Global variables
         let cameraStream = null;
-        let selectedProduct = 'T-Shirt';
-        let selectedSize = 'M';
-        let selectedColor = '#dc3545';
+        let selectedProductId = null;
+        let selectedProductName = '';
+        let selectedVariationId = null;
+        let selectedSize = '';
+        let selectedColor = '';
+        let selectedColorName = '';
         let isFilterEnabled = false;
+        let isAuthenticated = document.querySelector('meta[name="user-authenticated"]')?.getAttribute('content') === 'true';
+
+        // AR System Variables
+        let arSystem = {
+            scene: null,
+            camera: null,
+            renderer: null,
+            pose: null,
+            faceMesh: null,
+            bodyTrackingEnabled: false,
+            faceTrackingEnabled: false,
+            arRenderingEnabled: false,
+            trackingPoints: [],
+            productModels: {},
+            animationId: null,
+            performanceMonitor: {
+                fps: 0,
+                frameCount: 0,
+                lastTime: performance.now()
+            }
+        };
+
+        // Initialize with first product if available
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstProduct = document.querySelector('.product-card.selected');
+            if (firstProduct) {
+                const productData = firstProduct.querySelector('.product-data');
+                if (productData) {
+                    selectedProductId = parseInt(productData.querySelector('.product-id').textContent);
+                    selectedProductName = productData.querySelector('.product-name').textContent;
+                    selectedVariationId = productData.querySelector('.default-variation-id').textContent || null;
+                    
+                    // Set default size and color
+                    const firstSize = document.querySelector('.size-btn.selected');
+                    const firstColor = document.querySelector('.color-btn.selected');
+                    if (firstSize) selectedSize = firstSize.textContent.trim();
+                    if (firstColor) {
+                        selectedColor = firstColor.style.backgroundColor || firstColor.getAttribute('onclick').match(/'([^']+)'/)[1];
+                        selectedColorName = firstColor.getAttribute('title') || 'Default';
+                    }
+                }
+            }
+        });
 
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -998,7 +1220,7 @@
             });
         });
 
-        // Camera functions
+        // Enhanced AR Camera functions
         async function startCamera() {
             try {
                 const startBtn = document.getElementById('startBtn');
@@ -1006,15 +1228,16 @@
                 const placeholder = document.getElementById('cameraPlaceholder');
                 
                 // Show loading state
-                startBtn.innerHTML = '<div class="loading-spinner"></div>';
+                startBtn.innerHTML = '<i class="bi bi-circle-notch spin me-2"></i>Initializing AR...';
                 startBtn.disabled = true;
                 
-                // Request camera access
+                // Request camera access with higher resolution for AR
                 cameraStream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 },
-                        facingMode: 'user'
+                        width: { ideal: 1920, min: 1280 }, 
+                        height: { ideal: 1080, min: 720 },
+                        facingMode: 'user',
+                        frameRate: { ideal: 30, min: 15 }
                     } 
                 });
                 
@@ -1023,15 +1246,44 @@
                 video.srcObject = cameraStream;
                 video.autoplay = true;
                 video.playsInline = true;
+                video.muted = true;
                 video.style.width = '100%';
                 video.style.height = '100%';
                 video.style.objectFit = 'cover';
                 video.style.borderRadius = '15px';
+                video.style.transform = 'scaleX(-1)'; // Mirror for better UX
                 
-                // Replace placeholder with video
+                // Wait for video to load
+                await new Promise((resolve) => {
+                    video.addEventListener('loadedmetadata', resolve);
+                });
+                
+                // Replace placeholder with video and AR elements
                 const container = document.getElementById('cameraContainer');
-                container.innerHTML = '';
-                container.appendChild(video);
+                const arCanvas = document.getElementById('arCanvas');
+                const arOverlay = document.getElementById('arOverlay');
+                const arControls = document.getElementById('arControls');
+                const performanceStats = document.getElementById('performanceStats');
+                
+                // Show video
+                placeholder.style.display = 'none';
+                container.insertBefore(video, container.firstChild);
+                
+                // Show AR elements
+                arCanvas.style.display = 'block';
+                arOverlay.style.display = 'block';
+                arControls.style.display = 'flex';
+                
+                // Initialize AR system
+                const arInitialized = await initializeARSystem();
+                
+                if (arInitialized) {
+                    // Set up camera processing for MediaPipe
+                    setupCameraProcessing(video);
+                    showToast('AR Camera started successfully!', 'success');
+                } else {
+                    showToast('Camera started in basic mode', 'info');
+                }
                 
                 // Show product overlay
                 showProductOverlay();
@@ -1041,19 +1293,21 @@
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
                 
-                // Show success message
-                showToast('Camera started successfully!', 'success');
-                
             } catch (error) {
-                console.error('Error accessing camera:', error);
+                console.error('Error starting AR camera:', error);
                 document.getElementById('startBtn').innerHTML = '<i class="bi bi-camera-video"></i>';
                 document.getElementById('startBtn').disabled = false;
                 
-                let errorMessage = 'Failed to access camera. ';
+                let errorMessage = 'Failed to start AR camera. ';
                 if (error.name === 'NotAllowedError') {
                     errorMessage += 'Please allow camera access and try again.';
                 } else if (error.name === 'NotFoundError') {
                     errorMessage += 'No camera found on this device.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += 'Camera quality requirements not met. Trying basic mode...';
+                    // Fallback to lower quality
+                    setTimeout(() => startCameraBasic(), 1000);
+                    return;
                 } else {
                     errorMessage += 'Please check your camera settings.';
                 }
@@ -1062,28 +1316,209 @@
             }
         }
 
+        // Fallback basic camera mode
+        async function startCameraBasic() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 }, 
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    } 
+                });
+                
+                const video = document.createElement('video');
+                video.srcObject = cameraStream;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 15px; transform: scaleX(-1);';
+                
+                const container = document.getElementById('cameraContainer');
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                container.insertBefore(video, container.firstChild);
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
+                showToast('Camera started in basic mode', 'info');
+            } catch (error) {
+                console.error('Basic camera also failed:', error);
+                showToast('Camera initialization failed completely', 'error');
+            }
+        }
+
+        // Setup camera processing for MediaPipe
+        function setupCameraProcessing(video) {
+            const processFrame = async () => {
+                if (video && video.readyState === 4) {
+                    // Process with pose tracking
+                    if (arSystem.pose && arSystem.bodyTrackingEnabled) {
+                        await arSystem.pose.send({image: video});
+                    }
+                    
+                    // Process with face tracking
+                    if (arSystem.faceMesh && arSystem.faceTrackingEnabled) {
+                        await arSystem.faceMesh.send({image: video});
+                    }
+                }
+                
+                // Continue processing
+                if (cameraStream) {
+                    requestAnimationFrame(processFrame);
+                }
+            };
+            
+            // Start processing
+            processFrame();
+        }
+
         function stopCamera() {
             if (cameraStream) {
+                // Stop camera stream
                 cameraStream.getTracks().forEach(track => track.stop());
                 cameraStream = null;
                 
+                // Stop AR rendering
+                stopARRenderLoop();
+                
+                // Clear AR resources
+                if (arSystem.pose) {
+                    arSystem.pose.close();
+                }
+                if (arSystem.faceMesh) {
+                    arSystem.faceMesh.close();
+                }
+                
+                // Hide AR elements
+                document.getElementById('arCanvas').style.display = 'none';
+                document.getElementById('arOverlay').style.display = 'none';
+                document.getElementById('arControls').style.display = 'none';
+                document.getElementById('performanceStats').style.display = 'none';
+                
                 // Reset to placeholder
                 const container = document.getElementById('cameraContainer');
-                container.innerHTML = `
-                    <div class="camera-placeholder" id="cameraPlaceholder">
-                        <i class="bi bi-camera display-1 text-secondary mb-3"></i>
-                        <h5 class="text-muted">Click "Start Camera" to begin</h5>
-                        <p class="small text-muted">Make sure to allow camera access when prompted</p>
-                    </div>
-                `;
+                const video = container.querySelector('video');
+                if (video) {
+                    video.remove();
+                }
+                
+                document.getElementById('cameraPlaceholder').style.display = 'block';
                 
                 // Update button states
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
                 
-                showToast('Camera stopped', 'info');
+                showToast('AR Camera stopped', 'info');
             }
         }
+
+        // ========== AR CONTROL FUNCTIONS ==========
+
+        function toggleBodyTracking() {
+            arSystem.bodyTrackingEnabled = !arSystem.bodyTrackingEnabled;
+            const btn = document.getElementById('bodyTrackingToggle');
+            
+            if (arSystem.bodyTrackingEnabled) {
+                btn.classList.add('active');
+                showToast('Body tracking enabled', 'success');
+                
+                // Initialize pose tracking if not already done
+                if (!arSystem.pose && cameraStream) {
+                    initPoseTracking();
+                }
+            } else {
+                btn.classList.remove('active');
+                showToast('Body tracking disabled', 'info');
+                
+                // Clear tracking points
+                document.querySelectorAll('.tracking-points').forEach(point => point.remove());
+                document.getElementById('trackingStatus').textContent = 'Inactive';
+            }
+        }
+
+        function toggleFaceTracking() {
+            arSystem.faceTrackingEnabled = !arSystem.faceTrackingEnabled;
+            const btn = document.getElementById('faceTrackingToggle');
+            
+            if (arSystem.faceTrackingEnabled) {
+                btn.classList.add('active');
+                showToast('Face tracking enabled', 'success');
+                
+                // Initialize face tracking if not already done
+                if (!arSystem.faceMesh && cameraStream) {
+                    initFaceTracking();
+                }
+            } else {
+                btn.classList.remove('active');
+                showToast('Face tracking disabled', 'info');
+            }
+        }
+
+        function toggleARRendering() {
+            arSystem.arRenderingEnabled = !arSystem.arRenderingEnabled;
+            const btn = document.getElementById('arRenderingToggle');
+            const canvas = document.getElementById('arCanvas');
+            const renderer3d = document.getElementById('product3dRenderer');
+            
+            if (arSystem.arRenderingEnabled) {
+                btn.classList.add('active');
+                canvas.style.display = 'block';
+                renderer3d.style.display = 'block';
+                showToast('3D AR rendering enabled', 'success');
+                
+                // Start 3D rendering
+                if (selectedProductId) {
+                    renderProduct3D();
+                }
+                
+                // Show performance stats
+                document.getElementById('performanceStats').style.display = 'block';
+                document.getElementById('renderQuality').textContent = 'High';
+            } else {
+                btn.classList.remove('active');
+                canvas.style.display = 'none';
+                renderer3d.style.display = 'none';
+                stopARRenderLoop();
+                showToast('3D AR rendering disabled', 'info');
+                
+                // Hide performance stats
+                document.getElementById('performanceStats').style.display = 'none';
+            }
+        }
+
+        // ========== PERFORMANCE OPTIMIZATION ==========
+
+        function optimizePerformance() {
+            // Adjust quality based on performance
+            const fps = arSystem.performanceMonitor.fps;
+            const qualityElement = document.getElementById('renderQuality');
+            
+            if (fps < 15) {
+                // Low performance - reduce quality
+                if (arSystem.renderer) {
+                    arSystem.renderer.setPixelRatio(0.5);
+                }
+                qualityElement.textContent = 'Low';
+                qualityElement.style.color = '#dc3545';
+            } else if (fps < 25) {
+                // Medium performance
+                if (arSystem.renderer) {
+                    arSystem.renderer.setPixelRatio(0.75);
+                }
+                qualityElement.textContent = 'Medium';
+                qualityElement.style.color = '#ffc107';
+            } else {
+                // High performance
+                if (arSystem.renderer) {
+                    arSystem.renderer.setPixelRatio(1.0);
+                }
+                qualityElement.textContent = 'High';
+                qualityElement.style.color = '#28a745';
+            }
+        }
+
+        // Auto-optimize performance every 5 seconds
+        setInterval(optimizePerformance, 5000);
 
         function takeScreenshot() {
             if (!cameraStream) {
@@ -1127,14 +1562,347 @@
         }
 
         function showProductOverlay() {
-            const overlay = document.getElementById('productOverlay');
-            overlay.style.display = 'block';
-            // In a real implementation, this would show the actual product overlay
-            // For demo purposes, we'll just show it's working
+            if (arSystem.arRenderingEnabled) {
+                renderProduct3D();
+            } else {
+                // Fallback to 2D overlay
+                const overlay = document.getElementById('arOverlay');
+                overlay.style.display = 'block';
+                overlay.innerHTML = `
+                    <div style="position: absolute; top: 20%; left: 50%; transform: translateX(-50%); 
+                                background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; 
+                                border-radius: 10px; text-align: center;">
+                        <i class="bi bi-shirt me-2"></i>${selectedProductName}
+                        <br><small>Size: ${selectedSize} | Color: ${selectedColorName}</small>
+                    </div>
+                `;
+            }
+        }
+
+        // ========== AR SYSTEM IMPLEMENTATION ==========
+
+        // Initialize AR System
+        async function initializeARSystem() {
+            try {
+                // Initialize Three.js scene
+                initThreeJS();
+                
+                // Initialize MediaPipe Pose
+                if (arSystem.bodyTrackingEnabled) {
+                    await initPoseTracking();
+                }
+                
+                // Initialize MediaPipe Face Mesh
+                if (arSystem.faceTrackingEnabled) {
+                    await initFaceTracking();
+                }
+                
+                console.log('AR System initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize AR system:', error);
+                showToast('AR system initialization failed. Falling back to basic mode.', 'warning');
+                return false;
+            }
+        }
+
+        // Initialize Three.js Scene
+        function initThreeJS() {
+            const container = document.getElementById('cameraContainer');
+            const canvas = document.getElementById('arCanvas');
+            
+            // Scene setup
+            arSystem.scene = new THREE.Scene();
+            
+            // Camera setup
+            arSystem.camera = new THREE.PerspectiveCamera(
+                75, 
+                container.clientWidth / container.clientHeight, 
+                0.1, 
+                1000
+            );
+            arSystem.camera.position.z = 5;
+            
+            // Renderer setup
+            arSystem.renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas,
+                alpha: true,
+                antialias: true 
+            });
+            arSystem.renderer.setSize(container.clientWidth, container.clientHeight);
+            arSystem.renderer.setClearColor(0x000000, 0); // Transparent background
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            arSystem.scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            arSystem.scene.add(directionalLight);
+            
+            console.log('Three.js initialized');
+        }
+
+        // Initialize Pose Tracking
+        async function initPoseTracking() {
+            return new Promise((resolve, reject) => {
+                arSystem.pose = new Pose({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                    }
+                });
+
+                arSystem.pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    smoothSegmentation: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                arSystem.pose.onResults((results) => {
+                    if (results.poseLandmarks) {
+                        updateBodyTracking(results.poseLandmarks);
+                        updatePerformanceStats();
+                    }
+                });
+
+                arSystem.pose.initialize().then(() => {
+                    console.log('Pose tracking initialized');
+                    resolve();
+                }).catch(reject);
+            });
+        }
+
+        // Initialize Face Tracking
+        async function initFaceTracking() {
+            return new Promise((resolve, reject) => {
+                arSystem.faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                    }
+                });
+
+                arSystem.faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                arSystem.faceMesh.onResults((results) => {
+                    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                        updateFaceTracking(results.multiFaceLandmarks[0]);
+                    }
+                });
+
+                arSystem.faceMesh.initialize().then(() => {
+                    console.log('Face tracking initialized');
+                    resolve();
+                }).catch(reject);
+            });
+        }
+
+        // Update Body Tracking
+        function updateBodyTracking(landmarks) {
+            const overlay = document.getElementById('arOverlay');
+            const container = document.getElementById('cameraContainer');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Clear previous tracking points
+            overlay.querySelectorAll('.tracking-points').forEach(point => point.remove());
+            
+            // Key body points for clothing placement
+            const keyPoints = [
+                11, 12, // Shoulders
+                23, 24, // Hips
+                13, 14, // Elbows
+                15, 16, // Wrists
+                0       // Nose (for reference)
+            ];
+            
+            keyPoints.forEach(pointIndex => {
+                if (landmarks[pointIndex]) {
+                    const point = landmarks[pointIndex];
+                    const x = point.x * containerRect.width;
+                    const y = point.y * containerRect.height;
+                    
+                    const trackingPoint = document.createElement('div');
+                    trackingPoint.className = 'tracking-points';
+                    trackingPoint.style.left = x + 'px';
+                    trackingPoint.style.top = y + 'px';
+                    overlay.appendChild(trackingPoint);
+                }
+            });
+            
+            // Update 3D product position based on body tracking
+            if (arSystem.arRenderingEnabled && landmarks[11] && landmarks[12]) {
+                updateProductPosition(landmarks);
+            }
+            
+            document.getElementById('trackingStatus').textContent = 'Active';
+        }
+
+        // Update Face Tracking
+        function updateFaceTracking(landmarks) {
+            // Implement face-specific tracking for accessories like glasses, hats, etc.
+            if (selectedProductName.toLowerCase().includes('hat') || 
+                selectedProductName.toLowerCase().includes('cap') ||
+                selectedProductName.toLowerCase().includes('glasses')) {
+                
+                // Position product on head/face
+                const faceCenter = landmarks[6]; // Nose tip
+                if (faceCenter && arSystem.arRenderingEnabled) {
+                    updateFaceProductPosition(faceCenter);
+                }
+            }
+        }
+
+        // Update 3D Product Position
+        function updateProductPosition(bodyLandmarks) {
+            if (!arSystem.scene || !selectedProductId) return;
+            
+            const leftShoulder = bodyLandmarks[11];
+            const rightShoulder = bodyLandmarks[12];
+            
+            if (leftShoulder && rightShoulder) {
+                // Calculate center position between shoulders
+                const centerX = (leftShoulder.x + rightShoulder.x) / 2;
+                const centerY = (leftShoulder.y + rightShoulder.y) / 2;
+                const centerZ = (leftShoulder.z + rightShoulder.z) / 2;
+                
+                // Convert to Three.js coordinates
+                const x = (centerX - 0.5) * 10;
+                const y = -(centerY - 0.5) * 10;
+                const z = centerZ * 10;
+                
+                // Update product model position
+                const productModel = arSystem.productModels[selectedProductId];
+                if (productModel) {
+                    productModel.position.set(x, y, z);
+                    
+                    // Scale based on shoulder width
+                    const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+                    const scale = shoulderWidth * 15; // Adjust multiplier as needed
+                    productModel.scale.set(scale, scale, scale);
+                }
+            }
+        }
+
+        // Create 3D Product Model
+        async function create3DProductModel(productId, productName) {
+            // Create a basic 3D model for the product
+            // In a real implementation, you would load actual 3D models
+            
+            let geometry, material;
+            
+            if (productName.toLowerCase().includes('shirt') || productName.toLowerCase().includes('top')) {
+                // T-shirt geometry
+                geometry = new THREE.BoxGeometry(2, 2.5, 0.1);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: selectedColor,
+                    transparent: true,
+                    opacity: 0.8
+                });
+            } else if (productName.toLowerCase().includes('jacket')) {
+                // Jacket geometry
+                geometry = new THREE.BoxGeometry(2.2, 2.8, 0.2);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: selectedColor,
+                    transparent: true,
+                    opacity: 0.7
+                });
+            } else if (productName.toLowerCase().includes('dress')) {
+                // Dress geometry
+                geometry = new THREE.ConeGeometry(1.5, 4, 8);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: selectedColor,
+                    transparent: true,
+                    opacity: 0.7
+                });
+            } else {
+                // Default geometry
+                geometry = new THREE.BoxGeometry(2, 2, 0.1);
+                material = new THREE.MeshLambertMaterial({ 
+                    color: selectedColor,
+                    transparent: true,
+                    opacity: 0.8
+                });
+            }
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData = { productId, productName };
+            
+            // Add to scene and store reference
+            arSystem.scene.add(mesh);
+            arSystem.productModels[productId] = mesh;
+            
+            console.log(`Created 3D model for ${productName}`);
+            return mesh;
+        }
+
+        // Render 3D Product
+        async function renderProduct3D() {
+            if (!arSystem.arRenderingEnabled || !selectedProductId) return;
+            
+            // Remove existing product models
+            Object.values(arSystem.productModels).forEach(model => {
+                arSystem.scene.remove(model);
+            });
+            arSystem.productModels = {};
+            
+            // Create new product model
+            await create3DProductModel(selectedProductId, selectedProductName);
+            
+            // Start rendering loop if not already running
+            if (!arSystem.animationId) {
+                startARRenderLoop();
+            }
+        }
+
+        // AR Rendering Loop
+        function startARRenderLoop() {
+            function animate() {
+                arSystem.animationId = requestAnimationFrame(animate);
+                
+                // Update performance stats
+                arSystem.performanceMonitor.frameCount++;
+                const currentTime = performance.now();
+                if (currentTime >= arSystem.performanceMonitor.lastTime + 1000) {
+                    arSystem.performanceMonitor.fps = arSystem.performanceMonitor.frameCount;
+                    arSystem.performanceMonitor.frameCount = 0;
+                    arSystem.performanceMonitor.lastTime = currentTime;
+                    
+                    document.getElementById('fpsCounter').textContent = arSystem.performanceMonitor.fps;
+                }
+                
+                // Render the scene
+                if (arSystem.renderer && arSystem.scene && arSystem.camera) {
+                    arSystem.renderer.render(arSystem.scene, arSystem.camera);
+                }
+            }
+            animate();
+        }
+
+        // Stop AR Rendering
+        function stopARRenderLoop() {
+            if (arSystem.animationId) {
+                cancelAnimationFrame(arSystem.animationId);
+                arSystem.animationId = null;
+            }
+        }
+
+        // Update Performance Stats
+        function updatePerformanceStats() {
+            const stats = document.getElementById('performanceStats');
+            if (stats) {
+                stats.style.display = 'block';
+            }
         }
 
         // Product selection functions
-        function selectProduct(element, productName) {
+        function selectProduct(element, productId, productName, variationId = null) {
             // Remove selected class from all products
             document.querySelectorAll('.product-card').forEach(card => {
                 card.classList.remove('selected');
@@ -1142,7 +1910,23 @@
             
             // Add selected class to clicked product
             element.classList.add('selected');
-            selectedProduct = productName;
+            
+            // Update global variables
+            selectedProductId = productId;
+            selectedProductName = productName;
+            selectedVariationId = variationId;
+            
+            // Get product data
+            const productData = element.querySelector('.product-data');
+            if (productData) {
+                const availableSizes = productData.querySelector('.available-sizes').textContent.split(',').filter(s => s.trim());
+                const availableColors = productData.querySelector('.available-colors').textContent.split(',').filter(c => c.trim());
+                
+                // Update size options
+                updateSizeOptions(availableSizes);
+                // Update color options  
+                updateColorOptions(availableColors);
+            }
             
             // Update overlay if camera is active
             if (cameraStream) {
@@ -1150,6 +1934,60 @@
             }
             
             showToast(`Selected: ${productName}`, 'success');
+        }
+
+        function updateSizeOptions(sizes) {
+            const sizeSelector = document.getElementById('sizeSelector');
+            if (!sizeSelector || sizes.length === 0) return;
+            
+            sizeSelector.innerHTML = '';
+            sizes.forEach((size, index) => {
+                const sizeBtn = document.createElement('div');
+                sizeBtn.className = `size-btn ${index === 0 ? 'selected' : ''}`;
+                sizeBtn.textContent = size.trim();
+                sizeBtn.onclick = () => selectSize(sizeBtn, size.trim());
+                sizeSelector.appendChild(sizeBtn);
+            });
+            
+            // Update selected size
+            if (sizes.length > 0) {
+                selectedSize = sizes[0].trim();
+            }
+        }
+
+        function updateColorOptions(colors) {
+            const colorPicker = document.getElementById('colorPicker');
+            if (!colorPicker || colors.length === 0) return;
+            
+            colorPicker.innerHTML = '';
+            colors.forEach((color, index) => {
+                const colorCode = getColorCode(color.trim());
+                const colorBtn = document.createElement('div');
+                colorBtn.className = `color-btn ${index === 0 ? 'selected' : ''}`;
+                colorBtn.style.background = colorCode;
+                colorBtn.title = color.trim();
+                if (color.toLowerCase().includes('white')) {
+                    colorBtn.style.border = '2px solid #dee2e6';
+                }
+                colorBtn.onclick = () => selectColor(colorBtn, colorCode, color.trim());
+                colorPicker.appendChild(colorBtn);
+            });
+            
+            // Update selected color
+            if (colors.length > 0) {
+                selectedColor = getColorCode(colors[0].trim());
+                selectedColorName = colors[0].trim();
+            }
+        }
+
+        function getColorCode(colorName) {
+            const colorMap = {
+                'red': '#dc3545', 'blue': '#007bff', 'green': '#28a745', 'yellow': '#ffc107',
+                'purple': '#6f42c1', 'orange': '#fd7e14', 'teal': '#20c997', 'gray': '#6c757d',
+                'grey': '#6c757d', 'black': '#000000', 'white': '#ffffff', 'pink': '#e83e8c',
+                'brown': '#8b4513', 'navy': '#000080', 'maroon': '#800000', 'lime': '#00ff00'
+            };
+            return colorMap[colorName.toLowerCase()] || '#' + Math.floor(Math.random()*16777215).toString(16);
         }
 
         function selectSize(element, size) {
@@ -1162,10 +2000,13 @@
             element.classList.add('selected');
             selectedSize = size;
             
+            // Find matching variation for the selected size/color combination
+            updateSelectedVariation();
+            
             showToast(`Size changed to: ${size}`, 'info');
         }
 
-        function selectColor(element, color) {
+        function selectColor(element, colorCode, colorName = 'Color') {
             // Remove selected class from all colors
             document.querySelectorAll('.color-btn').forEach(btn => {
                 btn.classList.remove('selected');
@@ -1173,33 +2014,180 @@
             
             // Add selected class to clicked color
             element.classList.add('selected');
-            selectedColor = color;
+            selectedColor = colorCode;
+            selectedColorName = colorName;
             
-            showToast('Color updated', 'info');
+            // Find matching variation for the selected size/color combination
+            updateSelectedVariation();
+            
+            showToast(`Color changed to: ${colorName}`, 'info');
+        }
+
+        function updateSelectedVariation() {
+            // In a real implementation, you would query the available variations
+            // based on the selected size and color to get the correct variation ID
+            // For now, we'll keep the default variation ID
+            console.log(`Updated selection - Product: ${selectedProductName}, Size: ${selectedSize}, Color: ${selectedColorName}`);
         }
 
         // Shopping functions
         function addToCart() {
-            showToast(`Added ${selectedProduct} (${selectedSize}) to cart!`, 'success');
-            
-            // Simulate cart animation
+            // Check authentication
+            if (!isAuthenticated) {
+                showToast('Please login to add items to cart', 'warning');
+                setTimeout(() => {
+                    window.location.href = '{{ route("login") }}';
+                }, 1500);
+                return;
+            }
+
+            // Validate selection
+            if (!selectedProductId || !selectedSize) {
+                showToast('Please select a product and size', 'warning');
+                return;
+            }
+
             const btn = event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check2 me-2"></i>Added to Cart';
-            btn.disabled = true;
             
-            setTimeout(() => {
+            // Show loading state
+            btn.innerHTML = '<i class="bi bi-circle-notch spin me-2"></i>Adding...';
+            btn.disabled = true;
+
+            // Prepare cart data
+            const cartData = {
+                product_variation_id: selectedVariationId || selectedProductId, // Use variation ID if available
+                quantity: 1,
+                _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            };
+
+            // Make AJAX request to add to cart
+            fetch('{{ route("cart.add") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(cartData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast(`Added ${selectedProductName} (${selectedSize}) to cart!`, 'success');
+                    
+                    // Update cart count if available
+                    if (data.cart_count !== undefined) {
+                        updateCartCount(data.cart_count);
+                    }
+                    
+                    // Success animation
+                    btn.innerHTML = '<i class="bi bi-check2 me-2"></i>Added to Cart';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.message || 'Failed to add to cart');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding to cart:', error);
+                showToast(error.message || 'Failed to add to cart. Please try again.', 'error');
+                
+                // Restore button
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-            }, 2000);
+            });
         }
 
         function saveToWishlist() {
-            showToast(`Saved ${selectedProduct} to wishlist!`, 'success');
+            // Check authentication
+            if (!isAuthenticated) {
+                showToast('Please login to save items to wishlist', 'warning');
+                setTimeout(() => {
+                    window.location.href = '{{ route("login") }}';
+                }, 1500);
+                return;
+            }
+
+            // Validate selection
+            if (!selectedProductId) {
+                showToast('Please select a product', 'warning');
+                return;
+            }
+
+            // Make AJAX request to toggle wishlist
+            fetch('{{ route("wishlist.toggle") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    product_id: selectedProductId,
+                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const action = data.added ? 'added to' : 'removed from';
+                    showToast(`${selectedProductName} ${action} wishlist!`, 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to update wishlist');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating wishlist:', error);
+                showToast('Failed to update wishlist. Please try again.', 'error');
+            });
         }
 
-        function tryProduct(productId) {
-            showToast(`Loading ${productId} for virtual try-on...`, 'info');
+        function updateCartCount(count) {
+            // Update cart count in navigation or other elements
+            const cartCountElements = document.querySelectorAll('.cart-count, .cart-badge');
+            cartCountElements.forEach(element => {
+                element.textContent = count;
+                element.style.display = count > 0 ? 'inline' : 'none';
+            });
+        }
+
+        function tryProduct(productId, productName = 'Product') {
+            showToast(`Loading ${productName} for virtual try-on...`, 'info');
+            
+            // Find and select the product if it exists in the selection panel
+            const productCards = document.querySelectorAll('.product-card');
+            let foundProduct = false;
+            
+            productCards.forEach(card => {
+                const productData = card.querySelector('.product-data');
+                if (productData) {
+                    const cardProductId = parseInt(productData.querySelector('.product-id').textContent);
+                    if (cardProductId === productId) {
+                        // Simulate clicking on this product
+                        const cardName = productData.querySelector('.product-name').textContent;
+                        const variationId = productData.querySelector('.default-variation-id').textContent || null;
+                        selectProduct(card, productId, cardName, variationId);
+                        foundProduct = true;
+                    }
+                }
+            });
+            
+            if (!foundProduct) {
+                // If product not found in selection panel, still update global variables
+                selectedProductId = productId;
+                selectedProductName = productName;
+                selectedVariationId = null;
+                showToast(`Selected ${productName} for virtual try-on`, 'success');
+            }
             
             // Scroll to try-on section
             document.getElementById('try-on').scrollIntoView({

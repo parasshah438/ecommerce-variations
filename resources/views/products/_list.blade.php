@@ -157,12 +157,14 @@
         </div>
     </div>
 @empty
-    <div class="col-12">
-        <div class="text-center py-5">
+    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12">
+        <div class="card product-card h-100 shadow-sm border-0">
+            <div class="product-image-container position-relative">
             <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
-            <h4 class="mt-3 text-muted">No products found</h4>
+            <h4 class="mt-12 text-muted">No products found</h4>
             <p class="text-muted">Try adjusting your search or filter criteria</p>
             <a href="{{ route('products.index') }}" class="btn btn-primary">View All Products</a>
+                </div>
         </div>
     </div>
 @endforelse

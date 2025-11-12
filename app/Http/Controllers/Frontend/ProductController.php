@@ -6,12 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['images', 'variations.images', 'category', 'brand']);
+        // TODO: For even better performance, add these database indexes:
+        // CREATE INDEX idx_products_category_created ON products(category_id, created_at);
+        // CREATE INDEX idx_products_brand_created ON products(brand_id, created_at);
+        // CREATE INDEX idx_products_price ON products(price);
+        // CREATE INDEX idx_product_variations_product_id ON product_variations(product_id);
+        
+        $query = Product::with([
+            'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position'); },
+            'variations' => function($q) { $q->select('id', 'product_id', 'price', 'attribute_value_ids'); },
+            'category:id,name,slug',
+            'brand:id,name,slug'
+        ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at');
         
         // Search filter
         if ($request->has('q') && $request->q) {
@@ -41,6 +54,45 @@ class ProductController extends Controller
             $query->where('price', '<=', $request->max_price);
         }
         
+        // Size filter - OPTIMIZED with single whereHas and handles both string and integer JSON formats
+        if ($request->has('sizes') && is_array($request->sizes)) {
+            $sizeIds = array_map('intval', $request->sizes);
+            if (!empty($sizeIds)) {
+                $query->whereHas('variations', function ($q) use ($sizeIds) {
+                    $conditions = [];
+                    foreach ($sizeIds as $sizeId) {
+                        // Handle both integer and string formats in JSON
+                        $conditions[] = "JSON_CONTAINS(attribute_value_ids, '" . json_encode([$sizeId]) . "')";
+                        $conditions[] = "JSON_CONTAINS(attribute_value_ids, '" . json_encode([strval($sizeId)]) . "')";
+                    }
+                    $q->whereRaw('(' . implode(' OR ', $conditions) . ')');
+                });
+            }
+        }
+        
+        // Color filter - OPTIMIZED with single whereHas and handles both string and integer JSON formats
+        if ($request->has('colors') && is_array($request->colors)) {
+            $colorIds = array_map('intval', $request->colors);
+            if (!empty($colorIds)) {
+                $query->whereHas('variations', function ($q) use ($colorIds) {
+                    $conditions = [];
+                    foreach ($colorIds as $colorId) {
+                        // Handle both integer and string formats in JSON
+                        $conditions[] = "JSON_CONTAINS(attribute_value_ids, '" . json_encode([$colorId]) . "')";
+                        $conditions[] = "JSON_CONTAINS(attribute_value_ids, '" . json_encode([strval($colorId)]) . "')";
+                    }
+                    $q->whereRaw('(' . implode(' OR ', $conditions) . ')');
+                });
+            }
+        }
+        
+        // In stock filter
+        if ($request->has('in_stock') && $request->in_stock) {
+            $query->whereHas('variations.stock', function ($q) {
+                $q->where('quantity', '>', 0);
+            });
+        }
+        
         // Sort options
         $sortBy = $request->get('sort', 'created_at');
         $sortOrder = $request->get('order', 'desc');
@@ -55,13 +107,51 @@ class ProductController extends Controller
             case 'name':
                 $query->orderBy('name', 'asc');
                 break;
+            case 'rating':
+                // Sort by average rating (highest first), fallback to reviews count
+                $query->orderBy('average_rating', 'desc')
+                      ->orderBy('reviews_count', 'desc');
+                break;
+            case 'newest':
+                $query->orderBy('created_at', 'desc');
+                break;
+            case 'featured':
+                // Sort by active status and creation date
+                $query->orderBy('active', 'desc')
+                      ->orderBy('created_at', 'desc');
+                break;
+            case 'in_stock':
+                // Sort products that have variations with stock first
+                $query->whereHas('variations', function($q) {
+                    $q->whereHas('stock', function($stockQ) {
+                        $stockQ->where('quantity', '>', 0)->where('in_stock', true);
+                    });
+                })->orderBy('created_at', 'desc');
+                break;
+            case 'best_selling':
+                // Sort by reviews count as proxy for best selling (most reviewed products)
+                $query->orderBy('reviews_count', 'desc')
+                      ->orderBy('average_rating', 'desc');
+                break;
+            case 'brand':
+                // Sort by brand name alphabetically
+                $query->join('brands', 'products.brand_id', '=', 'brands.id')
+                      ->orderBy('brands.name', 'asc')
+                      ->select('products.*'); // Ensure we only select product columns
+                break;
+            case 'discount':
+                // Sort by discount percentage (MRP - Price) / MRP * 100
+                $query->whereColumn('mrp', '>', 'price')
+                      ->orderByRaw('((mrp - price) / mrp * 100) DESC')
+                      ->orderBy('created_at', 'desc');
+                break;
             case 'created_at':
             default:
                 $query->orderBy('created_at', $sortOrder);
                 break;
         }
         
-        $products = $query->paginate(12);
+        $products = $query->paginate($request->get('per_page', 8)); // Reduced from 12 to 8 for better performance
         
         // Add price range calculation and default ratings for each product
         $products->getCollection()->transform(function ($product) {
@@ -108,9 +198,64 @@ class ProductController extends Controller
             return $product;
         });
         
-        // Get available categories and brands for filters
-        $categories = \App\Models\Category::has('products')->get();
-        $brands = \App\Models\Brand::has('products')->get();
+        // Get available categories and brands for filters - CACHED
+        $categories = \Cache::remember('categories_with_products', 1800, function() {
+            return \App\Models\Category::select('id', 'name', 'slug')->has('products')->get();
+        });
+        $brands = \Cache::remember('brands_with_products', 1800, function() {
+            return \App\Models\Brand::select('id', 'name', 'slug')->has('products')->get();
+        });
+        
+        // Only load sizes and colors for initial page load, not for AJAX requests
+        $sizes = collect();
+        $colors = collect();
+        
+        if (!$request->ajax()) {
+            // Get available sizes for filters - CACHED for better performance
+            if ($sizeAttribute = \Cache::remember('size_attribute', 3600, function() {
+                return \App\Models\Attribute::where('name', 'Size')->orWhere('slug', 'size')->first();
+            })) {
+                $sizes = \Cache::remember('product_sizes_with_counts', 600, function() use ($sizeAttribute) {
+                    return \DB::table('attribute_values as av')
+                        ->select('av.*', \DB::raw('COUNT(DISTINCT pv.product_id) as products_count'))
+                        ->join('product_variations as pv', function($join) {
+                            $join->whereRaw('JSON_CONTAINS(pv.attribute_value_ids, CAST(av.id as JSON))');
+                        })
+                        ->join('products as p', 'p.id', '=', 'pv.product_id')
+                        ->where('av.attribute_id', $sizeAttribute->id)
+                        ->groupBy('av.id', 'av.attribute_id', 'av.value', 'av.code', 'av.hex_color', 'av.is_default', 'av.created_at', 'av.updated_at')
+                        ->having('products_count', '>', 0)
+                        ->orderBy('av.value')
+                        ->limit(20) // Limit to first 20 sizes for better performance
+                        ->get();
+                });
+            }
+            
+            // Get available colors for filters - CACHED for better performance  
+            if ($colorAttribute = \Cache::remember('color_attribute', 3600, function() {
+                return \App\Models\Attribute::where('name', 'Color')->orWhere('slug', 'color')->first();
+            })) {
+                $colors = \Cache::remember('product_colors_with_counts', 600, function() use ($colorAttribute) {
+                    return \DB::table('attribute_values as av')
+                        ->select('av.*', \DB::raw('COUNT(DISTINCT pv.product_id) as products_count'))
+                        ->join('product_variations as pv', function($join) {
+                            $join->whereRaw('JSON_CONTAINS(pv.attribute_value_ids, CAST(av.id as JSON))');
+                        })
+                        ->join('products as p', 'p.id', '=', 'pv.product_id')
+                        ->where('av.attribute_id', $colorAttribute->id)
+                        ->groupBy('av.id', 'av.attribute_id', 'av.value', 'av.code', 'av.hex_color', 'av.is_default', 'av.created_at', 'av.updated_at')
+                        ->having('products_count', '>', 0)
+                        ->orderBy('av.value')
+                        ->limit(20) // Limit to first 20 colors for better performance
+                        ->get();
+                });
+            }
+        }
+        
+        // Get price range for slider - CACHED
+        $priceRange = \Cache::remember('product_price_range', 3600, function() {
+            return Product::selectRaw('MIN(price) as min_price, MAX(price) as max_price')->first();
+        });
         
         // Handle AJAX requests
         if ($request->ajax()) {
@@ -118,11 +263,12 @@ class ProductController extends Controller
                 'html' => view('products._list', compact('products'))->render(),
                 'has_more' => $products->hasMorePages(),
                 'current_page' => $products->currentPage(),
-                'total' => $products->total()
+                'total' => $products->total(),
+                'filters_html' => view('products._product_filter', compact('categories', 'brands', 'sizes', 'colors', 'priceRange'))->render()
             ]);
         }
         
-        return view('products.index', compact('products', 'categories', 'brands'));
+        return view('products.index', compact('products', 'categories', 'brands', 'sizes', 'colors', 'priceRange'));
     }
 
     public function show($slug, Request $request)
@@ -213,18 +359,24 @@ class ProductController extends Controller
 
     public function newArrivals(Request $request)
     {
-        $query = Product::with(['images', 'variations.images', 'category', 'brand'])
-                       ->where('created_at', '>=', now()->subDays(30)) // Products added in last 30 days
-                       ->select('*') // Ensure all columns are selected
+        // Performance optimizations applied
+        
+        $query = Product::with(['images' => function($query) {
+                            $query->select('id', 'product_id', 'path', 'position')->orderBy('position');
+                        }, 
+                        'variations' => function($query) {
+                            $query->select('id', 'product_id', 'price', 'attribute_value_ids');
+                        },
+                        'category:id,name', 
+                        'brand:id,name'])
+                       ->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at') // Only select needed columns
+                       ->where('created_at', '>=', now()->subDays(60)) // Extended to 60 days for more products
                        ->orderBy('created_at', 'desc');
         
-        // Search filter
+        // Search filter (optimized - only search name for performance)
         if ($request->has('q') && $request->q) {
             $searchTerm = $request->q;
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('description', 'like', "%{$searchTerm}%");
-            });
+            $query->where('name', 'like', "%{$searchTerm}%");
         }
         
         // Category filter
@@ -250,6 +402,30 @@ class ProductController extends Controller
         if ($request->has('in_stock') && $request->in_stock) {
             $query->whereHas('variations.stock', function ($q) {
                 $q->where('quantity', '>', 0);
+            });
+        }
+        
+        // Size filter - optimized with single query
+        if ($request->has('sizes') && is_array($request->sizes)) {
+            $sizeIds = array_map('intval', $request->sizes);
+            $query->whereHas('variations', function ($q) use ($sizeIds) {
+                $q->where(function($subQ) use ($sizeIds) {
+                    foreach ($sizeIds as $sizeId) {
+                        $subQ->orWhereRaw('JSON_CONTAINS(attribute_value_ids, ?)', [json_encode([$sizeId])]);
+                    }
+                });
+            });
+        }
+        
+        // Color filter - optimized with single query
+        if ($request->has('colors') && is_array($request->colors)) {
+            $colorIds = array_map('intval', $request->colors);
+            $query->whereHas('variations', function ($q) use ($colorIds) {
+                $q->where(function($subQ) use ($colorIds) {
+                    foreach ($colorIds as $colorId) {
+                        $subQ->orWhereRaw('JSON_CONTAINS(attribute_value_ids, ?)', [json_encode([$colorId])]);
+                    }
+                });
             });
         }
         
@@ -286,7 +462,7 @@ class ProductController extends Controller
                 break;
         }
         
-        $products = $query->paginate($request->get('per_page', 12));
+        $products = $query->paginate($request->get('per_page', 6));
         
         // Add price range calculation for each product
         $products->getCollection()->transform(function ($product) {
@@ -312,15 +488,73 @@ class ProductController extends Controller
         
         // Get available categories and brands for filters with product counts for new arrivals
         $categories = \App\Models\Category::withCount(['products' => function($query) {
-            $query->where('created_at', '>=', now()->subDays(30));
+            $query->where('created_at', '>=', now()->subDays(60));
         }])->having('products_count', '>', 0)->get();
         
         $brands = \App\Models\Brand::withCount(['products' => function($query) {
-            $query->where('created_at', '>=', now()->subDays(30));
+            $query->where('created_at', '>=', now()->subDays(60));
         }])->having('products_count', '>', 0)->get();
         
+        // Get available sizes for new arrivals - optimized with single query
+        $sizeAttribute = \App\Models\Attribute::where('name', 'Size')->orWhere('slug', 'size')->first();
+        $sizes = collect();
+        if ($sizeAttribute) {
+            // Use a more efficient query with joins
+            $sizes = \App\Models\AttributeValue::select('attribute_values.*')
+                ->where('attribute_id', $sizeAttribute->id)
+                ->whereExists(function($query) {
+                    $query->select(\DB::raw(1))
+                          ->from('product_variations')
+                          ->join('products', 'products.id', '=', 'product_variations.product_id')
+                          ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, CAST(attribute_values.id as JSON))')
+                          ->where('products.created_at', '>=', now()->subDays(60));
+                })
+                ->get()
+                ->map(function($size) {
+                    // Quick count using a single query
+                    $size->products_count = \DB::table('product_variations')
+                        ->join('products', 'products.id', '=', 'product_variations.product_id')
+                        ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, ?)', [json_encode([$size->id])])
+                        ->where('products.created_at', '>=', now()->subDays(60))
+                        ->count();
+                    return $size;
+                })
+                ->filter(function($size) {
+                    return $size->products_count > 0;
+                });
+        }
+        
+        // Get available colors for new arrivals - optimized with single query
+        $colorAttribute = \App\Models\Attribute::where('name', 'Color')->orWhere('slug', 'color')->first();
+        $colors = collect();
+        if ($colorAttribute) {
+            // Use a more efficient query with joins
+            $colors = \App\Models\AttributeValue::select('attribute_values.*')
+                ->where('attribute_id', $colorAttribute->id)
+                ->whereExists(function($query) {
+                    $query->select(\DB::raw(1))
+                          ->from('product_variations')
+                          ->join('products', 'products.id', '=', 'product_variations.product_id')
+                          ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, CAST(attribute_values.id as JSON))')
+                          ->where('products.created_at', '>=', now()->subDays(60));
+                })
+                ->get()
+                ->map(function($color) {
+                    // Quick count using a single query
+                    $color->products_count = \DB::table('product_variations')
+                        ->join('products', 'products.id', '=', 'product_variations.product_id')
+                        ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, ?)', [json_encode([$color->id])])
+                        ->where('products.created_at', '>=', now()->subDays(60))
+                        ->count();
+                    return $color;
+                })
+                ->filter(function($color) {
+                    return $color->products_count > 0;
+                });
+        }
+        
         // Get price range for slider from new arrivals only
-        $priceRange = Product::where('created_at', '>=', now()->subDays(30))
+        $priceRange = Product::where('created_at', '>=', now()->subDays(60))
                            ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
                            ->first();
         
@@ -340,11 +574,11 @@ class ProductController extends Controller
                 'has_more' => $products->hasMorePages(),
                 'current_page' => $products->currentPage(),
                 'total' => $products->total(),
-                'filters_html' => view('products._filters', compact('categories', 'brands', 'priceRange'))->render()
+                'filters_html' => view('products._filters', compact('categories', 'brands', 'priceRange', 'sizes', 'colors'))->render()
             ]);
         }
         
-        return view('products.new_arrivals', compact('products', 'categories', 'brands', 'priceRange'));
+        return view('products.new_arrivals', compact('products', 'categories', 'brands', 'priceRange', 'sizes', 'colors'));
     }
 
     public function categoryProducts(Request $request, $slug)

@@ -124,7 +124,96 @@ class PagesController extends Controller
      */
     public function virtualTryOn()
     {
-        return view('pages.virtual-try-on');
+        // Get products suitable for virtual try-on (clothing items)
+        $products = collect();
+        
+        try {
+            $products = \App\Models\Product::with([
+                'images' => function($query) {
+                    $query->orderBy('position');
+                },
+                'variations' => function($query) {
+                    $query->with([
+                        'stock',
+                        'attributeValues.attribute'
+                    ]);
+                },
+                'brand',
+                'category'
+            ])
+            ->where('active', true)
+            ->whereHas('variations', function($query) {
+                $query->whereHas('stock', function($stockQuery) {
+                    $stockQuery->where('quantity', '>', 0)
+                             ->where('in_stock', true);
+                });
+            })
+            ->where(function($query) {
+                // Filter for clothing items suitable for virtual try-on
+                $query->where('name', 'LIKE', '%shirt%')
+                      ->orWhere('name', 'LIKE', '%t-shirt%')
+                      ->orWhere('name', 'LIKE', '%jacket%')
+                      ->orWhere('name', 'LIKE', '%hoodie%')
+                      ->orWhere('name', 'LIKE', '%dress%')
+                      ->orWhere('name', 'LIKE', '%top%')
+                      ->orWhere('name', 'LIKE', '%blouse%')
+                      ->orWhere('name', 'LIKE', '%sweater%')
+                      ->orWhere('name', 'LIKE', '%cardigan%')
+                      ->orWhere('name', 'LIKE', '%blazer%')
+                      ->orWhere(function($categoryQuery) {
+                          // Also include products from clothing categories
+                          $categoryQuery->whereHas('category', function($catQuery) {
+                              $catQuery->where('name', 'LIKE', '%clothing%')
+                                       ->orWhere('name', 'LIKE', '%apparel%')
+                                       ->orWhere('name', 'LIKE', '%fashion%')
+                                       ->orWhere('name', 'LIKE', '%wear%');
+                          });
+                      });
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(12)
+            ->get();
+
+            // Transform products to include necessary data for virtual try-on
+            $products = $products->map(function ($product) {
+                // Get the first available variation for default selection
+                $defaultVariation = $product->variations->where('is_in_stock', true)->first();
+                
+                // Get available sizes and colors from variations
+                $sizes = collect();
+                $colors = collect();
+                
+                foreach ($product->variations as $variation) {
+                    if ($variation->is_in_stock) {
+                        foreach ($variation->attribute_values as $attrValue) {
+                            if (strtolower($attrValue->attribute->name) === 'size') {
+                                $sizes->push($attrValue->value);
+                            } elseif (in_array(strtolower($attrValue->attribute->name), ['color', 'colour'])) {
+                                $colors->push($attrValue->value);
+                            }
+                        }
+                    }
+                }
+                
+                $product->available_sizes = $sizes->unique()->values();
+                $product->available_colors = $colors->unique()->values();
+                $product->default_variation = $defaultVariation;
+                $product->thumbnail = $product->getThumbnailImage();
+                $product->sale_price = $product->getBestSalePrice();
+                $product->discount_percentage = $product->getDiscountPercentage();
+                
+                return $product;
+            });
+
+        } catch (\Exception $e) {
+            // If there's an error with the database, continue with empty collection
+            \Log::error('Virtual Try-On: Error fetching products - ' . $e->getMessage());
+        }
+        
+        // Get user authentication status for JavaScript
+        $isAuthenticated = auth()->check();
+        
+        return view('pages.virtual-try-on', compact('products', 'isAuthenticated'));
     }
 
     /**
@@ -297,7 +386,7 @@ class PagesController extends Controller
     /**
      * Display the 404 Error page
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\Http\Response
      */
     public function error404()
     {

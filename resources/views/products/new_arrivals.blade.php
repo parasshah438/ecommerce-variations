@@ -92,6 +92,25 @@
 
         <!-- Products Section -->
         <div class="col-xl-9 col-lg-8">
+            <!-- Selected Filters Display -->
+            <div class="selected-filters-container mb-3" id="selectedFiltersContainer" style="display: none;">
+                <div class="card border-0 bg-light">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex align-items-center flex-wrap">
+                            <span class="text-muted fw-bold me-3 small">
+                                <i class="bi bi-funnel me-1"></i>Active Filters:
+                            </span>
+                            <div class="selected-filters-list d-flex flex-wrap gap-2" id="selectedFiltersList">
+                                <!-- Selected filters will be dynamically inserted here -->
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger ms-auto" id="clearAllFilters">
+                                <i class="bi bi-x-circle me-1"></i>Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Products Toolbar -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body py-3">
@@ -135,6 +154,7 @@
                                     <option value="rating">Highest Rated</option>
                                 </select>
                                 <select class="form-select form-select-sm" id="perPage" style="min-width: 80px;">
+                                    <option value="6">6</option>
                                     <option value="12">12</option>
                                     <option value="24">24</option>
                                     <option value="48">48</option>
@@ -185,7 +205,7 @@
 
                 <!-- No Products Message -->
                 <div class="text-center py-5 d-none" id="noProducts">
-                    <div class="mb-4">
+                    <div class="mb-12">
                         <i class="bi bi-search display-1 text-muted opacity-50"></i>
                     </div>
                     <h4 class="text-muted mb-3">No products found</h4>
@@ -593,6 +613,165 @@ body.mobile-sidebar-open {
     }
 }
 
+/* Selected Filters Styles */
+.selected-filters-container {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 100px;
+        transform: translateY(0);
+    }
+}
+
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    padding: 4px 8px 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+    transition: all 0.2s ease;
+    cursor: default;
+    user-select: none;
+}
+
+.filter-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.filter-tag-remove {
+    margin-left: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 10px;
+    color: white;
+}
+
+.filter-tag-remove:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.filter-tag-remove:active {
+    transform: scale(0.95);
+}
+
+/* Different colors for different filter types */
+.filter-tag.category {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.filter-tag.category:hover {
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.filter-tag.brand {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+}
+
+.filter-tag.brand:hover {
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.filter-tag.size {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #333;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
+}
+
+.filter-tag.size:hover {
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.filter-tag.size .filter-tag-remove {
+    color: #333;
+}
+
+.filter-tag.color {
+    background: linear-gradient(135deg, #e83e8c 0%, #c42f6a 100%);
+    box-shadow: 0 2px 4px rgba(232, 62, 140, 0.2);
+}
+
+.filter-tag.color:hover {
+    box-shadow: 0 4px 8px rgba(232, 62, 140, 0.3);
+}
+
+.filter-tag.price {
+    background: linear-gradient(135deg, #fd7e14 0%, #e55100 100%);
+    box-shadow: 0 2px 4px rgba(253, 126, 20, 0.2);
+}
+
+.filter-tag.price:hover {
+    box-shadow: 0 4px 8px rgba(253, 126, 20, 0.3);
+}
+
+.filter-tag.rating {
+    background: linear-gradient(135deg, #6610f2 0%, #5a0fc7 100%);
+    box-shadow: 0 2px 4px rgba(102, 16, 242, 0.2);
+}
+
+.filter-tag.rating:hover {
+    box-shadow: 0 4px 8px rgba(102, 16, 242, 0.3);
+}
+
+.filter-tag.stock {
+    background: linear-gradient(135deg, #20c997 0%, #1aa179 100%);
+    box-shadow: 0 2px 4px rgba(32, 201, 151, 0.2);
+}
+
+.filter-tag.stock:hover {
+    box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3);
+}
+
+/* Clear all button styling */
+#clearAllFilters {
+    transition: all 0.2s ease;
+}
+
+#clearAllFilters:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .selected-filters-container .card-body {
+        padding: 0.75rem;
+    }
+    
+    .filter-tag {
+        font-size: 0.7rem;
+        padding: 3px 6px 3px 10px;
+    }
+    
+    .filter-tag-remove {
+        width: 14px;
+        height: 14px;
+        font-size: 9px;
+    }
+}
+
 /* Ensure desktop filters are completely hidden on mobile */
 @media (max-width: 991px) {
     .filters-wrapper,
@@ -645,9 +824,41 @@ $(document).ready(function() {
     initializeMobileFilterSidebar();
     
     // Filter change handlers with proper delegation
-    $(document).on('change', '.category-filter, .brand-filter, .stock-filter', function() {
+    $(document).on('change', '.category-filter, .brand-filter, .stock-filter, .size-filter, .color-filter', function() {
         console.log('Filter changed:', $(this).attr('class'), $(this).val(), $(this).is(':checked'));
+        
+        // Sync checkboxes between desktop and mobile
+        const filterType = $(this).data('filter-type');
+        const value = $(this).val();
+        const isChecked = $(this).is(':checked');
+        
+        if (filterType === 'category') {
+            $('.category-filter[value="' + value + '"]').prop('checked', isChecked);
+        } else if (filterType === 'brand') {
+            $('.brand-filter[value="' + value + '"]').prop('checked', isChecked);
+        } else if (filterType === 'stock') {
+            $('.in-stock-checkbox').prop('checked', isChecked);
+        } else if (filterType === 'size') {
+            $('.size-filter[value="' + value + '"]').prop('checked', isChecked);
+        } else if (filterType === 'color') {
+            $('.color-filter[value="' + value + '"]').prop('checked', isChecked);
+        }
+        
         applyFilters();
+    });
+    
+    // Update selected filters display when any filter changes
+    $(document).on('change', '.category-filter, .brand-filter, .size-filter, .color-filter, .rating-filter, .in-stock-checkbox', function() {
+        setTimeout(() => {
+            updateSelectedFiltersDisplay();
+        }, 100);
+    });
+    
+    // Update display when search/price changes
+    $(document).on('input', '.search-input, .price-filter', function() {
+        setTimeout(() => {
+            updateSelectedFiltersDisplay();
+        }, 100);
     });
 
     // Special handling for rating filter (radio buttons)
@@ -655,11 +866,18 @@ $(document).ready(function() {
         const selectedRating = $(this).val();
         console.log('Rating filter changed:', selectedRating, 'checked:', $(this).is(':checked'));
         
-        // Highlight selected rating
-        $('.rating-filter-container .form-check').removeClass('bg-light');
-        if (selectedRating) {
-            $(this).closest('.form-check').addClass('bg-light rounded p-2');
+        // Sync rating selection between desktop and mobile
+        if (selectedRating === '') {
+            $('.rating-all').prop('checked', true);
+        } else {
+            $('.rating-' + selectedRating + '-star').prop('checked', true);
         }
+        
+        // Highlight selected rating in both containers
+        $('.rating-filter-container .form-check').removeClass('bg-light');
+        $('.rating-filter:checked').each(function() {
+            $(this).closest('.form-check').addClass('bg-light rounded p-2');
+        });
         
         applyFilters();
     });
@@ -668,8 +886,20 @@ $(document).ready(function() {
     let priceTimeout;
     $(document).on('input', '.price-filter', function() {
         clearTimeout(priceTimeout);
+        
+        // Sync price values between desktop and mobile inputs
+        const isMin = $(this).hasClass('min-price-input');
+        const isMax = $(this).hasClass('max-price-input');
+        const value = $(this).val();
+        
+        if (isMin) {
+            $('.min-price-input').val(value);
+        } else if (isMax) {
+            $('.max-price-input').val(value);
+        }
+        
         priceTimeout = setTimeout(() => {
-            console.log('Price filter changed:', $('#minPrice').val(), $('#maxPrice').val());
+            console.log('Price filter changed:', $('.min-price-input').first().val(), $('.max-price-input').first().val());
             applyFilters();
         }, 800);
     });
@@ -682,9 +912,13 @@ $(document).ready(function() {
     
     // Search input with debounce
     let searchTimeout;
-    $('#searchInput').on('input', function() {
+    $(document).on('input', '.search-input', function() {
         clearTimeout(searchTimeout);
         const query = $(this).val().trim();
+        
+        // Sync search value between desktop and mobile inputs
+        $('.search-input').val(query);
+        
         searchTimeout = setTimeout(() => {
             console.log('Search changed:', query);
             applyFilters();
@@ -710,16 +944,34 @@ $(document).ready(function() {
     });
     
     // Clear filters
-    $('#clearFilters, #resetFilters').on('click', function() {
+    $('#clearFilters, #resetFilters, #clearAllFilters').on('click', function() {
         clearAllFilters();
+    });
+    
+    // Handle individual filter tag removal
+    $(document).on('click', '.filter-tag-remove', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const $tag = $(this).closest('.filter-tag');
+        const filterType = $tag.data('filter-type');
+        const filterValue = $tag.data('filter-value');
+        
+        console.log('Removing filter:', filterType, filterValue);
+        
+        // Remove the specific filter based on type
+        removeFilter(filterType, filterValue);
+        
+        // Apply filters after removal
+        applyFilters();
     });
     
     function initializePriceSlider() {
         // This would initialize a price range slider library like noUiSlider or similar
         // For now, we'll use simple number inputs
-        $('#minPrice, #maxPrice').on('input', function() {
-            const minPrice = $('#minPrice').val();
-            const maxPrice = $('#maxPrice').val();
+        $(document).on('input', '.min-price-input, .max-price-input', function() {
+            const minPrice = $('.min-price-input').first().val();
+            const maxPrice = $('.max-price-input').first().val();
             
             if (minPrice && maxPrice && parseInt(minPrice) > parseInt(maxPrice)) {
                 $(this).val('');
@@ -771,6 +1023,12 @@ $(document).ready(function() {
                     $('#noProducts').addClass('d-none');
                     $('#productsGrid').removeClass('d-none');
                 }
+                
+                // Rebuild filter display mapping and update selected filters display
+                setTimeout(() => {
+                    buildFilterDisplayMapping();
+                    updateSelectedFiltersDisplay();
+                }, 100);
                 
                 // Animate new products
                 animateNewProducts();
@@ -880,35 +1138,71 @@ $(document).ready(function() {
         const formData = {};
         
         // Search
-        const search = $('#searchInput').val().trim();
+        const search = $('.search-input').first().val().trim();
         if (search) {
             formData.q = search;
             console.log('Added search:', search);
         }
         
+        // Helper function to get unique checked values (desktop first, mobile as fallback)
+        function getUniqueCheckedValues(selector) {
+            const values = [];
+            const uniqueValues = new Set();
+            
+            // First try to get from desktop version (not in mobile sidebar)
+            $(selector + ':checked').not('.mobile-filter-sidebar *').each(function() {
+                const value = parseInt($(this).val());
+                if (!isNaN(value) && !uniqueValues.has(value)) {
+                    values.push(value);
+                    uniqueValues.add(value);
+                }
+            });
+            
+            // If no desktop values found, try mobile version
+            if (values.length === 0) {
+                $('.mobile-filter-sidebar ' + selector + ':checked').each(function() {
+                    const value = parseInt($(this).val());
+                    if (!isNaN(value) && !uniqueValues.has(value)) {
+                        values.push(value);
+                        uniqueValues.add(value);
+                    }
+                });
+            }
+            
+            return values;
+        }
+        
         // Categories
-        const categories = [];
-        $('.category-filter:checked').each(function() {
-            categories.push(parseInt($(this).val()));
-        });
+        const categories = getUniqueCheckedValues('.category-filter');
         if (categories.length) {
             formData.categories = categories;
             console.log('Added categories:', categories);
         }
         
         // Brands
-        const brands = [];
-        $('.brand-filter:checked').each(function() {
-            brands.push(parseInt($(this).val()));
-        });
+        const brands = getUniqueCheckedValues('.brand-filter');
         if (brands.length) {
             formData.brands = brands;
             console.log('Added brands:', brands);
         }
         
+        // Sizes
+        const sizes = getUniqueCheckedValues('.size-filter');
+        if (sizes.length) {
+            formData.sizes = sizes;
+            console.log('Added sizes:', sizes);
+        }
+        
+        // Colors
+        const colors = getUniqueCheckedValues('.color-filter');
+        if (colors.length) {
+            formData.colors = colors;
+            console.log('Added colors:', colors);
+        }
+        
         // Price range
-        const minPrice = $('#minPrice').val();
-        const maxPrice = $('#maxPrice').val();
+        const minPrice = $('.min-price-input').first().val();
+        const maxPrice = $('.max-price-input').first().val();
         if (minPrice && minPrice > 0) {
             formData.min_price = parseInt(minPrice);
             console.log('Added min price:', minPrice);
@@ -919,7 +1213,7 @@ $(document).ready(function() {
         }
         
         // Rating
-        const ratingElement = $('.rating-filter:checked[name="ratingFilter"]');
+        const ratingElement = $('.rating-filter:checked').first();
         if (ratingElement.length > 0) {
             const rating = ratingElement.val();
             if (rating && rating !== '') {
@@ -929,14 +1223,14 @@ $(document).ready(function() {
         }
         
         // In stock
-        if ($('#inStockOnly').is(':checked')) {
+        if ($('.in-stock-checkbox').first().is(':checked')) {
             formData.in_stock = 1;
             console.log('Added in stock filter');
         }
         
         // Sort and pagination
         formData.sort = $('#sortBy').val() || 'created_at';
-        formData.per_page = $('#perPage').val() || '12';
+        formData.per_page = $('#perPage').val() || '6';
         
         console.log('Final filter data:', formData);
         return formData;
@@ -954,6 +1248,8 @@ $(document).ready(function() {
         if (formData.q) count++;
         if (formData.categories && formData.categories.length) count += formData.categories.length;
         if (formData.brands && formData.brands.length) count += formData.brands.length;
+        if (formData.sizes && formData.sizes.length) count += formData.sizes.length;
+        if (formData.colors && formData.colors.length) count += formData.colors.length;
         if (formData.min_price || formData.max_price) count++;
         if (formData.rating && formData.rating > 0) count++;
         if (formData.in_stock) count++;
@@ -973,15 +1269,15 @@ $(document).ready(function() {
         console.log('Clearing all filters...');
         
         // Clear all form inputs
-        $('.category-filter, .brand-filter').prop('checked', false);
+        $('.category-filter, .brand-filter, .size-filter, .color-filter').prop('checked', false);
         
         // Reset rating filter to "All Ratings"
-        $('#ratingAll').prop('checked', true);
-        $('.rating-filter[name="ratingFilter"]').prop('checked', false);
+        $('.rating-all').prop('checked', true);
+        $('.rating-filter:not(.rating-all)').prop('checked', false);
         $('.rating-filter-container .form-check').removeClass('bg-light');
-        $('#searchInput').val('');
-        $('#minPrice, #maxPrice').val('');
-        $('#inStockOnly').prop('checked', false);
+        $('.search-input').val('');
+        $('.min-price-input, .max-price-input').val('');
+        $('.in-stock-checkbox').prop('checked', false);
         $('#sortBy').val('created_at');
         $('#perPage').val('12');
         $('.quick-filter').removeClass('active');
@@ -990,13 +1286,203 @@ $(document).ready(function() {
         activeFiltersCount = 0;
         $('#activeFiltersCount').hide();
         
+        // Hide selected filters container
+        $('#selectedFiltersContainer').hide();
+        $('#selectedFiltersList').empty();
+        
         // Reset and apply filters
         applyFilters();
+    }
+    
+    function removeFilter(filterType, filterValue) {
+        console.log('Removing individual filter:', filterType, filterValue);
+        
+        switch(filterType) {
+            case 'category':
+                $(`.category-filter[value="${filterValue}"]`).prop('checked', false);
+                break;
+            case 'brand':
+                $(`.brand-filter[value="${filterValue}"]`).prop('checked', false);
+                break;
+            case 'size':
+                $(`.size-filter[value="${filterValue}"]`).prop('checked', false);
+                break;
+            case 'color':
+                $(`.color-filter[value="${filterValue}"]`).prop('checked', false);
+                break;
+            case 'rating':
+                $('.rating-all').prop('checked', true);
+                $('.rating-filter:not(.rating-all)').prop('checked', false);
+                $('.rating-filter-container .form-check').removeClass('bg-light');
+                break;
+            case 'price':
+                $('.min-price-input, .max-price-input').val('');
+                break;
+            case 'stock':
+                $('.in-stock-checkbox').prop('checked', false);
+                break;
+            case 'search':
+                $('.search-input').val('');
+                break;
+        }
+    }
+    
+    // Create a mapping of filter values to display names to avoid DOM lookups
+    const filterDisplayNames = {};
+    
+    function buildFilterDisplayMapping() {
+        // Clear existing mapping
+        Object.keys(filterDisplayNames).forEach(key => delete filterDisplayNames[key]);
+        
+        // Helper function to build mapping from desktop version only
+        function buildMapping(selector, prefix, textSelector) {
+            $(selector).not('.mobile-filter-sidebar *').each(function() {
+                const id = $(this).val();
+                const name = $(this).next('label').find(textSelector).first().text().trim();
+                if (id && name && !filterDisplayNames[`${prefix}_${id}`]) {
+                    filterDisplayNames[`${prefix}_${id}`] = name;
+                }
+            });
+        }
+        
+        // Build mappings from desktop version only to avoid duplicates
+        buildMapping('.category-filter', 'category', 'span');
+        buildMapping('.brand-filter', 'brand', 'span');
+        buildMapping('.size-filter', 'size', 'span');
+        buildMapping('.color-filter', 'color', '.color-name');
+        
+        console.log('Filter display mapping built:', filterDisplayNames);
+    }
+    
+    function updateSelectedFiltersDisplay() {
+        const formData = collectFilterData();
+        const $container = $('#selectedFiltersContainer');
+        const $list = $('#selectedFiltersList');
+        
+        // Debug logging
+        console.log('Updating selected filters display with formData:', formData);
+        
+        // Clear existing tags
+        $list.empty();
+        
+        let hasFilters = false;
+        
+        // Search filter
+        if (formData.q) {
+            $list.append(createFilterTag('search', formData.q, `"${formData.q}"`, 'search'));
+            hasFilters = true;
+        }
+        
+        // Category filters
+        if (formData.categories && formData.categories.length) {
+            const processedCategories = new Set();
+            formData.categories.forEach(categoryId => {
+                if (!processedCategories.has(categoryId)) {
+                    const categoryName = filterDisplayNames[`category_${categoryId}`];
+                    if (categoryName) {
+                        $list.append(createFilterTag('category', categoryId, categoryName, 'category'));
+                        hasFilters = true;
+                        processedCategories.add(categoryId);
+                    }
+                }
+            });
+        }
+        
+        // Brand filters
+        if (formData.brands && formData.brands.length) {
+            const processedBrands = new Set();
+            formData.brands.forEach(brandId => {
+                if (!processedBrands.has(brandId)) {
+                    const brandName = filterDisplayNames[`brand_${brandId}`];
+                    if (brandName) {
+                        $list.append(createFilterTag('brand', brandId, brandName, 'brand'));
+                        hasFilters = true;
+                        processedBrands.add(brandId);
+                    }
+                }
+            });
+        }
+        
+        // Size filters
+        if (formData.sizes && formData.sizes.length) {
+            console.log('Processing sizes:', formData.sizes);
+            const processedSizes = new Set(); // Track processed sizes to avoid duplicates
+            formData.sizes.forEach(sizeId => {
+                if (!processedSizes.has(sizeId)) {
+                    const sizeName = filterDisplayNames[`size_${sizeId}`];
+                    console.log(`Size ${sizeId} -> ${sizeName}`);
+                    if (sizeName) {
+                        $list.append(createFilterTag('size', sizeId, sizeName, 'size'));
+                        hasFilters = true;
+                        processedSizes.add(sizeId);
+                    }
+                }
+            });
+        }
+        
+        // Color filters
+        if (formData.colors && formData.colors.length) {
+            const processedColors = new Set();
+            formData.colors.forEach(colorId => {
+                if (!processedColors.has(colorId)) {
+                    const colorName = filterDisplayNames[`color_${colorId}`];
+                    if (colorName) {
+                        $list.append(createFilterTag('color', colorId, colorName, 'color'));
+                        hasFilters = true;
+                        processedColors.add(colorId);
+                    }
+                }
+            });
+        }
+        
+        // Price filter
+        if (formData.min_price || formData.max_price) {
+            let priceText = '';
+            if (formData.min_price && formData.max_price) {
+                priceText = `₹${formData.min_price} - ₹${formData.max_price}`;
+            } else if (formData.min_price) {
+                priceText = `₹${formData.min_price}+`;
+            } else if (formData.max_price) {
+                priceText = `Up to ₹${formData.max_price}`;
+            }
+            $list.append(createFilterTag('price', 'price-range', priceText, 'price'));
+            hasFilters = true;
+        }
+        
+        // Rating filter
+        if (formData.rating && formData.rating > 0) {
+            $list.append(createFilterTag('rating', formData.rating, `${formData.rating}+ Stars`, 'rating'));
+            hasFilters = true;
+        }
+        
+        // Stock filter
+        if (formData.in_stock) {
+            $list.append(createFilterTag('stock', 'in-stock', 'In Stock Only', 'stock'));
+            hasFilters = true;
+        }
+        
+        // Show/hide container based on whether there are filters
+        if (hasFilters) {
+            $container.show();
+        } else {
+            $container.hide();
+        }
+    }
+    
+    function createFilterTag(filterType, filterValue, displayText, cssClass) {
+        return `
+            <span class="filter-tag ${cssClass}" data-filter-type="${filterType}" data-filter-value="${filterValue}">
+                <span class="filter-tag-text">${displayText}</span>
+                <span class="filter-tag-remove" title="Remove filter">
+                    <i class="bi bi-x"></i>
+                </span>
+            </span>
+        `;
     }
 
     // Helper function to clear price range
     window.clearPriceRange = function() {
-        $('#minPrice, #maxPrice').val('');
+        $('.min-price-input, .max-price-input').val('');
         applyFilters();
     };
 
@@ -1005,17 +1491,19 @@ $(document).ready(function() {
         console.log('=== CURRENT FILTER STATE ===');
         console.log('Categories:', $('.category-filter:checked').map(function() { return $(this).val(); }).get());
         console.log('Brands:', $('.brand-filter:checked').map(function() { return $(this).val(); }).get());
-        console.log('Price:', $('#minPrice').val(), '-', $('#maxPrice').val());
+        console.log('Sizes:', $('.size-filter:checked').map(function() { return $(this).val(); }).get());
+        console.log('Colors:', $('.color-filter:checked').map(function() { return $(this).val(); }).get());
+        console.log('Price:', $('.min-price-input').first().val(), '-', $('.max-price-input').first().val());
         
-        const selectedRating = $('.rating-filter:checked[name="ratingFilter"]');
+        const selectedRating = $('.rating-filter:checked').first();
         console.log('Rating element found:', selectedRating.length);
         console.log('Rating value:', selectedRating.length > 0 ? selectedRating.val() : 'none');
         console.log('All rating filters:', $('.rating-filter').map(function() { 
-            return $(this).attr('id') + ':' + $(this).is(':checked'); 
+            return $(this).attr('class') + ':' + $(this).is(':checked'); 
         }).get());
         
-        console.log('In Stock:', $('#inStockOnly').is(':checked'));
-        console.log('Search:', $('#searchInput').val());
+        console.log('In Stock:', $('.in-stock-checkbox').first().is(':checked'));
+        console.log('Search:', $('.search-input').first().val());
         console.log('==============================');
     }
 
@@ -1023,10 +1511,9 @@ $(document).ready(function() {
     function updateRatingVisualFeedback() {
         $('.rating-filter-container .form-check').removeClass('bg-light border border-primary');
         
-        const checkedRating = $('.rating-filter:checked[name="ratingFilter"]');
-        if (checkedRating.length > 0) {
-            checkedRating.closest('.form-check').addClass('bg-light border border-primary rounded p-2');
-        }
+        $('.rating-filter:checked').each(function() {
+            $(this).closest('.form-check').addClass('bg-light border border-primary rounded p-2');
+        });
     }
 
     // Call visual feedback update after DOM ready
@@ -1162,6 +1649,10 @@ $(document).ready(function() {
     // Initialize animations for initial products
     setTimeout(function() {
         animateNewProducts();
+        // Build filter display mapping for better performance
+        buildFilterDisplayMapping();
+        // Initialize selected filters display
+        updateSelectedFiltersDisplay();
     }, 800);
 });
 </script>
