@@ -4,7 +4,7 @@
         <i class="bi bi-search me-2 text-primary"></i>Search Products
     </label>
     <div class="input-group">
-        <input type="text" class="form-control search-input" placeholder="Search products..." data-filter-type="search">
+        <input type="text" class="form-control search-input" name="q" placeholder="Search products..." value="{{ request('q') }}" data-filter-type="search">
         <button class="btn btn-outline-primary" type="button">
             <i class="bi bi-search"></i>
         </button>
@@ -19,10 +19,15 @@
     <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
         @forelse($categories as $category)
         <div class="form-check mb-2 filter-item">
-            <input class="form-check-input category-filter" type="checkbox" value="{{ $category->id }}" id="category{{ $category->id }}" data-filter-type="category">
+            <input class="form-check-input category-filter" type="checkbox" 
+                   name="categories[]" value="{{ $category->id }}" 
+                   id="category{{ $category->id }}" data-filter-type="category"
+                   {{ in_array($category->id, request('categories', [])) ? 'checked' : '' }}>
             <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="category{{ $category->id }}">
                 <span>{{ $category->name }}</span>
+                @if(isset($category->products_count))
                 <span class="badge bg-light text-dark">{{ $category->products_count }}</span>
+                @endif
             </label>
         </div>
         @empty
@@ -39,10 +44,15 @@
     <div class="filter-scroll-container" style="max-height: 200px; overflow-y: auto;">
         @forelse($brands as $brand)
         <div class="form-check mb-2 filter-item">
-            <input class="form-check-input brand-filter" type="checkbox" value="{{ $brand->id }}" id="brand{{ $brand->id }}" data-filter-type="brand">
+            <input class="form-check-input brand-filter" type="checkbox" 
+                   name="brands[]" value="{{ $brand->id }}" 
+                   id="brand{{ $brand->id }}" data-filter-type="brand"
+                   {{ in_array($brand->id, request('brands', [])) ? 'checked' : '' }}>
             <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="brand{{ $brand->id }}">
                 <span>{{ $brand->name }}</span>
+                @if(isset($brand->products_count))
                 <span class="badge bg-light text-dark">{{ $brand->products_count }}</span>
+                @endif
             </label>
         </div>
         @empty
@@ -58,10 +68,16 @@
     </label>
     <div class="row g-2 mb-3">
         <div class="col-6">
-            <input type="number" class="form-control form-control-sm price-filter min-price-input" placeholder="Min ₹" min="0" max="{{ $priceRange->max_price ?? 10000 }}" data-filter-type="price">
+            <input type="number" class="form-control form-control-sm price-filter min-price-input" 
+                   name="min_price" id="minPrice" placeholder="Min ₹" 
+                   min="0" max="{{ $priceRange->max_price ?? 10000 }}" 
+                   value="{{ request('min_price') }}" data-filter-type="price">
         </div>
         <div class="col-6">
-            <input type="number" class="form-control form-control-sm price-filter max-price-input" placeholder="Max ₹" min="0" max="{{ $priceRange->max_price ?? 10000 }}" data-filter-type="price">
+            <input type="number" class="form-control form-control-sm price-filter max-price-input" 
+                   name="max_price" id="maxPrice" placeholder="Max ₹" 
+                   min="0" max="{{ $priceRange->max_price ?? 10000 }}" 
+                   value="{{ request('max_price') }}" data-filter-type="price">
         </div>
     </div>
     <div class="d-flex justify-content-between">
@@ -126,10 +142,15 @@
     <div class="filter-scroll-container" style="max-height: 150px; overflow-y: auto;">
         @foreach($sizes as $size)
         <div class="form-check mb-2 filter-item">
-            <input class="form-check-input size-filter" type="checkbox" value="{{ $size->id }}" data-filter-type="size" id="size{{ $size->id }}">
+            <input class="form-check-input size-filter" type="checkbox" 
+                   name="sizes[]" value="{{ $size->id }}" data-filter-type="size" 
+                   id="size{{ $size->id }}"
+                   {{ in_array($size->id, request('sizes', [])) ? 'checked' : '' }}>
             <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="size{{ $size->id }}">
                 <span>{{ $size->value }}</span>
+                @if(isset($size->products_count))
                 <span class="badge bg-light text-dark">{{ $size->products_count }}</span>
+                @endif
             </label>
         </div>
         @endforeach
@@ -148,7 +169,10 @@
             @foreach($colors as $color)
             <div class="col-6">
                 <div class="form-check color-filter-item">
-                    <input class="form-check-input color-filter" type="checkbox" value="{{ $color->id }}" data-filter-type="color" id="color{{ $color->id }}">
+                    <input class="form-check-input color-filter" type="checkbox" 
+                           name="colors[]" value="{{ $color->id }}" data-filter-type="color" 
+                           id="color{{ $color->id }}"
+                           {{ in_array($color->id, request('colors', [])) ? 'checked' : '' }}>
                     <label class="form-check-label d-flex align-items-center color-option" for="color{{ $color->id }}">
                         @if($color->hex_color)
                             <span class="color-swatch me-2" style="background-color: {{ $color->hex_color }};"></span>
@@ -156,7 +180,9 @@
                             <span class="color-swatch me-2 bg-light border"></span>
                         @endif
                         <span class="color-name">{{ $color->value }}</span>
+                        @if(isset($color->products_count))
                         <span class="badge bg-light text-dark ms-auto">{{ $color->products_count }}</span>
+                        @endif
                     </label>
                 </div>
             </div>

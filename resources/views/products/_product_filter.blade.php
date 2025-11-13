@@ -3,9 +3,6 @@
                     <div class="card-header bg-white border-bottom d-none d-md-block">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>Filters</h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
-                                <i class="bi bi-x-circle me-1"></i>Clear All
-                            </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -68,32 +65,102 @@
                             </div>
                             @endif
 
-                            <!-- Price Range Filter -->
+                            <!-- Price Range Filter - Amazon Style -->
                             <div class="filter-section border-bottom px-3 py-3">
                                 <label class="form-label fw-bold text-dark mb-3">
                                     <i class="bi bi-currency-rupee me-2 text-primary"></i>Price Range
                                 </label>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <input type="number" class="form-control form-control-sm price-filter" 
-                                               id="minPrice" name="min_price" placeholder="Min ₹" min="0" 
-                                               max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}" 
-                                               value="{{ request('min_price') }}" data-filter-type="price">
+                                
+                                <!-- Price Display -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="price-display-box">
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Min</small>
+                                        <strong id="minPriceDisplay" class="text-dark">₹{{ request('min_price', isset($priceRange) ? $priceRange->min_price ?? 0 : 0) }}</strong>
                                     </div>
-                                    <div class="col-6">
-                                        <input type="number" class="form-control form-control-sm price-filter" 
-                                               id="maxPrice" name="max_price" placeholder="Max ₹" min="0" 
-                                               max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}" 
-                                               value="{{ request('max_price') }}" data-filter-type="price">
+                                    <div class="mx-2 text-muted">—</div>
+                                    <div class="price-display-box">
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Max</small>
+                                        <strong id="maxPriceDisplay" class="text-dark">₹{{ request('max_price', isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000) }}</strong>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between">
-                                    <small class="text-muted">
-                                        Range: ₹{{ number_format(isset($priceRange) ? $priceRange->min_price ?? 0 : 0) }} - ₹{{ number_format(isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000) }}
-                                    </small>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="clearPriceRange()">
-                                        <i class="bi bi-x"></i>
+
+                                <!-- Dual Range Slider -->
+                                <div class="price-slider-container mb-3" style="position: relative; height: 6px;">
+                                    <!-- Background Track -->
+                                    <div class="slider-track" style="position: absolute; width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px;"></div>
+                                    
+                                    <!-- Active Range Track -->
+                                    <div id="sliderRange" class="slider-range" style="position: absolute; height: 6px; background: linear-gradient(90deg, #ff6b35 0%, #f7931e 100%); border-radius: 3px; left: 0%; right: 0%;"></div>
+                                    
+                                    <!-- Min Range Input -->
+                                    <input type="range" 
+                                           id="minPriceRange" 
+                                           class="price-range-input" 
+                                           min="{{ isset($priceRange) ? $priceRange->min_price ?? 0 : 0 }}" 
+                                           max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}" 
+                                           value="{{ request('min_price', isset($priceRange) ? $priceRange->min_price ?? 0 : 0) }}"
+                                           step="100"
+                                           style="position: absolute; width: 100%; pointer-events: none; -webkit-appearance: none; background: transparent;">
+                                    
+                                    <!-- Max Range Input -->
+                                    <input type="range" 
+                                           id="maxPriceRange" 
+                                           class="price-range-input" 
+                                           min="{{ isset($priceRange) ? $priceRange->min_price ?? 0 : 0 }}" 
+                                           max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}" 
+                                           value="{{ request('max_price', isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000) }}"
+                                           step="100"
+                                           style="position: absolute; width: 100%; pointer-events: none; -webkit-appearance: none; background: transparent;">
+                                </div>
+
+                                <!-- Hidden Inputs for Form Submission -->
+                                <input type="hidden" id="minPrice" name="min_price" value="{{ request('min_price') }}">
+                                <input type="hidden" id="maxPrice" name="max_price" value="{{ request('max_price') }}">
+
+                                <!-- Price Input Fields (Manual Entry) -->
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">₹</span>
+                                            <input type="number" 
+                                                   class="form-control form-control-sm" 
+                                                   id="minPriceInput" 
+                                                   placeholder="Min" 
+                                                   min="{{ isset($priceRange) ? $priceRange->min_price ?? 0 : 0 }}" 
+                                                   max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}"
+                                                   value="{{ request('min_price') }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">₹</span>
+                                            <input type="number" 
+                                                   class="form-control form-control-sm" 
+                                                   id="maxPriceInput" 
+                                                   placeholder="Max" 
+                                                   min="{{ isset($priceRange) ? $priceRange->min_price ?? 0 : 0 }}" 
+                                                   max="{{ isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000 }}"
+                                                   value="{{ request('max_price') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Go & Clear Buttons -->
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="applyPriceFilter" class="btn btn-primary btn-sm flex-fill">
+                                        <i class="bi bi-check2"></i> Apply
                                     </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearPriceRange()">
+                                        <i class="bi bi-x"></i> Clear
+                                    </button>
+                                </div>
+
+                                <!-- Available Range Info -->
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Available: ₹{{ number_format(isset($priceRange) ? $priceRange->min_price ?? 0 : 0) }} - ₹{{ number_format(isset($priceRange) ? $priceRange->max_price ?? 10000 : 10000) }}
+                                    </small>
                                 </div>
                             </div>
 

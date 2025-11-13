@@ -100,6 +100,107 @@
     border-bottom: 1px solid #f0f0f0 !important;
 }
 
+/* Amazon-Style Price Range Slider */
+.price-slider-container {
+    margin: 15px 0;
+    padding: 0;
+}
+
+.price-display-box {
+    text-align: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    min-width: 90px;
+}
+
+.price-display-box strong {
+    font-size: 1rem;
+    color: #ff6b35;
+}
+
+/* Dual Range Slider Styling */
+.price-range-input {
+    pointer-events: all !important;
+}
+
+.price-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border: 3px solid #ff6b35;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 3;
+}
+
+.price-range-input::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    border-color: #e55a2b;
+    box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+}
+
+.price-range-input::-webkit-slider-thumb:active {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.6);
+}
+
+.price-range-input::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: white;
+    border: 3px solid #ff6b35;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.price-range-input::-moz-range-thumb:hover {
+    transform: scale(1.15);
+    border-color: #e55a2b;
+    box-shadow: 0 3px 10px rgba(255, 107, 53, 0.4);
+}
+
+/* Manual Price Input Styling */
+.input-group-sm .input-group-text {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.input-group-sm .form-control:focus {
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.15);
+}
+
+/* Apply Button Styling */
+#applyPriceFilter {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#applyPriceFilter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+/* Price range track animation */
+.slider-range {
+    transition: all 0.1s ease;
+}
+
+/* Border sections */
+
 /* Price range styling */
 .btn-outline-secondary {
     border-color: #dee2e6;
@@ -670,6 +771,7 @@ body.mobile-filter-open {
                         <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High</option>
                         <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low</option>
                         <option value="name" {{ request('sort') == 'name' ? 'selected' : '' }}>Name A-Z</option>
+                        <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
                         <option value="rating" {{ request('sort') == 'rating' ? 'selected' : '' }}>Sort by: Highest Rated</option>
                         <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Sort by: Newest</option>
                         <option value="featured" {{ request('sort') == 'featured' ? 'selected' : '' }}>Sort by: Featured</option>
@@ -793,8 +895,145 @@ document.addEventListener('DOMContentLoaded', function(){
     window.clearPriceRange = function() {
         document.getElementById('minPrice').value = '';
         document.getElementById('maxPrice').value = '';
+        document.getElementById('minPriceInput').value = '';
+        document.getElementById('maxPriceInput').value = '';
+        
+        // Reset sliders to full range
+        const minRange = document.getElementById('minPriceRange');
+        const maxRange = document.getElementById('maxPriceRange');
+        if (minRange && maxRange) {
+            minRange.value = minRange.min;
+            maxRange.value = maxRange.max;
+            document.getElementById('minPriceDisplay').textContent = '₹' + minRange.min;
+            document.getElementById('maxPriceDisplay').textContent = '₹' + maxRange.max;
+            updateSliderRange();
+        }
+        
         applyFilters();
     };
+
+    // ===== AMAZON-STYLE PRICE RANGE SLIDER =====
+    const minPriceRange = document.getElementById('minPriceRange');
+    const maxPriceRange = document.getElementById('maxPriceRange');
+    const minPriceInput = document.getElementById('minPriceInput');
+    const maxPriceInput = document.getElementById('maxPriceInput');
+    const minPriceDisplay = document.getElementById('minPriceDisplay');
+    const maxPriceDisplay = document.getElementById('maxPriceDisplay');
+    const sliderRange = document.getElementById('sliderRange');
+    const applyPriceBtn = document.getElementById('applyPriceFilter');
+
+    // Function to update the visual slider range
+    function updateSliderRange() {
+        const min = parseInt(minPriceRange.min);
+        const max = parseInt(minPriceRange.max);
+        const minVal = parseInt(minPriceRange.value);
+        const maxVal = parseInt(maxPriceRange.value);
+        
+        const percentMin = ((minVal - min) / (max - min)) * 100;
+        const percentMax = ((maxVal - min) / (max - min)) * 100;
+        
+        sliderRange.style.left = percentMin + '%';
+        sliderRange.style.right = (100 - percentMax) + '%';
+    }
+
+    // Function to format number with commas
+    function formatPrice(price) {
+        return parseInt(price).toLocaleString('en-IN');
+    }
+
+    // Min range slider event
+    if (minPriceRange) {
+        minPriceRange.addEventListener('input', function() {
+            let minVal = parseInt(this.value);
+            let maxVal = parseInt(maxPriceRange.value);
+            
+            // Prevent overlap - min cannot exceed max
+            if (minVal >= maxVal) {
+                minVal = maxVal - 100;
+                this.value = minVal;
+            }
+            
+            // Update displays
+            minPriceDisplay.textContent = '₹' + formatPrice(minVal);
+            minPriceInput.value = minVal;
+            
+            updateSliderRange();
+        });
+    }
+
+    // Max range slider event
+    if (maxPriceRange) {
+        maxPriceRange.addEventListener('input', function() {
+            let maxVal = parseInt(this.value);
+            let minVal = parseInt(minPriceRange.value);
+            
+            // Prevent overlap - max cannot be less than min
+            if (maxVal <= minVal) {
+                maxVal = minVal + 100;
+                this.value = maxVal;
+            }
+            
+            // Update displays
+            maxPriceDisplay.textContent = '₹' + formatPrice(maxVal);
+            maxPriceInput.value = maxVal;
+            
+            updateSliderRange();
+        });
+    }
+
+    // Manual input events (sync with sliders)
+    if (minPriceInput) {
+        minPriceInput.addEventListener('input', function() {
+            let value = parseInt(this.value) || parseInt(minPriceRange.min);
+            const max = parseInt(maxPriceRange.value);
+            
+            if (value >= max) {
+                value = max - 100;
+                this.value = value;
+            }
+            
+            minPriceRange.value = value;
+            minPriceDisplay.textContent = '₹' + formatPrice(value);
+            updateSliderRange();
+        });
+    }
+
+    if (maxPriceInput) {
+        maxPriceInput.addEventListener('input', function() {
+            let value = parseInt(this.value) || parseInt(maxPriceRange.max);
+            const min = parseInt(minPriceRange.value);
+            
+            if (value <= min) {
+                value = min + 100;
+                this.value = value;
+            }
+            
+            maxPriceRange.value = value;
+            maxPriceDisplay.textContent = '₹' + formatPrice(value);
+            updateSliderRange();
+        });
+    }
+
+    // Apply price filter button
+    if (applyPriceBtn) {
+        applyPriceBtn.addEventListener('click', function() {
+            const minVal = minPriceRange.value;
+            const maxVal = maxPriceRange.value;
+            
+            // Update hidden form inputs
+            document.getElementById('minPrice').value = minVal;
+            document.getElementById('maxPrice').value = maxVal;
+            
+            // Apply filters
+            applyFilters();
+        });
+    }
+
+    // Initialize slider on page load
+    if (minPriceRange && maxPriceRange) {
+        updateSliderRange();
+    }
+    // ===== END PRICE RANGE SLIDER =====
 
     // Search functionality with debounce - handle both desktop and mobile search inputs
     searchInputs.forEach(function(searchInput) {
