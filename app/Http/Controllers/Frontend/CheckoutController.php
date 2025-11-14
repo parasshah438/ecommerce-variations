@@ -694,6 +694,129 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Show public order tracking form
+     */
+    public function showTrackingForm()
+    {
+        return view('orders.public-track');
+    }
+
+    /**
+     * Search for order by order number and email/phone
+     */
+    public function searchOrder(Request $request)
+    {
+        $request->validate([
+            'order_number' => 'required|string',
+            'contact_info' => 'required|string',
+            'contact_type' => 'required|in:email,phone'
+        ]);
+
+        $orderNumber = $request->order_number;
+        $contactInfo = $request->contact_info;
+        $contactType = $request->contact_type;
+
+        // Find order by order number
+        $order = Order::where('id', $orderNumber)->first();
+
+        if (!$order) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Order not found. Please check your order number.');
+        }
+
+        // Verify contact information
+        $isValid = false;
+        if ($contactType === 'email') {
+            $isValid = $order->user->email === $contactInfo || 
+                      ($order->address && $order->address->email === $contactInfo);
+        } else if ($contactType === 'phone') {
+            $cleanPhone = preg_replace('/[^0-9]/', '', $contactInfo);
+            $orderPhone = preg_replace('/[^0-9]/', '', $order->address->phone ?? '');
+            $userPhone = preg_replace('/[^0-9]/', '', $order->user->phone ?? '');
+            
+            $isValid = $orderPhone === $cleanPhone || $userPhone === $cleanPhone;
+        }
+
+        if (!$isValid) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Contact information does not match our records.');
+        }
+
+        // Redirect to order details
+        return redirect()->route('order.track.public.details', $orderNumber)
+            ->with('success', 'Order found! Here are your tracking details.');
+    }
+
+    /**
+     * Display public order tracking details
+     */
+    public function publicTrackOrder($orderNumber)
+    {
+        $order = Order::where('id', $orderNumber)
+            ->with(['items.productVariation.product', 'address', 'user'])
+            ->first();
+
+        if (!$order) {
+            abort(404, 'Order not found');
+        }
+
+        // Define tracking timeline
+        $trackingSteps = [
+            Order::STATUS_PENDING => [
+                'title' => 'Order Placed',
+                'description' => 'Your order has been placed successfully',
+                'completed' => true,
+                'timestamp' => $order->created_at,
+                'icon' => 'bi-cart-check'
+            ],
+            Order::STATUS_CONFIRMED => [
+                'title' => 'Order Confirmed', 
+                'description' => 'Your order has been confirmed and is being prepared',
+                'completed' => in_array($order->status, [Order::STATUS_CONFIRMED, Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->status === Order::STATUS_CONFIRMED ? $order->updated_at : null,
+                'icon' => 'bi-check-circle'
+            ],
+            Order::STATUS_PROCESSING => [
+                'title' => 'Processing',
+                'description' => 'Your order is being processed and packed',
+                'completed' => in_array($order->status, [Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->status === Order::STATUS_PROCESSING ? $order->updated_at : null,
+                'icon' => 'bi-box-seam'
+            ],
+            Order::STATUS_SHIPPED => [
+                'title' => 'Shipped',
+                'description' => 'Your order has been shipped and is on the way',
+                'completed' => in_array($order->status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->status === Order::STATUS_SHIPPED ? $order->updated_at : null,
+                'icon' => 'bi-truck'
+            ],
+            Order::STATUS_DELIVERED => [
+                'title' => 'Delivered',
+                'description' => 'Your order has been delivered successfully',
+                'completed' => $order->status === Order::STATUS_DELIVERED,
+                'timestamp' => $order->status === Order::STATUS_DELIVERED ? $order->updated_at : null,
+                'icon' => 'bi-house-check'
+            ]
+        ];
+
+        // Handle cancelled orders
+        if ($order->status === Order::STATUS_CANCELLED) {
+            $trackingSteps[Order::STATUS_CANCELLED] = [
+                'title' => 'Order Cancelled',
+                'description' => 'Your order has been cancelled',
+                'completed' => true,
+                'timestamp' => $order->cancelled_at ?? $order->updated_at,
+                'icon' => 'bi-x-circle',
+                'status' => 'cancelled'
+            ];
+        }
+
+        return view('orders.public-track-details', compact('order', 'trackingSteps'));
+    }
+
+    /**
      * Cancel an order
      */
     public function cancelOrder(Request $request, Order $order)

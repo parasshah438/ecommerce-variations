@@ -110,4 +110,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::put('/', [TaxSettingsController::class, 'update'])->name('update');
         Route::post('/test-calculation', [TaxSettingsController::class, 'testCalculation'])->name('test');
     });
+
+    // Cache Management Routes (Admin Only)
+    Route::prefix('cache')->name('cache.')->middleware('admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CacheManagementController::class, 'index'])->name('index');
+        Route::post('/clear', [\App\Http\Controllers\Admin\CacheManagementController::class, 'clearCache'])->name('clear');
+        Route::post('/clear-specific', [\App\Http\Controllers\Admin\CacheManagementController::class, 'clearSpecificCache'])->name('clear-specific');
+        Route::get('/logs', [\App\Http\Controllers\Admin\CacheManagementController::class, 'getLogs'])->name('logs');
+    });
 });

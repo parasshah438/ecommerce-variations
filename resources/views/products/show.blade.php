@@ -734,6 +734,9 @@
     </div>
 </div>
 
+<!-- Similar Products Section -->
+@include('products._similar_products')
+
 @endsection
 
 @push('styles')

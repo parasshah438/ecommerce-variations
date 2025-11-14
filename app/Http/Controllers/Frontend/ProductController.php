@@ -26,6 +26,15 @@ class ProductController extends Controller
             'brand:id,name,slug'
         ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at');
         
+        // Route-based filtering
+        $isNewArrivals = $request->route()->getName() === 'products.new_arrivals' || 
+                        $request->route()->getName() === 'products.new_arrivals.filter' ||
+                        str_contains($request->path(), 'new-arrivals');
+        
+        if ($isNewArrivals) {
+            $query->where('created_at', '>=', now()->subDays(30));
+        }
+        
         // Search filter
         if ($request->has('q') && $request->q) {
             $searchTerm = $request->q;
@@ -283,6 +292,11 @@ class ProductController extends Controller
             ]);
         }
         
+        // Route-based view selection
+        if ($isNewArrivals) {
+            return view('products.new_arrivals', compact('products', 'categories', 'brands', 'sizes', 'colors', 'priceRange'));
+        }
+        
         return view('products.index', compact('products', 'categories', 'brands', 'sizes', 'colors', 'priceRange'));
     }
 
@@ -409,9 +423,12 @@ class ProductController extends Controller
             }
         }
 
+        // OPTIMIZED: Similar Products Logic - Amazon & Flipkart Style
+        $similarProducts = $this->getSimilarProducts($product, $request);
+
         // Check if this is a modal request
         if ($request->has('modal') && $request->modal == 1) {
-            $html = view('products.modal', compact('product', 'variations', 'variationImages', 'productImages', 'attributeGroups'))->render();
+            $html = view('products.modal', compact('product', 'variations', 'variationImages', 'productImages', 'attributeGroups', 'similarProducts'))->render();
             
             return response()->json([
                 'success' => true,
@@ -420,236 +437,15 @@ class ProductController extends Controller
                 'variations' => $variations,
                 'variationImages' => $variationImages,
                 'productImages' => $productImages,
-                'attributeGroups' => $attributeGroups
+                'attributeGroups' => $attributeGroups,
+                'similarProducts' => $similarProducts
             ]);
         }
 
-        return view('products.show', compact('product', 'variations', 'variationImages', 'productImages', 'attributeGroups'));
+        return view('products.show', compact('product', 'variations', 'variationImages', 'productImages', 'attributeGroups', 'similarProducts'));
     }
 
-    public function newArrivals(Request $request)
-    {
-        // Performance optimizations applied
-        
-        $query = Product::with(['images' => function($query) {
-                            $query->select('id', 'product_id', 'path', 'position')->orderBy('position');
-                        }, 
-                        'variations' => function($query) {
-                            $query->select('id', 'product_id', 'price', 'attribute_value_ids');
-                        },
-                        'category:id,name', 
-                        'brand:id,name'])
-                       ->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at') // Only select needed columns
-                       ->where('created_at', '>=', now()->subDays(60)) // Extended to 60 days for more products
-                       ->orderBy('created_at', 'desc');
-        
-        // Search filter (optimized - only search name for performance)
-        if ($request->has('q') && $request->q) {
-            $searchTerm = $request->q;
-            $query->where('name', 'like', "%{$searchTerm}%");
-        }
-        
-        // Category filter
-        if ($request->has('categories') && is_array($request->categories)) {
-            $query->whereIn('category_id', $request->categories);
-        }
-        
-        // Brand filter
-        if ($request->has('brands') && is_array($request->brands)) {
-            $query->whereIn('brand_id', $request->brands);
-        }
-        
-        // Price range filter
-        if ($request->has('min_price') && $request->min_price) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        
-        if ($request->has('max_price') && $request->max_price) {
-            $query->where('price', '<=', $request->max_price);
-        }
-        
-        // In stock filter
-        if ($request->has('in_stock') && $request->in_stock) {
-            $query->whereHas('variations.stock', function ($q) {
-                $q->where('quantity', '>', 0);
-            });
-        }
-        
-        // Size filter - optimized with single query
-        if ($request->has('sizes') && is_array($request->sizes)) {
-            $sizeIds = array_map('intval', $request->sizes);
-            $query->whereHas('variations', function ($q) use ($sizeIds) {
-                $q->where(function($subQ) use ($sizeIds) {
-                    foreach ($sizeIds as $sizeId) {
-                        $subQ->orWhereRaw('JSON_CONTAINS(attribute_value_ids, ?)', [json_encode([$sizeId])]);
-                    }
-                });
-            });
-        }
-        
-        // Color filter - optimized with single query
-        if ($request->has('colors') && is_array($request->colors)) {
-            $colorIds = array_map('intval', $request->colors);
-            $query->whereHas('variations', function ($q) use ($colorIds) {
-                $q->where(function($subQ) use ($colorIds) {
-                    foreach ($colorIds as $colorId) {
-                        $subQ->orWhereRaw('JSON_CONTAINS(attribute_value_ids, ?)', [json_encode([$colorId])]);
-                    }
-                });
-            });
-        }
-        
-        // Rating filter - temporarily skip if column doesn't exist
-        if ($request->has('rating') && $request->rating) {
-            $rating = floatval($request->rating);
-            \Log::info('Applying rating filter', ['rating' => $rating]);
-            
-            // For now, skip rating filter to avoid SQL errors
-            // TODO: Add average_rating column to products table
-            \Log::info('Rating filter temporarily disabled - need to add average_rating column to products table');
-        }
-        
-        // Sort options
-        $sortBy = $request->get('sort', 'created_at');
-        $sortOrder = $request->get('order', 'desc');
-        
-        switch ($sortBy) {
-            case 'price_low':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_high':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'name':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'rating':
-                $query->orderBy('average_rating', 'desc');
-                break;
-            case 'created_at':
-            default:
-                $query->orderBy('created_at', $sortOrder);
-                break;
-        }
-        
-        $products = $query->paginate($request->get('per_page', 6));
-        
-        // Add price range calculation for each product
-        $products->getCollection()->transform(function ($product) {
-            if ($product->variations->count() > 0) {
-                $prices = $product->variations->pluck('price')->filter();
-                if ($prices->count() > 0) {
-                    $product->min_price = $prices->min();
-                    $product->max_price = $prices->max();
-                    $product->has_variations = true;
-                } else {
-                    $product->min_price = $product->price;
-                    $product->max_price = $product->price;
-                    $product->has_variations = false;
-                }
-            } else {
-                // Simple product (no variations)
-                $product->min_price = $product->price;
-                $product->max_price = $product->price;
-                $product->has_variations = false;
-            }
-            return $product;
-        });
-        
-        // Get available categories and brands for filters with product counts for new arrivals
-        $categories = \App\Models\Category::withCount(['products' => function($query) {
-            $query->where('created_at', '>=', now()->subDays(60));
-        }])->having('products_count', '>', 0)->get();
-        
-        $brands = \App\Models\Brand::withCount(['products' => function($query) {
-            $query->where('created_at', '>=', now()->subDays(60));
-        }])->having('products_count', '>', 0)->get();
-        
-        // Get available sizes for new arrivals - optimized with single query
-        $sizeAttribute = \App\Models\Attribute::where('name', 'Size')->orWhere('slug', 'size')->first();
-        $sizes = collect();
-        if ($sizeAttribute) {
-            // Use a more efficient query with joins
-            $sizes = \App\Models\AttributeValue::select('attribute_values.*')
-                ->where('attribute_id', $sizeAttribute->id)
-                ->whereExists(function($query) {
-                    $query->select(\DB::raw(1))
-                          ->from('product_variations')
-                          ->join('products', 'products.id', '=', 'product_variations.product_id')
-                          ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, CAST(attribute_values.id as JSON))')
-                          ->where('products.created_at', '>=', now()->subDays(60));
-                })
-                ->get()
-                ->map(function($size) {
-                    // Quick count using a single query
-                    $size->products_count = \DB::table('product_variations')
-                        ->join('products', 'products.id', '=', 'product_variations.product_id')
-                        ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, ?)', [json_encode([$size->id])])
-                        ->where('products.created_at', '>=', now()->subDays(60))
-                        ->count();
-                    return $size;
-                })
-                ->filter(function($size) {
-                    return $size->products_count > 0;
-                });
-        }
-        
-        // Get available colors for new arrivals - optimized with single query
-        $colorAttribute = \App\Models\Attribute::where('name', 'Color')->orWhere('slug', 'color')->first();
-        $colors = collect();
-        if ($colorAttribute) {
-            // Use a more efficient query with joins
-            $colors = \App\Models\AttributeValue::select('attribute_values.*')
-                ->where('attribute_id', $colorAttribute->id)
-                ->whereExists(function($query) {
-                    $query->select(\DB::raw(1))
-                          ->from('product_variations')
-                          ->join('products', 'products.id', '=', 'product_variations.product_id')
-                          ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, CAST(attribute_values.id as JSON))')
-                          ->where('products.created_at', '>=', now()->subDays(60));
-                })
-                ->get()
-                ->map(function($color) {
-                    // Quick count using a single query
-                    $color->products_count = \DB::table('product_variations')
-                        ->join('products', 'products.id', '=', 'product_variations.product_id')
-                        ->whereRaw('JSON_CONTAINS(product_variations.attribute_value_ids, ?)', [json_encode([$color->id])])
-                        ->where('products.created_at', '>=', now()->subDays(60))
-                        ->count();
-                    return $color;
-                })
-                ->filter(function($color) {
-                    return $color->products_count > 0;
-                });
-        }
-        
-        // Get price range for slider from new arrivals only
-        $priceRange = Product::where('created_at', '>=', now()->subDays(60))
-                           ->selectRaw('MIN(price) as min_price, MAX(price) as max_price')
-                           ->first();
-        
-        // Handle AJAX requests
-        if ($request->ajax()) {
-            if ($request->has('load_more')) {
-                return response()->json([
-                    'html' => view('products._new_arrivals_list', compact('products'))->render(),
-                    'has_more' => $products->hasMorePages(),
-                    'current_page' => $products->currentPage(),
-                    'total' => $products->total()
-                ]);
-            }
-            
-            return response()->json([
-                'html' => view('products._new_arrivals_list', compact('products'))->render(),
-                'has_more' => $products->hasMorePages(),
-                'current_page' => $products->currentPage(),
-                'total' => $products->total(),
-                'filters_html' => view('products._filters', compact('categories', 'brands', 'priceRange', 'sizes', 'colors'))->render()
-            ]);
-        }
-        
-        return view('products.new_arrivals', compact('products', 'categories', 'brands', 'priceRange', 'sizes', 'colors'));
-    }
+
 
     public function categoryProducts(Request $request, $slug)
     {
@@ -946,6 +742,165 @@ class ProductController extends Controller
         }
         
         return view('products.category', compact('products', 'categories', 'brands', 'sizes', 'colors', 'priceRange', 'category'));
+    }
+
+    /**
+     * Get similar products with professional optimization like Amazon/Flipkart
+     * Uses multi-layered strategy for best recommendations
+     */
+    private function getSimilarProducts($product, $request)
+    {
+        // Cache key based on product and context
+        $cacheKey = "similar_products_{$product->id}_" . md5($product->category_id . '_' . $product->brand_id);
+        
+        return \Cache::remember($cacheKey, 1800, function() use ($product) { // Cache for 30 minutes
+            $similarProducts = collect();
+            
+            // STRATEGY 1: Same Category + Brand (Highest Priority)
+            if ($product->category_id && $product->brand_id) {
+                $categoryBrandProducts = Product::with([
+                    'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position')->limit(1); },
+                    'variations' => function($q) { $q->select('id', 'product_id', 'price'); },
+                    'category:id,name',
+                    'brand:id,name'
+                ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+                  ->where('category_id', $product->category_id)
+                  ->where('brand_id', $product->brand_id)
+                  ->where('id', '!=', $product->id)
+                  ->orderBy('created_at', 'desc')
+                  ->limit(6)
+                  ->get();
+                  
+                $similarProducts = $similarProducts->merge($categoryBrandProducts);
+            }
+            
+            // STRATEGY 2: Same Category, Different Brands (Medium Priority)
+            if ($similarProducts->count() < 12 && $product->category_id) {
+                $needed = 12 - $similarProducts->count();
+                $existingIds = $similarProducts->pluck('id')->toArray();
+                
+                $categoryProducts = Product::with([
+                    'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position')->limit(1); },
+                    'variations' => function($q) { $q->select('id', 'product_id', 'price'); },
+                    'category:id,name',
+                    'brand:id,name'
+                ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+                  ->where('category_id', $product->category_id)
+                  ->where('brand_id', '!=', $product->brand_id)
+                  ->whereNotIn('id', array_merge($existingIds, [$product->id]))
+                  ->orderBy('average_rating', 'desc') // Best rated first
+                  ->orderBy('reviews_count', 'desc')
+                  ->limit($needed)
+                  ->get();
+                  
+                $similarProducts = $similarProducts->merge($categoryProducts);
+            }
+            
+            // STRATEGY 3: Price Range Based (Lower Priority)
+            if ($similarProducts->count() < 12) {
+                $needed = 12 - $similarProducts->count();
+                $existingIds = $similarProducts->pluck('id')->toArray();
+                $priceMin = $product->price * 0.7; // -30%
+                $priceMax = $product->price * 1.3; // +30%
+                
+                $priceRangeProducts = Product::with([
+                    'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position')->limit(1); },
+                    'variations' => function($q) { $q->select('id', 'product_id', 'price'); },
+                    'category:id,name',
+                    'brand:id,name'
+                ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+                  ->whereBetween('price', [$priceMin, $priceMax])
+                  ->whereNotIn('id', array_merge($existingIds, [$product->id]))
+                  ->orderBy('reviews_count', 'desc')
+                  ->orderBy('created_at', 'desc')
+                  ->limit($needed)
+                  ->get();
+                  
+                $similarProducts = $similarProducts->merge($priceRangeProducts);
+            }
+            
+            // STRATEGY 4: Same Brand, Any Category (Fallback)
+            if ($similarProducts->count() < 12 && $product->brand_id) {
+                $needed = 12 - $similarProducts->count();
+                $existingIds = $similarProducts->pluck('id')->toArray();
+                
+                $brandProducts = Product::with([
+                    'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position')->limit(1); },
+                    'variations' => function($q) { $q->select('id', 'product_id', 'price'); },
+                    'category:id,name',
+                    'brand:id,name'
+                ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+                  ->where('brand_id', $product->brand_id)
+                  ->whereNotIn('id', array_merge($existingIds, [$product->id]))
+                  ->orderBy('created_at', 'desc')
+                  ->limit($needed)
+                  ->get();
+                  
+                $similarProducts = $similarProducts->merge($brandProducts);
+            }
+            
+            // STRATEGY 5: Popular Products (Final Fallback)
+            if ($similarProducts->count() < 8) {
+                $needed = 8 - $similarProducts->count();
+                $existingIds = $similarProducts->pluck('id')->toArray();
+                
+                $popularProducts = Product::with([
+                    'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position')->limit(1); },
+                    'variations' => function($q) { $q->select('id', 'product_id', 'price'); },
+                    'category:id,name',
+                    'brand:id,name'
+                ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+                  ->whereNotIn('id', array_merge($existingIds, [$product->id]))
+                  ->orderBy('reviews_count', 'desc')
+                  ->orderBy('average_rating', 'desc')
+                  ->limit($needed)
+                  ->get();
+                  
+                $similarProducts = $similarProducts->merge($popularProducts);
+            }
+            
+            // Process similar products (same as index method for consistency)
+            return $similarProducts->unique('id')->take(12)->map(function ($similarProduct) {
+                // Calculate price range for variations
+                if ($similarProduct->variations && $similarProduct->variations->count() > 0) {
+                    $prices = $similarProduct->variations->pluck('price')->filter();
+                    if ($prices->count() > 0) {
+                        $similarProduct->min_price = $prices->min();
+                        $similarProduct->max_price = $prices->max();
+                        $similarProduct->has_variations = true;
+                    } else {
+                        $similarProduct->min_price = $similarProduct->price;
+                        $similarProduct->max_price = $similarProduct->price;
+                        $similarProduct->has_variations = false;
+                    }
+                } else {
+                    $similarProduct->min_price = $similarProduct->price;
+                    $similarProduct->max_price = $similarProduct->price;
+                    $similarProduct->has_variations = false;
+                }
+                
+                // Add default ratings if not present (same as index method)
+                try {
+                    $rating = $similarProduct->average_rating;
+                    if (is_null($rating) || $rating == 0) {
+                        $similarProduct->average_rating = round(rand(35, 48) / 10, 1);
+                    }
+                } catch (\Exception $e) {
+                    $similarProduct->average_rating = round(rand(35, 48) / 10, 1);
+                }
+                
+                try {
+                    $reviews = $similarProduct->reviews_count;
+                    if (is_null($reviews) || $reviews == 0) {
+                        $similarProduct->reviews_count = rand(5, 150);
+                    }
+                } catch (\Exception $e) {
+                    $similarProduct->reviews_count = rand(5, 150);
+                }
+                
+                return $similarProduct;
+            })->values();
+        });
     }
 
     public function loadMore(Request $request)

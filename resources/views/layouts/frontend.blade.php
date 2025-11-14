@@ -163,6 +163,11 @@
                             <li><a class="dropdown-item" href="#">Home & Garden</a></li>
                         </ul>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('order.track.public') }}">
+                            <i class="bi bi-truck me-1"></i>Track Order
+                        </a>
+                    </li>
                 </ul>
                 
                 <!-- Search Form -->

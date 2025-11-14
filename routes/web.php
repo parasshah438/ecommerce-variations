@@ -227,10 +227,15 @@ Route::get('/debug/product-data/{slug}', function($slug) {
 Route::get('/products', [FrontProduct::class, 'index'])->name('products.index');
 Route::get('/products/filter', [FrontProduct::class, 'index'])->name('products.filter');
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
-Route::get('/new-arrivals', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals');
-Route::get('/new-arrivals/filter', [FrontProduct::class, 'newArrivals'])->name('products.new_arrivals.filter');
+Route::get('/new-arrivals', [FrontProduct::class, 'index'])->name('products.new_arrivals');
+Route::get('/new-arrivals/filter', [FrontProduct::class, 'index'])->name('products.new_arrivals.filter');
 Route::get('/category/{slug}', [FrontProduct::class, 'categoryProducts'])->name('category.products');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
+
+// Public Order Tracking Routes (Guest access)
+Route::get('/track-order', [FrontCheckout::class, 'showTrackingForm'])->name('order.track.public');
+Route::post('/track-order/search', [FrontCheckout::class, 'searchOrder'])->name('order.track.search');
+Route::get('/track-order/{orderNumber}', [FrontCheckout::class, 'publicTrackOrder'])->name('order.track.public.details');
 
 // Review routes
 use App\Http\Controllers\Frontend\ReviewController;
@@ -377,6 +382,46 @@ Route::get('/debug-logs', function() {
     }
     return 'No log file found';
 })->name('debug.logs');
+
+// Test public order tracking (for development)
+Route::get('/test-public-tracking', function() {
+    // Create a sample order for testing if none exists
+    $order = \App\Models\Order::first();
+    if (!$order) {
+        // Create test data
+        $user = \App\Models\User::first() ?? \App\Models\User::factory()->create([
+            'email' => 'test@example.com',
+            'phone' => '+91 9876543210'
+        ]);
+        
+        $address = \App\Models\Address::create([
+            'user_id' => $user->id,
+            'name' => 'Test User',
+            'phone' => '+91 9876543210',
+            'address_line' => '123 Test Street',
+            'city' => 'Mumbai',
+            'state' => 'Maharashtra',
+            'zip' => '400001',
+            'is_default' => true
+        ]);
+        
+        $order = \App\Models\Order::create([
+            'user_id' => $user->id,
+            'address_id' => $address->id,
+            'order_number' => 'ORD-' . strtoupper(uniqid()),
+            'total' => 2999.00,
+            'status' => 'processing',
+            'payment_method' => 'razorpay'
+        ]);
+    }
+    
+    return "<h3>Test Public Order Tracking</h3>
+            <p><strong>Order Number:</strong> {$order->order_number}</p>
+            <p><strong>Customer Email:</strong> {$order->user->email}</p>
+            <p><strong>Customer Phone:</strong> {$order->user->phone}</p>
+            <p><a href='" . route('order.track.public') . "' class='btn btn-primary'>Go to Track Order Page</a></p>
+            <p><a href='" . route('order.track.public.details', $order->order_number) . "' class='btn btn-success'>Direct Link to Order Details</a></p>";
+})->name('test.public.tracking');
 
 // Test order relationships
 Route::get('/test-order-relationships', function() {
