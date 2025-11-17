@@ -461,13 +461,60 @@ class ProductController extends Controller
         ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
           ->where('category_id', $category->id);
         
-        // Search filter
+        // ENHANCED Search filter with professional logic
         if ($request->has('q') && $request->q) {
-            $searchTerm = $request->q;
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('description', 'like', "%{$searchTerm}%");
-            });
+            $searchTerm = trim($request->q);
+            
+            // Handle different search scenarios
+            if (is_numeric($searchTerm)) {
+                // If search term is numeric (like product ID, price, etc.)
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('id', $searchTerm)
+                      ->orWhere('price', $searchTerm)
+                      ->orWhere('mrp', $searchTerm)
+                      ->orWhere('name', 'like', "%{$searchTerm}%")
+                      ->orWhere('description', 'like', "%{$searchTerm}%")
+                      ->orWhere('slug', 'like', "%" . \Illuminate\Support\Str::slug($searchTerm) . "%");
+                });
+            } else {
+                // Text-based search with multi-strategy approach
+                $searchTerms = $this->extractSearchTerms($searchTerm);
+                
+                $query->where(function ($q) use ($searchTerm, $searchTerms) {
+                    // Strategy 1: Exact phrase match (highest priority)
+                    $q->where('name', 'like', "%{$searchTerm}%")
+                      ->orWhere('description', 'like', "%{$searchTerm}%")
+                      ->orWhere('slug', 'like', "%" . \Illuminate\Support\Str::slug($searchTerm) . "%");
+                    
+                    // Strategy 2: Individual word matches
+                    foreach ($searchTerms as $term) {
+                        if (strlen($term) > 2) {
+                            $q->orWhere('name', 'like', "%{$term}%")
+                              ->orWhere('description', 'like', "%{$term}%");
+                        }
+                    }
+                    
+                    // Strategy 3: Brand name matches within this category
+                    $q->orWhereHas('brand', function ($brandQuery) use ($searchTerm, $searchTerms) {
+                        $brandQuery->where('name', 'like', "%{$searchTerm}%");
+                        foreach ($searchTerms as $term) {
+                            if (strlen($term) > 2) {
+                                $brandQuery->orWhere('name', 'like', "%{$term}%");
+                            }
+                        }
+                    });
+                    
+                    // Strategy 4: Attribute values search (sizes, colors, etc.)
+                    $q->orWhereHas('variations.attributeValues', function ($attrQuery) use ($searchTerm, $searchTerms) {
+                        $attrQuery->where('value', 'like', "%{$searchTerm}%");
+                        foreach ($searchTerms as $term) {
+                            if (strlen($term) > 2) {
+                                $attrQuery->orWhere('value', 'like', "%{$term}%");
+                            }
+                        }
+                    });
+                });
+            }
         }
         
         // Category filter (additional subcategories if needed)
@@ -930,5 +977,16 @@ class ProductController extends Controller
         });
         
         return view('products._list', compact('products'));
+    }
+    
+    /**
+     * Helper method to extract search terms from search query
+     */
+    private function extractSearchTerms($searchQuery)
+    {
+        // Split by spaces and remove empty terms
+        return array_filter(explode(' ', strtolower($searchQuery)), function($term) {
+            return strlen(trim($term)) > 2;
+        });
     }
 }

@@ -194,6 +194,62 @@
                     <!-- ...reuse your attribute selection logic here... -->
                 </div>
             </div>
+            <!-- Configure Variations Section -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2">2</span>
+                    <h6 class="mb-0">Configure Variations</h6>
+                </div>
+                <div class="text-muted">
+                    <span id="variationsCount">{{ $product->variations->count() }}</span> variations
+                </div>
+            </div>
+            
+            <!-- Bulk Actions -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label small">Bulk Price Update</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" id="bulkPrice" placeholder="Price" step="0.01">
+                        <button class="btn btn-outline-secondary" type="button" onclick="applyBulkPrice()">
+                            Apply to Selected
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Bulk Stock Update</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" id="bulkStock" placeholder="Stock" min="0">
+                        <button class="btn btn-outline-secondary" type="button" onclick="applyBulkStock()">
+                            Apply to Selected
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Bulk SKU Prefix</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="bulkSKU" placeholder="PREFIX">
+                        <button class="btn btn-outline-secondary" type="button" onclick="generateBulkSKU()">
+                            Generate SKUs
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Quick Actions</label>
+                    <div class="btn-group btn-group-sm w-100">
+                        <button class="btn btn-outline-primary" type="button" onclick="toggleAllVariations()" title="Select/Deselect All">
+                            <i class="bi bi-check-square"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" type="button" onclick="duplicateSelected()" title="Duplicate Selected">
+                            <i class="bi bi-files"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" type="button" onclick="removeAllVariations()" title="Remove Selected">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-responsive mt-4">
                 <table class="table table-bordered align-middle mb-0">
                     <thead class="table-light">
@@ -289,6 +345,7 @@
 $(document).ready(function() {
     let variationIndex = 0;
     let selectedAttributes = {};
+    
     // Auto-fill MRP when price changes
     $('#price').on('input', function() {
         const price = parseFloat($(this).val());
@@ -296,6 +353,17 @@ $(document).ready(function() {
             $('#mrp').val((price * 1.3).toFixed(2));
         }
     });
+    
+    // Initialize bulk actions on existing variations
+    updateBulkActions();
+    
+    // Add event listeners to existing variation checkboxes
+    document.querySelectorAll('.variation-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+    
+    // Initialize stats
+    updateStats();
 });
 // Toggle variations section
 function toggleVariations() {
@@ -450,45 +518,130 @@ function createVariationRow(combination, index) {
 }
 function applyBulkPrice() {
     const price = document.getElementById('bulkPrice').value;
-    if (!price) return;
-    document.querySelectorAll('.variation-checkbox:checked').forEach(checkbox => {
-        const row = checkbox.closest('tr');
-        const priceInput = row.querySelector('.price-input');
-        if (priceInput) priceInput.value = price;
-    });
-    updateStats();
+    if (!price) {
+        alert('Please enter a price value');
+        return;
+    }
+    
+    const selectedCheckboxes = document.querySelectorAll('.variation-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one variation');
+        return;
+    }
+    
+    if (confirm(`Apply price ₹${price} to ${selectedCheckboxes.length} selected variation(s)?`)) {
+        selectedCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const priceInput = row.querySelector('.price-input');
+            if (priceInput) priceInput.value = price;
+        });
+        updateStats();
+        
+        // Clear the input
+        document.getElementById('bulkPrice').value = '';
+        
+        // Show success message
+        showNotification(`Price updated for ${selectedCheckboxes.length} variation(s)`, 'success');
+    }
 }
 function applyBulkStock() {
     const stock = document.getElementById('bulkStock').value;
-    if (stock === '') return;
-    document.querySelectorAll('.variation-checkbox:checked').forEach(checkbox => {
-        const row = checkbox.closest('tr');
-        const stockInput = row.querySelector('.stock-input');
-        if (stockInput) stockInput.value = stock;
-    });
-    updateStats();
+    if (stock === '') {
+        alert('Please enter a stock value');
+        return;
+    }
+    
+    const selectedCheckboxes = document.querySelectorAll('.variation-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one variation');
+        return;
+    }
+    
+    if (confirm(`Apply stock quantity ${stock} to ${selectedCheckboxes.length} selected variation(s)?`)) {
+        selectedCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const stockInput = row.querySelector('.stock-input');
+            if (stockInput) stockInput.value = stock;
+        });
+        updateStats();
+        
+        // Clear the input
+        document.getElementById('bulkStock').value = '';
+        
+        // Show success message
+        showNotification(`Stock updated for ${selectedCheckboxes.length} variation(s)`, 'success');
+    }
 }
 function generateBulkSKU() {
     const prefix = document.getElementById('bulkSKU').value || 'PROD';
-    document.querySelectorAll('.variation-checkbox:checked').forEach((checkbox, index) => {
-        const row = checkbox.closest('tr');
-        const skuInput = row.querySelector('.sku-input');
-        if (skuInput) {
-            skuInput.value = `${prefix}-${String(index + 1).padStart(3, '0')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-        }
-    });
+    const selectedCheckboxes = document.querySelectorAll('.variation-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one variation');
+        return;
+    }
+    
+    if (confirm(`Generate SKUs with prefix "${prefix}" for ${selectedCheckboxes.length} selected variation(s)?`)) {
+        selectedCheckboxes.forEach((checkbox, index) => {
+            const row = checkbox.closest('tr');
+            const skuInput = row.querySelector('.sku-input');
+            if (skuInput) {
+                const timestamp = Date.now().toString().slice(-4);
+                const randomStr = Math.random().toString(36).substr(2, 4).toUpperCase();
+                skuInput.value = `${prefix}-${String(index + 1).padStart(3, '0')}-${timestamp}-${randomStr}`;
+            }
+        });
+        
+        // Clear the input
+        document.getElementById('bulkSKU').value = '';
+        
+        // Show success message
+        showNotification(`SKUs generated for ${selectedCheckboxes.length} variation(s)`, 'success');
+    }
 }
 function toggleAllVariations() {
     const checkboxes = document.querySelectorAll('.variation-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAll');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
     checkboxes.forEach(cb => cb.checked = !allChecked);
+    selectAllCheckbox.checked = !allChecked;
+    
     updateBulkActions();
+    
+    const selectedCount = document.querySelectorAll('.variation-checkbox:checked').length;
+    const action = !allChecked ? 'Selected' : 'Deselected';
+    showNotification(`${action} ${selectedCount} variation(s)`, 'info');
 }
 function removeAllVariations() {
-    if (confirm('Are you sure you want to remove all selected variations?')) {
-        document.querySelectorAll('.variation-checkbox:checked').forEach(checkbox => {
-            removeVariation(checkbox.closest('tr').querySelector('.btn-outline-danger'));
+    const selectedCheckboxes = document.querySelectorAll('.variation-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one variation to remove');
+        return;
+    }
+    
+    const totalVariations = document.querySelectorAll('.variation-checkbox').length;
+    if (selectedCheckboxes.length === totalVariations) {
+        alert('Cannot remove all variations. At least one variation must remain.');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to remove ${selectedCheckboxes.length} selected variation(s)? This action cannot be undone.`)) {
+        selectedCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            row.remove();
         });
+        
+        updateStats();
+        updateBulkActions();
+        
+        // Update select all checkbox
+        const remainingCheckboxes = document.querySelectorAll('.variation-checkbox');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        selectAllCheckbox.checked = false;
+        
+        showNotification(`Removed ${selectedCheckboxes.length} variation(s)`, 'warning');
     }
 }
 function toggleAllRows() {
@@ -500,7 +653,30 @@ function toggleAllRows() {
 }
 function updateBulkActions() {
     const selected = document.querySelectorAll('.variation-checkbox:checked').length;
-    // Update UI to show how many are selected
+    const total = document.querySelectorAll('.variation-checkbox').length;
+    
+    // Update select all checkbox state
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selected === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (selected === total) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+    
+    // Update bulk action buttons state
+    const bulkButtons = document.querySelectorAll('#bulkPrice + button, #bulkStock + button, #bulkSKU + button');
+    bulkButtons.forEach(button => {
+        button.disabled = selected === 0;
+        if (selected > 0) {
+            button.textContent = button.textContent.replace(/to \w+/, `to Selected (${selected})`);
+        } else {
+            button.textContent = button.textContent.replace(/to Selected.*/, 'to Selected');
+        }
+    });
 }
 function removeVariation(button) {
     if (confirm('Remove this variation?')) {
@@ -688,6 +864,89 @@ function formatFileSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Duplicate selected variations
+function duplicateSelected() {
+    const selectedCheckboxes = document.querySelectorAll('.variation-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one variation to duplicate');
+        return;
+    }
+    
+    if (confirm(`Duplicate ${selectedCheckboxes.length} selected variation(s)?`)) {
+        const tbody = document.getElementById('variationsTableBody');
+        let duplicatedCount = 0;
+        
+        selectedCheckboxes.forEach(checkbox => {
+            const originalRow = checkbox.closest('tr');
+            const newRow = originalRow.cloneNode(true);
+            
+            // Update the variation index for the new row
+            const currentRows = tbody.querySelectorAll('tr').length;
+            const newIndex = currentRows;
+            
+            // Update all input names and IDs
+            const inputs = newRow.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.name && input.name.includes('[')) {
+                    input.name = input.name.replace(/\[\d+\]/, `[${newIndex}]`);
+                }
+                if (input.id && input.id.includes('_')) {
+                    input.id = input.id.replace(/_\d+/, `_${newIndex}`);
+                }
+                
+                // Clear the checkbox state and add "COPY" to SKU
+                if (input.type === 'checkbox' && input.classList.contains('variation-checkbox')) {
+                    input.checked = false;
+                } else if (input.classList.contains('sku-input') && input.value) {
+                    input.value = input.value + '-COPY';
+                }
+            });
+            
+            // Update preview div ID
+            const previewDiv = newRow.querySelector('[id^="preview_"]');
+            if (previewDiv) {
+                previewDiv.id = `preview_${newIndex}`;
+            }
+            
+            // Update onclick attributes
+            const fileInput = newRow.querySelector('input[type="file"]');
+            if (fileInput) {
+                fileInput.setAttribute('onchange', `previewVariationImages(this, ${newIndex})`);
+            }
+            
+            tbody.appendChild(newRow);
+            duplicatedCount++;
+        });
+        
+        updateStats();
+        updateBulkActions();
+        
+        showNotification(`Duplicated ${duplicatedCount} variation(s)`, 'success');
+    }
+}
+
+// Show notification helper
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
 }
 </script>
 @endpush

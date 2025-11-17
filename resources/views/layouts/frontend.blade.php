@@ -117,6 +117,54 @@
             box-shadow: none;
         }
         
+        /* Search Suggestions Dropdown */
+        .search-suggestions-dropdown {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .suggestion-item {
+            transition: background-color 0.2s;
+            border-radius: 4px;
+            margin: 1px 0;
+        }
+        
+        .suggestion-item:hover,
+        .suggestion-item.active {
+            background-color: #f8f9fa;
+        }
+        
+        .suggestion-item.cursor-pointer {
+            cursor: pointer;
+        }
+        
+        .suggestion-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.25rem 0;
+        }
+        
+        .suggestion-text {
+            font-size: 0.9rem;
+        }
+        
+        .suggestion-text strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .suggestion-section {
+            border-bottom: 1px solid #f1f1f1;
+            padding-bottom: 0.5rem;
+        }
+        
+        .suggestion-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
         @media (max-width: 768px) {
             .navbar-brand {
                 font-size: 1.2rem;
@@ -170,13 +218,28 @@
                     </li>
                 </ul>
                 
-                <!-- Search Form -->
-                <form class="d-flex me-3" style="min-width: 300px;" action="{{ route('products.search') }}">
-                    <div class="input-group">
-                        <input class="form-control search-box" type="search" name="q" placeholder="Search products..." value="{{ request('q') }}">
+                <!-- Professional Search Form -->
+                <form class="d-flex me-3" style="min-width: 300px;" action="{{ route('search.index') }}" method="GET">
+                    <div class="input-group position-relative">
+                        <input class="form-control search-box" 
+                               type="search" 
+                               name="q" 
+                               id="globalSearchInput"
+                               placeholder="Search products, brands, categories..." 
+                               value="{{ request('q') }}"
+                               autocomplete="off">
                         <button class="btn btn-outline-light" type="submit">
                             <i class="bi bi-search"></i>
                         </button>
+                        
+                        <!-- Search Suggestions Dropdown -->
+                        <div id="searchSuggestions" class="search-suggestions-dropdown position-absolute w-100" style="display: none; top: 100%; left: 0; z-index: 1000;">
+                            <div class="bg-white border border-top-0 rounded-bottom shadow-lg">
+                                <div class="suggestions-content p-2">
+                                    <!-- Dynamic content will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
                 
@@ -316,6 +379,182 @@
     <script src="{{ asset('js/sale-timer.js') }}"></script>
     
     <script>
+        // Professional Search Autocomplete (Amazon/Flipkart style)
+        $(document).ready(function() {
+            let searchTimeout;
+            const searchInput = $('#globalSearchInput');
+            const suggestionsDiv = $('#searchSuggestions');
+            const suggestionsContent = $('.suggestions-content');
+            
+            // Handle search input
+            searchInput.on('input', function() {
+                const query = $(this).val().trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length < 2) {
+                    suggestionsDiv.hide();
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    fetchSuggestions(query);
+                }, 300); // Debounce for 300ms
+            });
+            
+            // Handle search form submission
+            searchInput.closest('form').on('submit', function(e) {
+                const query = searchInput.val().trim();
+                if (query.length < 2) {
+                    e.preventDefault();
+                    toastr.warning('Please enter at least 2 characters to search');
+                    return false;
+                }
+                suggestionsDiv.hide();
+            });
+            
+            // Hide suggestions when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.input-group').length) {
+                    suggestionsDiv.hide();
+                }
+            });
+            
+            // Handle keyboard navigation
+            searchInput.on('keydown', function(e) {
+                const suggestions = suggestionsContent.find('.suggestion-item');
+                const current = suggestions.filter('.active');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (current.length === 0) {
+                        suggestions.first().addClass('active');
+                    } else {
+                        current.removeClass('active');
+                        const next = current.next('.suggestion-item');
+                        if (next.length > 0) {
+                            next.addClass('active');
+                        } else {
+                            suggestions.first().addClass('active');
+                        }
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (current.length === 0) {
+                        suggestions.last().addClass('active');
+                    } else {
+                        current.removeClass('active');
+                        const prev = current.prev('.suggestion-item');
+                        if (prev.length > 0) {
+                            prev.addClass('active');
+                        } else {
+                            suggestions.last().addClass('active');
+                        }
+                    }
+                } else if (e.key === 'Enter') {
+                    const active = suggestions.filter('.active');
+                    if (active.length > 0) {
+                        e.preventDefault();
+                        window.location.href = active.data('url');
+                    }
+                } else if (e.key === 'Escape') {
+                    suggestionsDiv.hide();
+                }
+            });
+            
+            function fetchSuggestions(query) {
+                $.get('{{ route('search.autocomplete') }}', { q: query })
+                    .done(function(data) {
+                        displaySuggestions(data, query);
+                    })
+                    .fail(function() {
+                        suggestionsDiv.hide();
+                    });
+            }
+            
+            function displaySuggestions(suggestions, query) {
+                if (suggestions.length === 0) {
+                    suggestionsDiv.hide();
+                    return;
+                }
+                
+                let html = '';
+                let hasProducts = false;
+                let hasCategories = false;
+                let hasBrands = false;
+                
+                // Group suggestions by type
+                const products = suggestions.filter(s => s.type === 'product');
+                const categories = suggestions.filter(s => s.type === 'category');
+                const brands = suggestions.filter(s => s.type === 'brand');
+                
+                // Products section
+                if (products.length > 0) {
+                    html += '<div class="suggestion-section mb-2">';
+                    html += '<div class="suggestion-header text-muted small fw-bold mb-1">PRODUCTS</div>';
+                    products.forEach(item => {
+                        html += `<div class="suggestion-item d-flex align-items-center p-2 cursor-pointer" data-url="${item.url}">
+                            <i class="bi bi-box me-2 text-primary"></i>
+                            <div class="flex-grow-1">
+                                <div class="suggestion-text">${item.highlight || item.text}</div>
+                                ${item.price ? `<small class="text-success">₹${item.price}</small>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                // Categories section
+                if (categories.length > 0) {
+                    html += '<div class="suggestion-section mb-2">';
+                    html += '<div class="suggestion-header text-muted small fw-bold mb-1">CATEGORIES</div>';
+                    categories.forEach(item => {
+                        html += `<div class="suggestion-item d-flex align-items-center p-2 cursor-pointer" data-url="${item.url}">
+                            <i class="bi bi-grid me-2 text-warning"></i>
+                            <div class="suggestion-text">${item.highlight || item.text}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                // Brands section
+                if (brands.length > 0) {
+                    html += '<div class="suggestion-section mb-2">';
+                    html += '<div class="suggestion-header text-muted small fw-bold mb-1">BRANDS</div>';
+                    brands.forEach(item => {
+                        html += `<div class="suggestion-item d-flex align-items-center p-2 cursor-pointer" data-url="${item.url}">
+                            <i class="bi bi-award me-2 text-info"></i>
+                            <div class="suggestion-text">${item.highlight || item.text}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                // View all results option
+                html += `<div class="suggestion-section border-top pt-2">
+                    <div class="suggestion-item d-flex align-items-center p-2 cursor-pointer text-primary fw-bold" data-url="{{ route('search.index') }}?q=${encodeURIComponent(query)}">
+                        <i class="bi bi-search me-2"></i>
+                        <div>View all results for "${query}"</div>
+                    </div>
+                </div>`;
+                
+                suggestionsContent.html(html);
+                suggestionsDiv.show();
+                
+                // Handle suggestion clicks
+                suggestionsContent.find('.suggestion-item').on('click', function() {
+                    window.location.href = $(this).data('url');
+                });
+                
+                // Handle hover
+                suggestionsContent.find('.suggestion-item').on('mouseenter', function() {
+                    suggestionsContent.find('.suggestion-item').removeClass('active');
+                    $(this).addClass('active');
+                }).on('mouseleave', function() {
+                    $(this).removeClass('active');
+                });
+            }
+        });
        
         // Initialize toastr
         if (typeof toastr !== 'undefined') {

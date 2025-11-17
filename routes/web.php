@@ -303,8 +303,13 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::post('/address/{address}/set-default', [FrontCheckout::class, 'setDefaultAddress'])->name('address.set_default');
 });
 
-// Public search route (doesn't require authentication)
-Route::get('/search', [FrontSearch::class, 'autocomplete'])->name('products.search');
+// Professional Search System Routes (Amazon/Flipkart style)
+Route::get('/search', [FrontSearch::class, 'index'])->name('search.index');
+Route::get('/search/results', [FrontSearch::class, 'results'])->name('search.results'); // AJAX search results
+Route::get('/search/autocomplete', [FrontSearch::class, 'autocomplete'])->name('search.autocomplete');
+Route::get('/search/suggestions', [FrontSearch::class, 'suggestions'])->name('search.suggestions');
+Route::get('/search/filters', [FrontSearch::class, 'filters'])->name('search.filters');
+Route::post('/search/track', [FrontSearch::class, 'trackSearch'])->name('search.track');
 
 // Sales routes (public access)
 Route::prefix('sales')->name('sales.')->group(function () {

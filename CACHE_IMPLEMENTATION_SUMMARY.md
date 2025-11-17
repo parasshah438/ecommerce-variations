@@ -88,9 +88,9 @@ REDIS_PORT=6379
 ## 🎯 **Production Deployment Steps**
 
 ### **Option 1: Keep Current Setup (Recommended)**
-1. Upload your code to production
-2. Run: `php artisan migrate` (creates cache table)
-3. Run: `php artisan config:cache`
+1. Upload your cache-related code to production
+2. Run: `php artisan config:cache` (cache configuration)
+3. **Optional**: Run `php artisan migrate` (only if cache table doesn't exist)
 4. ✅ **Done!** Cache will work automatically
 
 ### **Option 2: Upgrade to Redis (For High Traffic)**
@@ -117,14 +117,32 @@ php test_cache.php          # Run cache tests
 
 ## 🔧 **Cache Management**
 
-### **Clear Specific Caches**
+### **Smart Cache Invalidation (Recommended)**
 ```php
-// Clear similar products for a specific product
-Cache::forget("similar_products_{$productId}_{$category}_{$brand}");
+// Auto-clear caches when product is updated
+\App\Services\ProductCacheService::clearProductCaches($productId, $categoryId, $brandId);
 
-// Clear all category caches
-Cache::flush(); // Use carefully - clears everything!
+// Clear specific cache patterns
+Cache::forget("similar_products_{$productId}_{$category}_{$brand}");
+Cache::forget("category_{$categoryId}_subcategories");
 ```
+
+### **Manual Cache Clearing (When Needed)**
+```bash
+# ✅ GOOD: Clear only application cache, rebuild config
+php artisan cache:clear && php artisan config:cache
+
+# ❌ AVOID: Clearing config unnecessarily  
+php artisan config:clear && php artisan cache:clear && php artisan config:cache
+```
+
+### **Admin Interface (Best for Production)**
+```url
+https://yourdomain.com/admin/cache
+```
+- Selective cache clearing
+- Real-time statistics
+- Audit logging
 
 ### **Monitor Cache Performance**
 ```php
@@ -145,7 +163,9 @@ DB::table('cache')->count()
 - ✅ All cache keys properly structured
 - ✅ Reasonable cache durations set
 
-**Just upload to production and run `php artisan migrate` + `php artisan config:cache`**
+**Just upload cache code to production and run `php artisan config:cache`**
+
+*Only run `php artisan migrate` if cache table doesn't exist in production DB.*
 
 No additional changes needed unless you want to upgrade to Redis for higher performance.
 

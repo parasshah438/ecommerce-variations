@@ -2101,6 +2101,38 @@
             showToast(`Filter "${filterName}" ${element.classList.contains('active') ? 'applied' : 'removed'}`, 'info');
         }
 
+        // Perform search - Professional redirect to products page
+        function performSearch(query, type) {
+            if (!query.trim()) return;
+            
+            // Build search URL with professional parameters
+            const searchParams = new URLSearchParams();
+            searchParams.set('q', query.trim());
+            
+            // Add type-specific parameters for better filtering
+            if (type) {
+                switch(type) {
+                    case 'category':
+                        // Will be handled by ProductSearchService
+                        searchParams.set('search_type', 'category');
+                        break;
+                    case 'brand':
+                        searchParams.set('search_type', 'brand');
+                        break;
+                    case 'product':
+                        searchParams.set('search_type', 'product');
+                        break;
+                }
+            }
+            
+            // Show loading state
+            showToast(`Searching for "${query}"...`, 'info');
+            
+            // Redirect to professional search results
+            const searchUrl = '{{ route("products.index") }}?' + searchParams.toString();
+            window.location.href = searchUrl;
+        }
+
         // Highlight matching text
         function highlightMatch(text, query) {
             if (!query) return text;
