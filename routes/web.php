@@ -229,6 +229,7 @@ Route::get('/products/filter', [FrontProduct::class, 'index'])->name('products.f
 Route::get('/products/load-more', [FrontProduct::class, 'loadMore'])->name('products.load_more');
 Route::get('/new-arrivals', [FrontProduct::class, 'index'])->name('products.new_arrivals');
 Route::get('/new-arrivals/filter', [FrontProduct::class, 'index'])->name('products.new_arrivals.filter');
+Route::get('/product-search', [FrontProduct::class, 'searchProducts'])->name('products.search');
 Route::get('/category/{slug}', [FrontProduct::class, 'categoryProducts'])->name('category.products');
 Route::get('/products/{slug}', [FrontProduct::class, 'show'])->name('products.show');
 
