@@ -330,7 +330,18 @@ Route::prefix('sales')->name('sales.')->group(function () {
 // Include admin routes
 require __DIR__.'/admin.php';
 
-// Test checkout route (remove in production)
+// Admin Users Routes
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Users Management Routes - Specific routes first, then resource routes
+    Route::prefix('users')->name('users.')->group(function() {
+        Route::get('debug', [App\Http\Controllers\Admin\UserController::class, 'debug'])->name('debug');
+        Route::get('statistics', [App\Http\Controllers\Admin\UserController::class, 'getStatistics'])->name('statistics');
+        Route::post('bulk-delete', [App\Http\Controllers\Admin\UserController::class, 'bulkDelete'])->name('bulk-delete');
+        Route::post('bulk-update-status', [App\Http\Controllers\Admin\UserController::class, 'bulkUpdateStatus'])->name('bulk-update-status');
+        Route::get('api', [App\Http\Controllers\Admin\UserController::class, 'getUsers'])->name('api');
+        Route::patch('{user}/status', [App\Http\Controllers\Admin\UserController::class, 'updateStatus'])->name('update-status');
+    });    Route::resource('users', App\Http\Controllers\Admin\UserController::class);
+});// Test checkout route (remove in production)
 Route::get('/checkout-demo', function () {
     return view('checkout.demo');
 })->name('checkout.demo');

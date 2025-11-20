@@ -1,5 +1,91 @@
 @extends('admin.layout')
 
+@section('page-title', 'Dashboard')
+@section('page-description', 'Welcome to your admin dashboard')
+@section('breadcrumb-section', 'Main')
+@section('breadcrumb-page', 'Dashboard')
+
+@section('content')
+<div class="container-fluid">
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon primary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stats-value">1,245</div>
+                <div class="stats-label">Total Users</div>
+                <div class="stats-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>12% from last month</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon success">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="stats-value">3,567</div>
+                <div class="stats-label">Total Orders</div>
+                <div class="stats-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>8% from last month</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon warning">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stats-value">$45,678</div>
+                <div class="stats-label">Total Revenue</div>
+                <div class="stats-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>15% from last month</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-icon danger">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="stats-value">891</div>
+                <div class="stats-label">Products</div>
+                <div class="stats-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>5% from last month</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Message -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-tachometer-alt fa-4x text-primary mb-4"></i>
+                    <h3>Welcome to AdminPro Dashboard</h3>
+                    <p class="text-muted mb-4">Your modern admin panel is ready to use. Navigate through the sidebar to explore all features.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{{ route('admin.users.index') }}" class="btn btn-primary">
+                            <i class="fas fa-users me-2"></i>Manage Users
+                        </a>
+                        <a href="{{ route('admin.demo-forms') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-magic me-2"></i>View Demo Forms
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection@extends('admin.layout')
+
 @section('title', 'Dashboard')
 @section('page-title', 'Dashboard')
 @section('page-description', 'Overview of your e-commerce store')

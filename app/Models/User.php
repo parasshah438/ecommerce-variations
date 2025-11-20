@@ -6,11 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+//use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -28,8 +30,15 @@ class User extends Authenticatable
         'last_login_ip',
         'last_device_info',
         'social_providers',
+        'avatar',
+        'role',
+        'status',
+        'date_of_birth',
+        'address',
+        'city',
+        'country',
+        'bio',
     ];
-
     /**
      * The attributes that should be hidden for serialization.
      *
