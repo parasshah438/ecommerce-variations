@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\ImageOptimizer;
 use App\Models\Product;
 use App\Models\ProductVariation;
 use App\Models\ProductImage;
@@ -54,7 +55,7 @@ class ProductController extends Controller
             'mrp' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
             'variations' => 'nullable|array',
             'variations.*.id' => 'nullable|exists:product_variations,id',
@@ -64,7 +65,7 @@ class ProductController extends Controller
             'variations.*.sku' => 'nullable|string|max:100',
             'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
-            'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
         ]);
 
         try {
@@ -97,13 +98,60 @@ class ProductController extends Controller
             // Handle new product images (add only, not delete)
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $file) {
-                    $path = $file->store('products', 'public');
-                    ProductImage::create([
-                        'product_id' => $product->id,
-                        'path' => $path,
-                        'alt' => $product->name . ' - Image ' . ($index + 1),
-                        'position' => $index,
-                    ]);
+                    try {
+                        // Check file size and use appropriate method
+                        $fileSize = $file->getSize();
+                        $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                        
+                        if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
+                            \Log::info('Using enhanced large file handler', [
+                                'file_name' => $file->getClientOriginalName(),
+                                'file_size' => $fileSize,
+                                'upload_error' => $file->getError()
+                            ]);
+                            
+                            $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'products', [
+                                'quality' => 85,
+                                'maxWidth' => 1600,
+                                'maxHeight' => 1600,
+                                'generateWebP' => true,
+                                'generateThumbnails' => true,
+                                'thumbnailSizes' => [150, 300, 600],
+                                'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
+                            ]);
+                        } else {
+                            $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'products', [
+                                'quality' => 85,
+                                'maxWidth' => 1600,
+                                'maxHeight' => 1600,
+                                'generateWebP' => true,
+                                'generateThumbnails' => true,
+                                'thumbnailSizes' => [150, 300, 600]
+                            ]);
+                        }
+                        
+                        ProductImage::create([
+                            'product_id' => $product->id,
+                            'path' => $optimizationResult['optimized'],
+                            'alt' => $product->name . ' - Image ' . ($index + 1),
+                            'position' => $index,
+                        ]);
+                    } catch (\Exception $e) {
+                        // Final fallback to basic storage
+                        \Log::error('All image processing methods failed, using basic storage: ' . $e->getMessage());
+                        try {
+                            $path = $file->store('products', 'public');
+                            ProductImage::create([
+                                'product_id' => $product->id,
+                                'path' => $path,
+                                'alt' => $product->name . ' - Image ' . ($index + 1),
+                                'position' => $index,
+                            ]);
+                        } catch (\Exception $basicError) {
+                            \Log::error('Even basic storage failed: ' . $basicError->getMessage());
+                            // Continue with other images instead of failing completely
+                        }
+                    }
                 }
             }
 
@@ -157,14 +205,55 @@ class ProductController extends Controller
                     $variationImageKey = "variation_images.{$variationIndex}";
                     if ($request->hasFile($variationImageKey)) {
                         foreach ($request->file($variationImageKey) as $imageIndex => $file) {
-                            $path = $file->store('variations', 'public');
-                            ProductVariationImage::create([
-                                'product_id' => $product->id,
-                                'product_variation_id' => $variation->id,
-                                'path' => $path,
-                                'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
-                                'position' => $imageIndex,
-                            ]);
+                            try {
+                                // Check file size and use appropriate method
+                                $fileSize = $file->getSize();
+                                $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                                
+                                if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
+                                    $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'variations', [
+                                        'quality' => 85,
+                                        'maxWidth' => 800,
+                                        'maxHeight' => 800,
+                                        'generateWebP' => true,
+                                        'generateThumbnails' => true,
+                                        'thumbnailSizes' => [150, 300],
+                                        'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
+                                    ]);
+                                } else {
+                                    $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'variations', [
+                                        'quality' => 85,
+                                        'maxWidth' => 800,
+                                        'maxHeight' => 800,
+                                        'generateWebP' => true,
+                                        'generateThumbnails' => true,
+                                        'thumbnailSizes' => [150, 300]
+                                    ]);
+                                }
+                                
+                                ProductVariationImage::create([
+                                    'product_id' => $product->id,
+                                    'product_variation_id' => $variation->id,
+                                    'path' => $optimizationResult['optimized'],
+                                    'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
+                                    'position' => $imageIndex,
+                                ]);
+                            } catch (\Exception $e) {
+                                // Final fallback to basic storage
+                                \Log::error('All variation image processing methods failed, using basic storage: ' . $e->getMessage());
+                                try {
+                                    $path = $file->store('variations', 'public');
+                                    ProductVariationImage::create([
+                                        'product_id' => $product->id,
+                                        'product_variation_id' => $variation->id,
+                                        'path' => $path,
+                                        'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
+                                        'position' => $imageIndex,
+                                    ]);
+                                } catch (\Exception $basicError) {
+                                    \Log::error('Even basic variation image storage failed: ' . $basicError->getMessage());
+                                }
+                            }
                         }
                     }
                 }
@@ -255,7 +344,7 @@ class ProductController extends Controller
             'stock_quantity' => 'nullable|integer|min:0',
             
             // Main product images
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             
             // Product video
             'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
@@ -270,7 +359,7 @@ class ProductController extends Controller
             'variations.*.min_qty' => 'nullable|integer|min:1',
             
             // Variation images
-            'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
         ]);
 
         try {
@@ -298,14 +387,53 @@ class ProductController extends Controller
             // Handle main product images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $file) {
-                    $path = $file->store('products', 'public');
-                    
-                    ProductImage::create([
-                        'product_id' => $product->id,
-                        'path' => $path,
-                        'alt' => $product->name . ' - Image ' . ($index + 1),
-                        'position' => $index,
-                    ]);
+                    try {
+                        // Check file size and use appropriate method
+                        $fileSize = $file->getSize();
+                        $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                        
+                        if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
+                            $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'products', [
+                                'quality' => 85,
+                                'maxWidth' => 1600,
+                                'maxHeight' => 1600,
+                                'generateWebP' => true,
+                                'generateThumbnails' => true,
+                                'thumbnailSizes' => [150, 300, 600],
+                                'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
+                            ]);
+                        } else {
+                            $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'products', [
+                                'quality' => 85,
+                                'maxWidth' => 1600,
+                                'maxHeight' => 1600,
+                                'generateWebP' => true,
+                                'generateThumbnails' => true,
+                                'thumbnailSizes' => [150, 300, 600]
+                            ]);
+                        }
+                        
+                        ProductImage::create([
+                            'product_id' => $product->id,
+                            'path' => $optimizationResult['optimized'],
+                            'alt' => $product->name . ' - Image ' . ($index + 1),
+                            'position' => $index,
+                        ]);
+                    } catch (\Exception $e) {
+                        // Final fallback to basic storage
+                        \Log::error('All image processing methods failed, using basic storage: ' . $e->getMessage());
+                        try {
+                            $path = $file->store('products', 'public');
+                            ProductImage::create([
+                                'product_id' => $product->id,
+                                'path' => $path,
+                                'alt' => $product->name . ' - Image ' . ($index + 1),
+                                'position' => $index,
+                            ]);
+                        } catch (\Exception $basicError) {
+                            \Log::error('Even basic storage failed: ' . $basicError->getMessage());
+                        }
+                    }
                 }
             }
 
@@ -336,15 +464,55 @@ class ProductController extends Controller
                     $variationImageKey = "variation_images.{$variationIndex}";
                     if ($request->hasFile($variationImageKey)) {
                         foreach ($request->file($variationImageKey) as $imageIndex => $file) {
-                            $path = $file->store('variations', 'public');
-                            
-                            ProductVariationImage::create([
-                                'product_id' => $product->id,
-                                'product_variation_id' => $variation->id,
-                                'path' => $path,
-                                'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
-                                'position' => $imageIndex,
-                            ]);
+                            try {
+                                // Check file size and use appropriate method
+                                $fileSize = $file->getSize();
+                                $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                                
+                                if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
+                                    $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'variations', [
+                                        'quality' => 85,
+                                        'maxWidth' => 800,
+                                        'maxHeight' => 800,
+                                        'generateWebP' => true,
+                                        'generateThumbnails' => true,
+                                        'thumbnailSizes' => [150, 300],
+                                        'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
+                                    ]);
+                                } else {
+                                    $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'variations', [
+                                        'quality' => 85,
+                                        'maxWidth' => 800,
+                                        'maxHeight' => 800,
+                                        'generateWebP' => true,
+                                        'generateThumbnails' => true,
+                                        'thumbnailSizes' => [150, 300]
+                                    ]);
+                                }
+                                
+                                ProductVariationImage::create([
+                                    'product_id' => $product->id,
+                                    'product_variation_id' => $variation->id,
+                                    'path' => $optimizationResult['optimized'],
+                                    'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
+                                    'position' => $imageIndex,
+                                ]);
+                            } catch (\Exception $e) {
+                                // Final fallback to basic storage
+                                \Log::error('All variation image processing methods failed, using basic storage: ' . $e->getMessage());
+                                try {
+                                    $path = $file->store('variations', 'public');
+                                    ProductVariationImage::create([
+                                        'product_id' => $product->id,
+                                        'product_variation_id' => $variation->id,
+                                        'path' => $path,
+                                        'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
+                                        'position' => $imageIndex,
+                                    ]);
+                                } catch (\Exception $basicError) {
+                                    \Log::error('Even basic variation image storage failed: ' . $basicError->getMessage());
+                                }
+                            }
                         }
                     }
                     

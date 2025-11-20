@@ -9,20 +9,38 @@
                     $productImage = $product->images->first();
                     $selectedImage = $variationImage ?? $productImage;
                     
-                    // Handle both external URLs and local paths
+                    // Use optimized image URLs with fallback
                     $img = null;
+                    $webpImg = null;
+                    $thumbnailImg = null;
+                    
                     if ($selectedImage) {
-                        $img = str_starts_with($selectedImage->path, 'http') 
-                            ? $selectedImage->path 
-                            : asset('storage/' . $selectedImage->path);
+                        if (str_starts_with($selectedImage->path, 'http')) {
+                            $img = $selectedImage->path; // External URL
+                        } else {
+                            $img = $selectedImage->getOptimizedImageUrl();
+                            $webpImg = $selectedImage->getWebPUrl();
+                            $thumbnailImg = $selectedImage->getThumbnailUrl();
+                        }
                     }
                 @endphp
                 @if($img)
-                    <img src="{{$img}}" 
+                    @if($webpImg && $thumbnailImg)
+                    <picture>
+                        <source srcset="{{ $webpImg }}" type="image/webp">
+                        <img src="{{ $img }}" 
+                             class="card-img-top product-image" 
+                             style="height:250px;object-fit:fill;background-color:#f8f9fa;"
+                             alt="{{ $product->name }}"
+                             loading="lazy">
+                    </picture>
+                    @else
+                    <img src="{{ $img }}" 
                          class="card-img-top product-image" 
                          style="height:250px;object-fit:fill;background-color:#f8f9fa;"
                          alt="{{ $product->name }}"
                          loading="lazy">
+                    @endif
                 @else
                     <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:250px;">
                         <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>

@@ -306,7 +306,7 @@ class CartController extends Controller
                 'sku' => $savedItem->productVariation->sku ?? '',
                 'price' => '₹' . number_format($savedItem->price, 2) . ' × ' . $savedItem->quantity,
                 'image_url' => $savedItem->productVariation->product->images->first() 
-                    ? \Illuminate\Support\Facades\Storage::url($savedItem->productVariation->product->images->first()->path) 
+                    ? $savedItem->productVariation->product->images->first()->getOptimizedImageUrl() 
                     : null,
                 'alt_text' => $savedItem->productVariation->product->name ?? '',
                 'quantity' => $savedItem->quantity
@@ -390,7 +390,7 @@ class CartController extends Controller
                     'price' => '₹' . number_format($cartItem->price, 2),
                     'quantity' => $cartItem->quantity,
                     'image_url' => $cartItem->productVariation->product->images->first() 
-                        ? \Illuminate\Support\Facades\Storage::url($cartItem->productVariation->product->images->first()->path) 
+                        ? $cartItem->productVariation->product->images->first()->getOptimizedImageUrl() 
                         : null,
                     'alt_text' => $cartItem->productVariation->product->name ?? '',
                     'stock' => optional($cartItem->productVariation->stock)->quantity ?? 0

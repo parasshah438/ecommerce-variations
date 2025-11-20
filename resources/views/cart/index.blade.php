@@ -49,18 +49,13 @@
                                                 $image = $item->productVariation?->images->first() ?? $product?->images->first();
                                             @endphp
                                             @if($image)
-                                                <!-- Debug: {{ $image->path }} -->
-                                                @php
-                                                    // Check if it's an external URL or local path
-                                                    $imageSrc = str_starts_with($image->path, 'http') 
-                                                        ? $image->path 
-                                                        : asset('storage/' . $image->path);
-                                                @endphp
-                                                <img src="{{ $imageSrc }}" 
+                                                <!-- Using optimized image URL -->
+                                                <img src="{{ $image->getOptimizedImageUrl() }}" 
                                                      class="img-fluid rounded" 
                                                      alt="{{ $product->name }}"
                                                      style="aspect-ratio: 1; object-fit: cover;"
-                                                     onerror="console.log('Save-for-later image failed:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                     loading="lazy"
+                                                     onerror="console.log('Save-for-later optimized image failed:', this.src); this.src='{{ $image->image_url }}'; this.onerror=function(){this.style.display='none'; this.nextElementSibling.style.display='flex';}">
                                                 <div class="bg-secondary rounded align-items-center justify-content-center" style="aspect-ratio: 1; display: none;">
                                                     <i class="bi bi-image text-white"></i>
                                                     <small class="text-white">No image</small>
@@ -141,19 +136,13 @@
                                             $image = $item->productVariation?->images->first() ?? $product?->images->first();
                                         @endphp
                                         @if($image)
-                                            <!-- Debug: {{ $image->path }} -->
-                                            @php
-                                                // Check if it's an external URL or local path
-                                                $imageSrc = str_starts_with($image->path, 'http') 
-                                                    ? $image->path 
-                                                    : asset('storage/' . $image->path);
-                                            @endphp
-                                            <!-- Debug full URL: {{ $imageSrc }} -->
-                                            <img src="{{ $imageSrc }}" 
+                                            <!-- Using optimized image URL (WebP if available) -->
+                                            <img src="{{ $image->getOptimizedImageUrl() }}" 
                                                  class="img-fluid rounded shadow-sm" 
                                                  alt="{{ $product->name }}"
                                                  style="aspect-ratio: 1; object-fit: cover;"
-                                                 onerror="console.log('Image failed to load:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                 loading="lazy"
+                                                 onerror="console.log('Optimized image failed:', this.src); this.src='{{ $image->image_url }}'; this.onerror=function(){this.style.display='none'; this.nextElementSibling.style.display='flex';}">
                                             <div class="bg-light rounded align-items-center justify-content-center shadow-sm" style="aspect-ratio: 1; display: none;">
                                                 <i class="bi bi-image text-muted fs-1"></i>
                                                 <small class="text-muted">Image not found</small>

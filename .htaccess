@@ -1,0 +1,27 @@
+# PHP Configuration Override for Upload Limits
+php_value upload_max_filesize 50M
+php_value post_max_size 100M
+php_value memory_limit 512M
+php_value max_execution_time 300
+php_value max_file_uploads 50
+php_value max_input_vars 3000
+php_value max_input_time 300
+
+# Optional: Enable error display for debugging
+# php_flag display_errors On
+# php_flag log_errors On
+
+# Rewrite rules for Laravel (if accessed from root)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Handle requests to public folder
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ public/$1 [L]
+    
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>

@@ -8,6 +8,9 @@
 <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="productForm">
     @csrf
     
+    <!-- Upload Alerts and Messages -->
+    @include('admin.products.partials.upload-alerts')
+    
     <div class="row">
         <!-- Basic Product Information -->
         <div class="col-lg-8">

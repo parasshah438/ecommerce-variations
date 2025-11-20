@@ -32,15 +32,13 @@
                     $image = $variationImage ?? $productImage;
                 @endphp
                 @if($image)
-                    @php
-                        $imageSrc = str_starts_with($image->path, 'http') 
-                            ? $image->path 
-                            : Storage::url($image->path);
-                    @endphp
-                    <img src="{{ $imageSrc }}" 
+                    <!-- Using optimized image URL (WebP if available) -->
+                    <img src="{{ $image->getOptimizedImageUrl() }}" 
                          class="card-img-top" 
                          alt="{{ $item->product->name }}"
-                         style="height: 200px; object-fit: cover;">
+                         style="height: 200px; object-fit: cover;"
+                         loading="lazy"
+                         onerror="console.log('Wishlist optimized image failed:', this.src); this.src='{{ $image->image_url }}'; this.onerror=function(){this.src='{{ asset('images/product-placeholder.jpg') }}';}">
                 @else
                     <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
                         <i class="bi bi-image text-muted fs-1"></i>

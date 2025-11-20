@@ -205,6 +205,10 @@
                             <i class="bi bi-list me-1"></i>Categories
                         </a>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('categories.all') }}">
+                                <i class="fas fa-sitemap me-2"></i>All Categories
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <!-- Add dynamic categories here -->
                             <li><a class="dropdown-item" href="#">Electronics</a></li>
                             <li><a class="dropdown-item" href="#">Clothing</a></li>

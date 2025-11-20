@@ -376,18 +376,22 @@ class ProductController extends Controller
             return $group->map(function ($img) {
                 return [
                     'id' => $img->id,
-                    'path' => \Illuminate\Support\Facades\Storage::url($img->path),
+                    'path' => $img->getOptimizedImageUrl(),
+                    'webp_path' => $img->getWebPUrl(),
+                    'thumbnail_url' => $img->getThumbnailUrl(),
                     'position' => $img->position,
                     'alt' => $img->alt
                 ];
             })->values();
         })->toArray();
 
-        // Product-level images with asset URLs (already eager loaded)
+        // Product-level images with optimized URLs (already eager loaded)
         $productImages = $product->images->map(function ($i) {
             return [
                 'id' => $i->id, 
-                'path' => \Illuminate\Support\Facades\Storage::url($i->path), 
+                'path' => $i->getOptimizedImageUrl(), 
+                'webp_path' => $i->getWebPUrl(),
+                'thumbnail_url' => $i->getThumbnailUrl(),
                 'position' => $i->position,
                 'alt' => $i->alt
             ];
@@ -1328,6 +1332,34 @@ class ProductController extends Controller
         }
         
         return view('products.search', compact('products', 'categories', 'brands', 'sizes', 'colors', 'priceRange', 'searchQuery'));
+    }
+
+    /**
+     * Display all categories in tree structure
+     */
+    public function allCategories()
+    {
+        // Get all categories with their children and products count
+        $categories = \App\Models\Category::with([
+            'children' => function($query) {
+                $query->where('is_active', true)
+                      ->withCount('products')
+                      ->with(['children' => function($subQuery) {
+                          $subQuery->where('is_active', true)
+                                   ->withCount('products')
+                                   ->orderBy('name');
+                      }])
+                      ->orderBy('name');
+            },
+            'products' // Load products relationship for main categories
+        ])
+        ->where('parent_id', null)
+        ->where('is_active', true)
+        ->withCount('products')
+        ->orderBy('name')
+        ->get();
+
+        return view('categories.all', compact('categories'));
     }
 
     /**

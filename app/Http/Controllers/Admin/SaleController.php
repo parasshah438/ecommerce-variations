@@ -10,6 +10,7 @@ use App\Models\Brand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\ImageOptimizer;
 
 class SaleController extends Controller
 {
@@ -58,9 +59,35 @@ class SaleController extends Controller
 
         $validated['slug'] = Str::slug($validated['name'] . '-' . time());
 
-        // Handle banner image upload
+        // Handle banner image upload with optimization
         if ($request->hasFile('banner_image')) {
-            $validated['banner_image'] = $request->file('banner_image')->store('sales', 'public');
+            try {
+                $result = ImageOptimizer::optimizeUploadedImage(
+                    $request->file('banner_image'),
+                    'sales',
+                    [
+                        'quality' => 85,
+                        'maxWidth' => 1200,
+                        'maxHeight' => 800,
+                        'generateWebP' => true,
+                        'generateThumbnails' => true,
+                        'thumbnailSizes' => [150, 300, 600]
+                    ]
+                );
+                
+                $validated['banner_image'] = $result['optimized'];
+                
+                \Log::info('Sale banner image optimized successfully', [
+                    'original_size' => $result['original_size'] ?? 'N/A',
+                    'optimized_size' => $result['optimized_size'] ?? 'N/A',
+                    'compression_ratio' => $result['compression_ratio'] ?? 'N/A',
+                    'path' => $result['optimized']
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Sale banner image optimization failed: ' . $e->getMessage());
+                // Fallback to regular upload
+                $validated['banner_image'] = $request->file('banner_image')->store('sales', 'public');
+            }
         }
 
         $sale = Sale::create($validated);
@@ -120,13 +147,52 @@ class SaleController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Handle banner image upload
+        // Handle banner image upload with optimization
         if ($request->hasFile('banner_image')) {
-            // Delete old image
+            // Delete old image and related optimized files
             if ($sale->banner_image) {
                 Storage::disk('public')->delete($sale->banner_image);
+                
+                // Also delete WebP and thumbnail versions if they exist
+                $pathInfo = pathinfo($sale->banner_image);
+                $basePath = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+                
+                // Delete WebP version
+                Storage::disk('public')->delete($basePath . '.webp');
+                
+                // Delete thumbnails
+                foreach ([150, 300, 600] as $size) {
+                    Storage::disk('public')->delete($basePath . '_' . $size . '.' . $pathInfo['extension']);
+                }
             }
-            $validated['banner_image'] = $request->file('banner_image')->store('sales', 'public');
+            
+            try {
+                $result = ImageOptimizer::optimizeUploadedImage(
+                    $request->file('banner_image'),
+                    'sales',
+                    [
+                        'quality' => 85,
+                        'maxWidth' => 1200,
+                        'maxHeight' => 800,
+                        'generateWebP' => true,
+                        'generateThumbnails' => true,
+                        'thumbnailSizes' => [150, 300, 600]
+                    ]
+                );
+                
+                $validated['banner_image'] = $result['optimized'];
+                
+                \Log::info('Sale banner image updated and optimized successfully', [
+                    'original_size' => $result['original_size'] ?? 'N/A',
+                    'optimized_size' => $result['optimized_size'] ?? 'N/A',
+                    'compression_ratio' => $result['compression_ratio'] ?? 'N/A',
+                    'path' => $result['optimized']
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Sale banner image optimization failed during update: ' . $e->getMessage());
+                // Fallback to regular upload
+                $validated['banner_image'] = $request->file('banner_image')->store('sales', 'public');
+            }
         }
 
         $sale->update($validated);
@@ -261,9 +327,21 @@ class SaleController extends Controller
      */
     public function destroy(Sale $sale)
     {
-        // Delete banner image
+        // Delete banner image and all optimized versions
         if ($sale->banner_image) {
             Storage::disk('public')->delete($sale->banner_image);
+            
+            // Also delete WebP and thumbnail versions if they exist
+            $pathInfo = pathinfo($sale->banner_image);
+            $basePath = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+            
+            // Delete WebP version
+            Storage::disk('public')->delete($basePath . '.webp');
+            
+            // Delete thumbnails
+            foreach ([150, 300, 600] as $size) {
+                Storage::disk('public')->delete($basePath . '_' . $size . '.' . $pathInfo['extension']);
+            }
         }
 
         $sale->delete();
