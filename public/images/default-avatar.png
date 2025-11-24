@@ -1,0 +1,1 @@
+This would be a default avatar image file. Since I cannot create binary files, you should place a default avatar image at public/images/default-avatar.png or update the avatar references to use a placeholder service like https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff

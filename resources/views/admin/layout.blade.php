@@ -1034,17 +1034,21 @@
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Users</div>
+                    <div class="nav-section-title">User Management</div>
                     <div class="nav-item">
-                        <a class="nav-link" href="#" data-keywords="clients users buyers consumers members">
+                        <a class="nav-link {{ request()->routeIs('admin.users*') ? 'active' : '' }}" 
+                           href="{{ route('admin.users.index') }}" 
+                           data-keywords="users management members customers clients admin">
                             <i class="nav-icon fas fa-users"></i>
-                            <span class="nav-text">Customers</span>
+                            <span class="nav-text">All Users</span>
                         </a>
                     </div>
                     <div class="nav-item">
-                        <a class="nav-link" href="#" data-keywords="administrators staff managers moderators">
-                            <i class="nav-icon fas fa-user-shield"></i>
-                            <span class="nav-text">Admins</span>
+                        <a class="nav-link {{ request()->routeIs('admin.user-activities*') ? 'active' : '' }}" 
+                           href="{{ route('admin.user-activities.index') }}" 
+                           data-keywords="activity logs history tracking audit">
+                            <i class="nav-icon fas fa-history"></i>
+                            <span class="nav-text">User Activities</span>
                         </a>
                     </div>
                 </div>

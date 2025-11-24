@@ -96,4 +96,80 @@ class User extends Authenticatable
     {
         return $this->mobile_number;
     }
-}
+
+    /**
+     * Get the user's activity logs
+     */
+    public function activities()
+    {
+        return $this->hasMany(User_activity::class);
+    }
+
+    /**
+     * Get the user's country
+     */
+    public function countryRelation()
+    {
+        return $this->belongsTo(Countries::class, 'country_id');
+    }
+
+    /**
+     * Get the user's state
+     */
+    public function stateRelation()
+    {
+        return $this->belongsTo(States::class, 'state_id');
+    }
+
+    /**
+     * Get the user's city
+     */
+    public function cityRelation()
+    {
+        return $this->belongsTo(Cities::class, 'city_id');
+    }
+
+    /**
+     * Get the user's university/institute
+     */
+    public function university()
+    {
+        return $this->belongsTo(University::class, 'institute');
+    }
+
+    /**
+     * Scope to get users by status
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeByRole($query, $role)
+    {
+        return $query->where('role', $role);
+    }
+
+    /**
+     * Get full name attribute
+     */
+    public function getFullNameAttribute()
+    {
+        return $this->name;
+    }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is active
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }}

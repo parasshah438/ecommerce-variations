@@ -10,7 +10,6 @@ use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\WelcomeController;
-
 // Debug Routes
 require __DIR__.'/debug-image-upload.php';
 require __DIR__.'/debug-simple-upload.php';
@@ -310,6 +309,21 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::put('/address/{address}', [FrontCheckout::class, 'updateAddress'])->name('address.update');
     Route::delete('/address/{address}', [FrontCheckout::class, 'deleteAddress'])->name('address.delete');
     Route::post('/address/{address}/set-default', [FrontCheckout::class, 'setDefaultAddress'])->name('address.set_default');
+
+
+
+	// Old admin routes - commented out, now using admin.php routes
+	// Route::get('manage_user','Admincontroller@manage_user');
+	// Route::get('dashboard', 'Admincontroller@index');
+	// Route::get('logout','Admincontroller@logout');
+	// Route::get('user_activity','Admincontroller@user_activity');
+	// Route::get('manage_user_activity','Admincontroller@manage_user_activity');
+
+
+
+
+
+
 });
 
 // Professional Search System Routes (Amazon/Flipkart style)
@@ -330,18 +344,7 @@ Route::prefix('sales')->name('sales.')->group(function () {
 // Include admin routes
 require __DIR__.'/admin.php';
 
-// Admin Users Routes
-Route::prefix('admin')->name('admin.')->group(function () {
-    // Users Management Routes - Specific routes first, then resource routes
-    Route::prefix('users')->name('users.')->group(function() {
-        Route::get('debug', [App\Http\Controllers\Admin\UserController::class, 'debug'])->name('debug');
-        Route::get('statistics', [App\Http\Controllers\Admin\UserController::class, 'getStatistics'])->name('statistics');
-        Route::post('bulk-delete', [App\Http\Controllers\Admin\UserController::class, 'bulkDelete'])->name('bulk-delete');
-        Route::post('bulk-update-status', [App\Http\Controllers\Admin\UserController::class, 'bulkUpdateStatus'])->name('bulk-update-status');
-        Route::get('api', [App\Http\Controllers\Admin\UserController::class, 'getUsers'])->name('api');
-        Route::patch('{user}/status', [App\Http\Controllers\Admin\UserController::class, 'updateStatus'])->name('update-status');
-    });    Route::resource('users', App\Http\Controllers\Admin\UserController::class);
-});// Test checkout route (remove in production)
+//Test checkout route (remove in production)
 Route::get('/checkout-demo', function () {
     return view('checkout.demo');
 })->name('checkout.demo');

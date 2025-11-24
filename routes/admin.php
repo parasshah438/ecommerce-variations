@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\TaxSettingsController;
+use App\Http\Controllers\Admin\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,6 +110,55 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/', [TaxSettingsController::class, 'index'])->name('index');
         Route::put('/', [TaxSettingsController::class, 'update'])->name('update');
         Route::post('/test-calculation', [TaxSettingsController::class, 'testCalculation'])->name('test');
+    });
+
+    // User Management Routes
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}', [UserController::class, 'show'])->name('show');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'delete_user'])->name('destroy');
+        Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/bulk-action', [UserController::class, 'bulkAction'])->name('bulk-action');
+        
+        // AJAX DataTables endpoint
+        Route::post('/data', [UserController::class, 'manage_user'])->name('data');
+        
+        // AJAX CRUD endpoints
+        Route::post('/ajax/view', [UserController::class, 'view_user'])->name('ajax.view');
+        Route::post('/ajax/delete', [UserController::class, 'delete_user'])->name('ajax.delete');
+        Route::post('/ajax/delete-multiple', [UserController::class, 'delete_all_user'])->name('ajax.delete-multiple');
+        Route::post('/ajax/toggle-status', [UserController::class, 'toggleStatus'])->name('ajax.toggle-status');
+        
+        // Export routes
+        Route::get('/{user}/pdf', [UserController::class, 'exportPdf'])->name('pdf');
+        Route::get('/{user}/excel', [UserController::class, 'exportExcel'])->name('excel');
+        Route::get('/export/all', [UserController::class, 'exportAllUsers'])->name('export.all');
+        
+        // User details for printing
+        Route::get('/{user}/details', [UserController::class, 'user_all_details'])->name('details');
+        Route::get('/{user}/details/export', [UserController::class, 'user_all_details_export'])->name('details.export');
+        
+        // Ecommerce-specific routes
+        Route::get('/{user}/ecommerce-details', [UserController::class, 'getEcommerceDetails'])->name('ecommerce.details');
+        Route::get('/{user}/orders', [UserController::class, 'getUserOrders'])->name('orders');
+        Route::get('/{user}/wishlist', [UserController::class, 'getUserWishlist'])->name('wishlist');
+        Route::get('/{user}/cart', [UserController::class, 'getUserCart'])->name('cart');
+        
+        Route::get('/{user}/payments', [UserController::class, 'getUserPayments'])->name('payments');
+        Route::post('/{user}/send-email', [UserController::class, 'sendUserEmail'])->name('send-email');
+    });
+
+    // User Activity Management Routes  
+    Route::prefix('user-activities')->name('user-activities.')->group(function () {
+        Route::get('/', [UserController::class, 'activity_logs'])->name('index');
+        Route::post('/data', [UserController::class, 'manage_activity_logs'])->name('data');
+        Route::post('/view', [UserController::class, 'view_user_activity'])->name('view');
+        Route::post('/delete', [UserController::class, 'delete_user_activity'])->name('delete');
+        Route::post('/delete-multiple', [UserController::class, 'delete_all_user_activity'])->name('delete-multiple');
     });
 
     // Cache Management Routes (Admin Only)
