@@ -1,7 +1,36 @@
-<div class="row">
-    @if($products->count() > 0)
-        @foreach($products as $product)
-            <div class="col-lg-4 col-md-6 mb-4">
+
+
+@if($products->count() > 0)
+    <!-- Summary Stats -->
+    <div class="row mt-4">
+        <div class="col-12 mb-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h5 class="text-primary mb-1">{{ $products->count() }}</h5>
+                            <small class="text-muted">Products Found</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h5 class="text-success mb-1">{{ rand(85, 98) }}%</h5>
+                            <small class="text-muted">AI Confidence</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h5 class="text-info mb-1">₹{{ number_format($products->avg('price'), 0) }}</h5>
+                            <small class="text-muted">Avg Price</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h5 class="text-warning mb-1">{{ $products->where('variations')->count() }}</h5>
+                            <small class="text-muted">With Variations</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach($products as $product)            <div class="col-lg-4 col-md-6 mb-4">
                 <div class="card h-100 product-card shadow-sm">
                     <!-- Product Image -->
                     <div class="position-relative">
@@ -120,81 +149,33 @@
             </div>
         @endforeach
     @else
-        <div class="col-12">
-            <div class="text-center py-5">
-                <i class="fas fa-search fa-4x text-muted mb-3"></i>
-                <h4 class="text-muted">No products found</h4>
-                <p class="text-muted">Try adjusting your preferences to see more results.</p>
-                <button type="button" class="btn btn-outline-primary" onclick="$('#resetForm').click();">
-                    <i class="fas fa-redo me-2"></i>Reset Preferences
-                </button>
-            </div>
-        </div>
-    @endif
-</div>
-
-@if($products->count() > 0)
-    <!-- Summary Stats -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card bg-light">
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3">
-                            <h5 class="text-primary mb-1">{{ $products->count() }}</h5>
-                            <small class="text-muted">Products Found</small>
-                        </div>
-                        <div class="col-md-3">
-                            <h5 class="text-success mb-1">{{ rand(85, 98) }}%</h5>
-                            <small class="text-muted">AI Confidence</small>
-                        </div>
-                        <div class="col-md-3">
-                            <h5 class="text-info mb-1">₹{{ number_format($products->avg('price'), 0) }}</h5>
-                            <small class="text-muted">Avg Price</small>
-                        </div>
-                        <div class="col-md-3">
-                            <h5 class="text-warning mb-1">{{ $products->where('variations')->count() }}</h5>
-                            <small class="text-muted">With Variations</small>
-                        </div>
-                    </div>
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No products found</h4>
+            <p class="text-muted mb-4">
+                We couldn't find any products matching your specific preferences. <br>
+                Try adjusting your selections or resetting your preferences to see more results.
+            </p>
+            
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <button type="button" class="btn btn-outline-primary me-2" onclick="$('#resetForm').click();">
+                        <i class="fas fa-redo me-2"></i>Reset Preferences
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <a href="{{ route('products.index') }}" class="btn btn-primary">
+                        <i class="fas fa-shopping-bag me-2"></i>Browse All Products
+                    </a>
                 </div>
             </div>
+            
+            <div class="mt-4">
+                <small class="text-muted">
+                    <strong>Tips:</strong> Try selecting fewer filters, different color combinations, or broader size ranges
+                </small>
+            </div>
         </div>
-    </div>
-@endif
-
-<script>
-// Wishlist functionality
-$(document).on('click', '.wishlist-btn', function() {
-    const btn = $(this);
-    const productId = btn.data('product-id');
-    const icon = btn.find('i');
-    
-    $.post('{{ route("wishlist.toggle") }}', {
-        product_id: productId,
-        _token: '{{ csrf_token() }}'
-    }, function(response) {
-        if (response.success) {
-            if (response.added) {
-                icon.removeClass('far').addClass('fas text-danger');
-                btn.addClass('btn-danger').removeClass('btn-light');
-            } else {
-                icon.removeClass('fas text-danger').addClass('far');
-                btn.addClass('btn-light').removeClass('btn-danger');
-            }
-        }
-    });
-});
-
-// Quick add to cart
-$(document).on('click', '.add-to-cart-btn', function() {
-    const btn = $(this);
-    const productId = btn.data('product-id');
-    const originalText = btn.html();
-    
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-    
-    // Redirect to product page for variation selection
-    window.location.href = '/products/' + productId + '?quick_add=1';
-});
-</script>
+    </div>@endif
+</div>

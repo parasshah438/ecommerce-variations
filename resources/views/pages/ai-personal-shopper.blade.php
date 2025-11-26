@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="csrf-token-here">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Modern Admin Dashboard</title>
 
     <!-- Fonts -->
@@ -18,6 +18,9 @@
     <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- jQuery (load early to prevent $ is not defined errors) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
 <style>
 :root {
@@ -150,6 +153,41 @@
 
 .quiz-option.selected .option-icon {
     animation: bounce 0.6s ease;
+}
+
+/* Enhanced color circle styles */
+.color-circle {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.quiz-option:hover .color-circle {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+.quiz-option.selected .color-circle {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.3), 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+.quiz-option.selected .color-circle::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Special handling for white color to ensure visibility */
+.color-circle[style*="background-color: #FFFFFF"]::after,
+.color-circle[style*="background-color: #ffffff"]::after {
+    color: #333;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.8);
 }
 
 @keyframes bounce {
@@ -324,6 +362,19 @@
     margin-top: 0.5rem;
 }
 
+/* Size option responsive layout */
+#step-6 .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#step-6 .col-md-4 {
+    flex: 0 0 auto;
+    max-width: 200px;
+    min-width: 150px;
+}
+
 @media (max-width: 768px) {
     .hero-section {
         padding: 80px 0 60px;
@@ -346,13 +397,27 @@
         grid-template-columns: 1fr;
         gap: 1rem;
     }
+
+    /* Responsive size options on mobile */
+    #step-6 .col-md-4 {
+        flex: 0 0 calc(50% - 0.5rem);
+        max-width: calc(50% - 0.5rem);
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    #step-6 .col-md-4 {
+        flex: 0 0 calc(50% - 0.25rem);
+        max-width: calc(50% - 0.25rem);
+    }
 }
 </style>
 
 <div class="hero-section">
     <div class="container position-relative">
         <div class="row justify-content-center text-center">
-            <div class="col-lg-10">
+            <div class="col-lg-12">
                 <div class="ai-icon">
                     <i class="fas fa-robot"></i>
                 </div>
@@ -428,50 +493,73 @@
             <p class="text-center text-muted mb-4">Choose the category that interests you most</p>
             
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div class="quiz-option" data-value="clothing" data-question="category">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-tshirt"></i>
+                @if($categories->count() > 0)
+                    @foreach($categories as $category)
+                        <div class="col-md-6 mb-3">
+                            <div class="quiz-option" data-value="{{ $category->slug }}" data-question="category">
+                                <div class="text-center">
+                                    <div class="option-icon">
+                                        <i class="{{ $category->icon }}"></i>
+                                    </div>
+                                    <h4 class="h5 mb-2">{{ $category->name }}</h4>
+                                    <p class="text-muted mb-0">
+                                        @if($category->description)
+                                            {{ Str::limit($category->description, 50) }}
+                                        @else
+                                            {{ $category->products_count }} {{ Str::plural('product', $category->products_count) }} available
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
-                            <h4 class="h5 mb-2">Clothing</h4>
-                            <p class="text-muted mb-0">T-shirts, shirts, dresses, tops & more</p>
+                        </div>
+                    @endforeach
+                @else
+                    <!-- Fallback to hardcoded categories if no dynamic categories available -->
+                    <div class="col-md-6 mb-3">
+                        <div class="quiz-option" data-value="clothing" data-question="category">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-tshirt"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Clothing</h4>
+                                <p class="text-muted mb-0">T-shirts, shirts, dresses, tops & more</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="quiz-option" data-value="footwear" data-question="category">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-shoe-prints"></i>
+                    <div class="col-md-6 mb-3">
+                        <div class="quiz-option" data-value="footwear" data-question="category">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-shoe-prints"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Footwear</h4>
+                                <p class="text-muted mb-0">Sneakers, boots, heels, sandals & more</p>
                             </div>
-                            <h4 class="h5 mb-2">Footwear</h4>
-                            <p class="text-muted mb-0">Sneakers, boots, heels, sandals & more</p>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="quiz-option" data-value="accessories" data-question="category">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-glasses"></i>
+                    <div class="col-md-6 mb-3">
+                        <div class="quiz-option" data-value="accessories" data-question="category">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-glasses"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Accessories</h4>
+                                <p class="text-muted mb-0">Watches, sunglasses, belts & more</p>
                             </div>
-                            <h4 class="h5 mb-2">Accessories</h4>
-                            <p class="text-muted mb-0">Watches, sunglasses, belts & more</p>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="quiz-option" data-value="bags" data-question="category">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-shopping-bag"></i>
+                    <div class="col-md-6 mb-3">
+                        <div class="quiz-option" data-value="bags" data-question="category">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-shopping-bag"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Bags</h4>
+                                <p class="text-muted mb-0">Handbags, backpacks, clutches & more</p>
                             </div>
-                            <h4 class="h5 mb-2">Bags</h4>
-                            <p class="text-muted mb-0">Handbags, backpacks, clutches & more</p>
                         </div>
                     </div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -640,66 +728,90 @@
             <p class="text-center text-muted mb-4">Select your favorite colors (you can choose multiple)</p>
             
             <div class="row">
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="black" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #2c3e50;">
-                                <i class="fas fa-circle"></i>
+                @if($colors->count() > 0)
+                    @foreach($colors as $color)
+                        <div class="col-md-4 mb-3">
+                            <div class="quiz-option" data-value="{{ $color->value ?? $color->id }}" data-question="colors" data-multi="true">
+                                <div class="text-center">
+                                    <div class="option-icon" style="color: {{ $color->hex_color ?? '#666' }};">
+                                        @if($color->hex_color)
+                                            <!-- Use actual color circle for colors with hex values -->
+                                            <div class="color-circle" 
+                                                 style="width: 40px; height: 40px; border-radius: 50%; background-color: {{ $color->hex_color }}; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                            </div>
+                                        @else
+                                            <!-- Fallback icon for colors without hex values -->
+                                            <i class="fas fa-circle"></i>
+                                        @endif
+                                    </div>
+                                    <h4 class="h5 mb-2 mt-2">{{ $color->value }}</h4>
+                                </div>
                             </div>
-                            <h4 class="h5 mb-2">Black</h4>
+                        </div>
+                    @endforeach
+                @else
+                    <!-- Fallback to hardcoded colors if no dynamic colors available -->
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="black" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #000000; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">Black</h4>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="white" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #ecf0f1;">
-                                <i class="fas fa-circle"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="white" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #FFFFFF; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">White</h4>
                             </div>
-                            <h4 class="h5 mb-2">White</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="blue" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #3498db;">
-                                <i class="fas fa-circle"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="blue" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #3498db; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">Blue</h4>
                             </div>
-                            <h4 class="h5 mb-2">Blue</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="red" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #e74c3c;">
-                                <i class="fas fa-circle"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="red" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #e74c3c; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">Red</h4>
                             </div>
-                            <h4 class="h5 mb-2">Red</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="green" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #27ae60;">
-                                <i class="fas fa-circle"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="green" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #27ae60; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">Green</h4>
                             </div>
-                            <h4 class="h5 mb-2">Green</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="pink" data-question="colors" data-multi="true">
-                        <div class="text-center">
-                            <div class="option-icon" style="color: #e91e63;">
-                                <i class="fas fa-circle"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="pink" data-question="colors" data-multi="true">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <div class="color-circle" style="width: 40px; height: 40px; border-radius: 50%; background-color: #e91e63; border: 2px solid #ddd; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                                </div>
+                                <h4 class="h5 mb-2 mt-2">Pink</h4>
                             </div>
-                            <h4 class="h5 mb-2">Pink</h4>
                         </div>
                     </div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -709,56 +821,101 @@
             <p class="text-center text-muted mb-4">Choose the size that fits you best</p>
             
             <div class="row justify-content-center">
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="S" data-question="size">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-compress-alt"></i>
+                @if($sizes->count() > 0)
+                    @foreach($sizes as $size)
+                        <div class="col-md-4 mb-3">
+                            <div class="quiz-option" data-value="{{ $size->value }}" data-question="size">
+                                <div class="text-center">
+                                    <div class="option-icon">
+                                        <i class="{{ $size->icon ?? 'fas fa-ruler' }}"></i>
+                                    </div>
+                                    <h4 class="h5 mb-2">
+                                        @if(strlen($size->value) <= 3)
+                                            {{ $size->value }}
+                                            @switch(strtoupper($size->value))
+                                                @case('XS')
+                                                    <small class="text-muted">(Extra Small)</small>
+                                                    @break
+                                                @case('S')
+                                                    <small class="text-muted">(Small)</small>
+                                                    @break
+                                                @case('M')
+                                                    <small class="text-muted">(Medium)</small>
+                                                    @break
+                                                @case('L')
+                                                    <small class="text-muted">(Large)</small>
+                                                    @break
+                                                @case('XL')
+                                                    <small class="text-muted">(Extra Large)</small>
+                                                    @break
+                                                @case('XXL')
+                                                    <small class="text-muted">(2XL)</small>
+                                                    @break
+                                                @case('XXXL')
+                                                    <small class="text-muted">(3XL)</small>
+                                                    @break
+                                            @endswitch
+                                        @else
+                                            {{ $size->value }}
+                                        @endif
+                                    </h4>
+                                </div>
                             </div>
-                            <h4 class="h5 mb-2">Small (S)</h4>
+                        </div>
+                    @endforeach
+                @else
+                    <!-- Fallback to hardcoded sizes if no dynamic sizes available -->
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="S" data-question="size">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Small (S)</h4>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="M" data-question="size">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-expand-alt"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="M" data-question="size">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-expand-alt"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Medium (M)</h4>
                             </div>
-                            <h4 class="h5 mb-2">Medium (M)</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="L" data-question="size">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-arrows-alt"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="L" data-question="size">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-arrows-alt"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Large (L)</h4>
                             </div>
-                            <h4 class="h5 mb-2">Large (L)</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="XL" data-question="size">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-arrows-alt-h"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="XL" data-question="size">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-arrows-alt-h"></i>
+                                </div>
+                                <h4 class="h5 mb-2">Extra Large (XL)</h4>
                             </div>
-                            <h4 class="h5 mb-2">Extra Large (XL)</h4>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="quiz-option" data-value="XXL" data-question="size">
-                        <div class="text-center">
-                            <div class="option-icon">
-                                <i class="fas fa-arrows-alt-v"></i>
+                    <div class="col-md-4 mb-3">
+                        <div class="quiz-option" data-value="XXL" data-question="size">
+                            <div class="text-center">
+                                <div class="option-icon">
+                                    <i class="fas fa-arrows-alt-v"></i>
+                                </div>
+                                <h4 class="h5 mb-2">XXL</h4>
                             </div>
-                            <h4 class="h5 mb-2">XXL</h4>
                         </div>
                     </div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -951,15 +1108,24 @@ class AIPersonalShopper {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Response is not JSON. Content-Type: ' + contentType);
+            }
+            return response.json();
+        })
         .then(data => {
             this.displayResults(data);
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Fetch Error:', error);
             this.displayError();
         });
     }
@@ -1010,11 +1176,60 @@ function restartQuiz() {
     }, 500);
 }
 
-// Initialize the quiz when page loads
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize when DOM is ready
+$(document).ready(function() {
+    // Initialize the AI Personal Shopper quiz
     window.aiShopper = new AIPersonalShopper();
+    
+    // Wishlist functionality - moved from partial view
+    $(document).on('click', '.wishlist-btn', function() {
+        const btn = $(this);
+        const productId = btn.data('product-id');
+        const icon = btn.find('i');
+        
+        // Check if user is authenticated
+        @guest
+            alert('Please login to add items to wishlist');
+            return;
+        @endguest
+        
+        $.post('/wishlist/toggle', {
+            product_id: productId,
+            _token: $('meta[name="csrf-token"]').attr('content')
+        }, function(response) {
+            if (response.success) {
+                if (response.added) {
+                    icon.removeClass('far').addClass('fas text-danger');
+                    btn.addClass('btn-danger').removeClass('btn-light');
+                } else {
+                    icon.removeClass('fas text-danger').addClass('far');
+                    btn.addClass('btn-light').removeClass('btn-danger');
+                }
+            }
+        }).fail(function() {
+            console.error('Wishlist operation failed');
+        });
+    });
+
+    // Quick add to cart functionality - moved from partial view
+    $(document).on('click', '.add-to-cart-btn', function() {
+        const btn = $(this);
+        const productId = btn.data('product-id');
+        const originalText = btn.html();
+        
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        // Redirect to product page for variation selection
+        window.location.href = '/products/' + productId + '?quick_add=1';
+    });
 });
 </script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Toastr JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 </body>
 
 </html>
