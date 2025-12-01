@@ -74,15 +74,6 @@ return [
         'redirect' => env('APP_URL') . '/auth/twitter/callback',
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Payment Gateway Services
-    |--------------------------------------------------------------------------
-    |
-    | Configuration for payment gateways
-    |
-    */
-
     'razorpay' => [
         'key' => env('RAZORPAY_KEY'),
         'secret' => env('RAZORPAY_SECRET'),
@@ -90,4 +81,7 @@ return [
         'skip_ssl_verification' => env('RAZORPAY_SKIP_SSL_VERIFICATION', false),
     ],
 
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+    ],
 ];

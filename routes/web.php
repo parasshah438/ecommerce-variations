@@ -22,6 +22,16 @@ Route::get('/location-integration', function () {
     return view('location-integration');
 })->name('location.integration');
 
+//chatbot
+Route::post('chatbot/chat', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chatbot.chat');
+Route::get('chatbot/suggestions', [App\Http\Controllers\ChatbotController::class, 'getSuggestedQuestions'])->name('chatbot.suggestions');
+Route::post('chatbot/search-products', [App\Http\Controllers\ChatbotController::class, 'searchProducts'])->name('chatbot.search_products');
+Route::post('chatbot/product-details', [App\Http\Controllers\ChatbotController::class, 'getProductDetails'])->name('chatbot.product_details');
+Route::get('chatbot',
+    function() { 
+        return view('chatbot');
+    })->name('chatbot.index');
+
 // Postal Code Validation Routes
 Route::get('/postal-code-checker', [App\Http\Controllers\PostalCodeController::class, 'index'])->name('postal.code.checker');
 Route::post('/api/validate-postal-code', [App\Http\Controllers\PostalCodeController::class, 'validatePostalCode'])->name('api.validate.postal.code');
