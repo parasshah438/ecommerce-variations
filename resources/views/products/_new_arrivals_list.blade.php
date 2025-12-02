@@ -112,4 +112,8 @@
         </div>
     </div>
     @endforeach
+    @else
+    <div class="text-center mt-5">
+        <h4 class="text-muted">No Products Found</h4>
+    </div>
 @endif

@@ -44,8 +44,8 @@ Route::get('/api/featured-products', [WelcomeController::class, 'getFeaturedProd
 
 Auth::routes();
 
-// Social Login Routes
-Route::prefix('auth')->name('social.')->group(function () {
+// Social Login Routes (with rate limiting for security)
+Route::prefix('auth')->name('social.')->middleware(['throttle:10,1'])->group(function () {
     Route::get('/{provider}', [App\Http\Controllers\Auth\SocialLoginController::class, 'redirectToProvider'])
         ->name('redirect')
         ->where('provider', 'google|facebook|github|linkedin|twitter');
@@ -59,6 +59,11 @@ Route::prefix('auth')->name('social.')->group(function () {
     
     Route::delete('/{provider}/disconnect', [App\Http\Controllers\Auth\SocialLoginController::class, 'disconnectProvider'])
         ->name('disconnect')
+        ->middleware('auth')
+        ->where('provider', 'google|facebook|github|linkedin|twitter');
+    
+    Route::post('/{provider}/sync-avatar', [App\Http\Controllers\Auth\SocialLoginController::class, 'syncAvatar'])
+        ->name('sync.avatar')
         ->middleware('auth')
         ->where('provider', 'google|facebook|github|linkedin|twitter');
 });

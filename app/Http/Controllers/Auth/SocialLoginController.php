@@ -142,6 +142,8 @@ class SocialLoginController extends Controller
                 'provider' => $provider,
                 'user_id' => $user->id,
                 'email' => $user->email,
+                'has_avatar' => !empty($user->avatar),
+                'total_social_providers' => count($user->social_providers ?? [])
             ]);
 
             return redirect()->intended(route('welcome'))->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
@@ -158,42 +160,103 @@ class SocialLoginController extends Controller
     }
 
     /**
-     * Find or create user from social login
+     * Find or create user from social login with enhanced account merging and avatar sync
      */
     private function findOrCreateUser($socialUser, $provider)
     {
-        // First, try to find user by email
-        $user = User::where('email', $socialUser->getEmail())->first();
+        $email = $socialUser->getEmail();
+        $socialId = $socialUser->getId();
+        $socialName = $socialUser->getName();
+        $socialAvatar = $socialUser->getAvatar();
+
+        // First, try to find user by email (account merging)
+        $user = User::where('email', $email)->first();
 
         if ($user) {
-            // Update social provider info if not already set
+            Log::info('Existing user found for social login', [
+                'provider' => $provider,
+                'user_id' => $user->id,
+                'email' => $email,
+                'merging_account' => true
+            ]);
+
+            // Merge social provider data
             $socialData = $user->social_providers ?? [];
-            if (!isset($socialData[$provider])) {
-                $socialData[$provider] = [
-                    'id' => $socialUser->getId(),
-                    'name' => $socialUser->getName(),
-                    'avatar' => $socialUser->getAvatar(),
-                    'connected_at' => now()->toISOString(),
-                ];
-                $user->social_providers = $socialData;
-                $user->save();
+            $providerData = [
+                'id' => $socialId,
+                'name' => $socialName,
+                'avatar' => $socialAvatar,
+                'connected_at' => now()->toISOString(),
+                'last_login_at' => now()->toISOString(),
+            ];
+
+            // Update or add provider data
+            $socialData[$provider] = $providerData;
+
+            // Sync avatar if user doesn't have one or if social avatar is newer/better
+            $shouldUpdateAvatar = $this->shouldUpdateAvatar($user, $socialAvatar, $provider);
+            
+            $updateData = ['social_providers' => $socialData];
+            if ($shouldUpdateAvatar && $socialAvatar) {
+                $updateData['avatar'] = $this->processSocialAvatar($socialAvatar, $provider);
+                Log::info('Avatar synchronized from social provider', [
+                    'user_id' => $user->id,
+                    'provider' => $provider,
+                    'avatar_url' => $socialAvatar
+                ]);
             }
+
+            $user->update($updateData);
+
+            Log::info('Social provider merged with existing account', [
+                'user_id' => $user->id,
+                'provider' => $provider,
+                'total_providers' => count($socialData)
+            ]);
 
             return $user;
         }
 
-        // Create new user
+        // Check if social ID already exists with different email (edge case)
+        $existingSocialUser = User::whereJsonContains('social_providers->' . $provider . '->id', $socialId)->first();
+        
+        if ($existingSocialUser) {
+            Log::warning('Social ID exists with different email', [
+                'provider' => $provider,
+                'social_id' => $socialId,
+                'existing_email' => $existingSocialUser->email,
+                'new_email' => $email
+            ]);
+            
+            // Update email if it's different (user might have changed email on social platform)
+            if ($existingSocialUser->email !== $email) {
+                $existingSocialUser->update(['email' => $email]);
+                Log::info('Updated user email from social provider', [
+                    'user_id' => $existingSocialUser->id,
+                    'old_email' => $existingSocialUser->email,
+                    'new_email' => $email
+                ]);
+            }
+            
+            return $existingSocialUser;
+        }
+
+        // Create new user with social avatar
+        $avatarPath = $socialAvatar ? $this->processSocialAvatar($socialAvatar, $provider) : null;
+
         $user = User::create([
-            'name' => $socialUser->getName() ?: 'Social User',
-            'email' => $socialUser->getEmail(),
-            'email_verified_at' => now(),
+            'name' => $socialName ?: 'Social User',
+            'email' => $email,
+            'email_verified_at' => now(), // Social emails are pre-verified
             'password' => Hash::make(str()->random(32)), // Random password for social users
+            'avatar' => $avatarPath,
             'social_providers' => [
                 $provider => [
-                    'id' => $socialUser->getId(),
-                    'name' => $socialUser->getName(),
-                    'avatar' => $socialUser->getAvatar(),
+                    'id' => $socialId,
+                    'name' => $socialName,
+                    'avatar' => $socialAvatar,
                     'connected_at' => now()->toISOString(),
+                    'last_login_at' => now()->toISOString(),
                 ]
             ],
         ]);
@@ -201,10 +264,118 @@ class SocialLoginController extends Controller
         Log::info('New user created via social login', [
             'provider' => $provider,
             'user_id' => $user->id,
-            'email' => $user->email,
+            'email' => $email,
+            'has_avatar' => !empty($avatarPath)
         ]);
 
         return $user;
+    }
+
+    /**
+     * Determine if user avatar should be updated from social provider
+     */
+    private function shouldUpdateAvatar($user, $socialAvatar, $provider)
+    {
+        // No social avatar available
+        if (empty($socialAvatar)) {
+            return false;
+        }
+
+        // User has no avatar - always update
+        if (empty($user->avatar)) {
+            return true;
+        }
+
+        // Check if current avatar is from a social provider
+        $currentProviders = $user->social_providers ?? [];
+        
+        // If current avatar is from social provider, update with newer one
+        if ($this->isAvatarFromSocialProvider($user->avatar)) {
+            return true;
+        }
+
+        // User has custom avatar - don't override unless it's been a while
+        $lastUpdate = null;
+        if (isset($currentProviders[$provider]['last_avatar_sync'])) {
+            $lastUpdate = \Carbon\Carbon::parse($currentProviders[$provider]['last_avatar_sync']);
+        }
+
+        // Update avatar if it hasn't been synced in the last 30 days
+        return $lastUpdate === null || $lastUpdate->diffInDays(now()) > 30;
+    }
+
+    /**
+     * Check if current avatar is from social provider
+     */
+    private function isAvatarFromSocialProvider($avatarPath)
+    {
+        if (empty($avatarPath)) {
+            return false;
+        }
+
+        // Check if avatar path contains social provider indicators
+        return str_contains($avatarPath, 'social-avatars') || 
+               str_contains($avatarPath, 'google') || 
+               str_contains($avatarPath, 'facebook') || 
+               str_contains($avatarPath, 'github') || 
+               str_contains($avatarPath, 'linkedin') || 
+               str_contains($avatarPath, 'twitter');
+    }
+
+    /**
+     * Process and store social avatar
+     */
+    private function processSocialAvatar($avatarUrl, $provider)
+    {
+        try {
+            if (empty($avatarUrl)) {
+                return null;
+            }
+
+            // Create directory for social avatars
+            $avatarDir = 'social-avatars/' . $provider;
+            $fullDir = storage_path('app/public/' . $avatarDir);
+            
+            if (!is_dir($fullDir)) {
+                mkdir($fullDir, 0755, true);
+            }
+
+            // Generate unique filename
+            $filename = uniqid($provider . '_') . '.jpg';
+            $filePath = $avatarDir . '/' . $filename;
+            $fullPath = storage_path('app/public/' . $filePath);
+
+            // Download and save avatar
+            $imageData = @file_get_contents($avatarUrl);
+            
+            if ($imageData === false) {
+                Log::warning('Failed to download social avatar', [
+                    'provider' => $provider,
+                    'url' => $avatarUrl
+                ]);
+                return null;
+            }
+
+            file_put_contents($fullPath, $imageData);
+
+            Log::info('Social avatar downloaded and stored', [
+                'provider' => $provider,
+                'original_url' => $avatarUrl,
+                'stored_path' => $filePath,
+                'file_size' => strlen($imageData)
+            ]);
+
+            return $filePath;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to process social avatar', [
+                'provider' => $provider,
+                'url' => $avatarUrl,
+                'error' => $e->getMessage()
+            ]);
+            
+            return null;
+        }
     }
 
     /**
@@ -310,17 +481,31 @@ class SocialLoginController extends Controller
 
         if (isset($socialData[$provider])) {
             unset($socialData[$provider]);
-            $user->social_providers = $socialData;
-            $user->save();
+            
+            // If avatar was from this provider and no other providers, remove it
+            $shouldRemoveAvatar = $this->shouldRemoveAvatarOnDisconnect($user, $provider);
+            
+            $updateData = ['social_providers' => $socialData];
+            if ($shouldRemoveAvatar) {
+                $updateData['avatar'] = null;
+                Log::info('Avatar removed after social provider disconnect', [
+                    'user_id' => $user->id,
+                    'provider' => $provider
+                ]);
+            }
+            
+            $user->update($updateData);
 
             Log::info('Social provider disconnected', [
                 'user_id' => $user->id,
                 'provider' => $provider,
+                'remaining_providers' => count($socialData)
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => ucfirst($provider) . ' account disconnected successfully.',
+                'remaining_providers' => count($socialData)
             ]);
         }
 
@@ -328,5 +513,105 @@ class SocialLoginController extends Controller
             'success' => false,
             'message' => ucfirst($provider) . ' account is not connected.',
         ], 400);
+    }
+
+    /**
+     * Check if avatar should be removed when disconnecting provider
+     */
+    private function shouldRemoveAvatarOnDisconnect($user, $provider)
+    {
+        // Don't remove if no avatar
+        if (empty($user->avatar)) {
+            return false;
+        }
+
+        // Don't remove if avatar is not from social provider
+        if (!$this->isAvatarFromSocialProvider($user->avatar)) {
+            return false;
+        }
+
+        // Don't remove if avatar is from a different provider that's still connected
+        $socialData = $user->social_providers ?? [];
+        foreach ($socialData as $providerKey => $data) {
+            if ($providerKey !== $provider && !empty($data['avatar'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get user's avatar URL (helper method for views)
+     */
+    public function getUserAvatarUrl($user = null)
+    {
+        $user = $user ?: Auth::user();
+        
+        if (!$user || empty($user->avatar)) {
+            return asset('images/default-avatar.svg'); // Default avatar
+        }
+
+        // If avatar is a full URL (from social provider), return as is
+        if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+            return $user->avatar;
+        }
+
+        // If avatar is a local path, return storage URL
+        return asset('storage/' . $user->avatar);
+    }
+
+    /**
+     * Sync avatar from specific provider (manual sync)
+     */
+    public function syncAvatar(Request $request, $provider)
+    {
+        $user = Auth::user();
+        $socialData = $user->social_providers ?? [];
+
+        if (!isset($socialData[$provider])) {
+            return response()->json([
+                'success' => false,
+                'message' => ucfirst($provider) . ' account is not connected.',
+            ], 400);
+        }
+
+        $providerData = $socialData[$provider];
+        $socialAvatar = $providerData['avatar'] ?? null;
+
+        if (empty($socialAvatar)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No avatar available from ' . ucfirst($provider) . '.',
+            ], 400);
+        }
+
+        $avatarPath = $this->processSocialAvatar($socialAvatar, $provider);
+
+        if ($avatarPath) {
+            // Update last sync time
+            $socialData[$provider]['last_avatar_sync'] = now()->toISOString();
+            
+            $user->update([
+                'avatar' => $avatarPath,
+                'social_providers' => $socialData
+            ]);
+
+            Log::info('Avatar manually synced from social provider', [
+                'user_id' => $user->id,
+                'provider' => $provider
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Avatar synced successfully from ' . ucfirst($provider) . '.',
+                'avatar_url' => $this->getUserAvatarUrl($user)
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to sync avatar from ' . ucfirst($provider) . '.',
+        ], 500);
     }
 }

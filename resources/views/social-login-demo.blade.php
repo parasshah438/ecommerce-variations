@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Social Login Integration Demo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -92,7 +93,7 @@
                         </div>
 
                         <div class="row mb-5">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="text-center">
                                     <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                         <i class="bi bi-gear-fill"></i>
@@ -101,7 +102,7 @@
                                     <p class="text-muted">Easy to add/remove providers via environment variables</p>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="text-center">
                                     <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                                         <i class="bi bi-shield-lock-fill"></i>
@@ -110,13 +111,22 @@
                                     <p class="text-muted">OAuth 2.0 with single device login enforcement</p>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="text-center">
                                     <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                                         <i class="bi bi-people-fill"></i>
                                     </div>
-                                    <h5>User Management</h5>
-                                    <p class="text-muted">Automatic user creation and social account linking</p>
+                                    <h5>Smart Account Merging</h5>
+                                    <p class="text-muted">Automatic account linking when same email exists</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="feature-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                                        <i class="bi bi-person-circle"></i>
+                                    </div>
+                                    <h5>Avatar Sync</h5>
+                                    <p class="text-muted">Automatic profile picture synchronization from social providers</p>
                                 </div>
                             </div>
                         </div>
@@ -186,6 +196,45 @@
                                         <i class="bi bi-arrow-right me-2"></i>Go to Login Page
                                     </a>
                                 </div>
+
+                                <!-- Social Features Demo -->
+                                @auth
+                                    <div class="mt-4">
+                                        <h6><i class="bi bi-person-circle me-2"></i>Your Social Accounts</h6>
+                                        @if(auth()->user()->social_providers)
+                                            <div id="user-social-providers">
+                                                @foreach(auth()->user()->social_providers as $provider => $data)
+                                                    <div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2">
+                                                        <div class="d-flex align-items-center">
+                                                            @if($provider === 'google')
+                                                                <i class="bi bi-google text-primary me-2"></i>
+                                                            @elseif($provider === 'facebook')
+                                                                <i class="bi bi-facebook text-primary me-2"></i>
+                                                            @elseif($provider === 'github')
+                                                                <i class="bi bi-github text-dark me-2"></i>
+                                                            @elseif($provider === 'linkedin')
+                                                                <i class="bi bi-linkedin text-primary me-2"></i>
+                                                            @elseif($provider === 'twitter')
+                                                                <i class="bi bi-twitter-x text-dark me-2"></i>
+                                                            @endif
+                                                            <span class="small">{{ ucfirst($provider) }}</span>
+                                                        </div>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary btn-sm" onclick="syncAvatar('{{ $provider }}')">
+                                                                <i class="bi bi-arrow-repeat"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-danger btn-sm" onclick="disconnectProvider('{{ $provider }}')">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <p class="text-muted small">No social accounts connected</p>
+                                        @endif
+                                    </div>
+                                @endauth
                             </div>
                         </div>
 
@@ -307,6 +356,60 @@
                 'twitter': `<i class="bi bi-twitter-x" style="color: ${color}; font-size: 24px;"></i>`
             };
             return iconMap[key] || `<i class="bi bi-box-arrow-in-right" style="color: ${color}; font-size: 24px;"></i>`;
+        }
+
+        // Sync avatar from provider
+        async function syncAvatar(provider) {
+            try {
+                const response = await fetch(`/auth/${provider}/sync-avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Avatar synced successfully from ${provider}!`);
+                    location.reload(); // Refresh to show updated avatar
+                } else {
+                    alert(`Failed to sync avatar: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Avatar sync error:', error);
+                alert('Failed to sync avatar. Please try again.');
+            }
+        }
+
+        // Disconnect social provider
+        async function disconnectProvider(provider) {
+            if (!confirm(`Are you sure you want to disconnect your ${provider} account?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/auth/${provider}/disconnect`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`${provider} account disconnected successfully!`);
+                    location.reload(); // Refresh to update the UI
+                } else {
+                    alert(`Failed to disconnect: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Disconnect error:', error);
+                alert('Failed to disconnect account. Please try again.');
+            }
         }
 
         // Load providers on page load

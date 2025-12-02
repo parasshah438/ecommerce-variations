@@ -32,7 +32,7 @@ class ProductController extends Controller
                         str_contains($request->path(), 'new-arrivals');
         
         if ($isNewArrivals) {
-            $query->where('created_at', '>=', now()->subDays(30));
+            $query->where('created_at', '>=', now()->subDays(10));
         }
         
         // Search filter

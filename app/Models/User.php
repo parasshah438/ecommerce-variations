@@ -172,4 +172,47 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === 'active';
-    }}
+    }
+
+    /**
+     * Get user's avatar URL
+     */
+    public function getAvatarUrlAttribute(): string
+    {
+        if (empty($this->avatar)) {
+            return asset('images/default-avatar.svg');
+        }
+
+        // If avatar is a full URL (from social provider), return as is
+        if (filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
+        }
+
+        // If avatar is a local path, return storage URL
+        return asset('storage/' . $this->avatar);
+    }
+
+    /**
+     * Get connected social providers
+     */
+    public function getConnectedProvidersAttribute(): array
+    {
+        return array_keys($this->social_providers ?? []);
+    }
+
+    /**
+     * Check if specific social provider is connected
+     */
+    public function hasProviderConnected(string $provider): bool
+    {
+        return isset($this->social_providers[$provider]);
+    }
+
+    /**
+     * Get social provider data for specific provider
+     */
+    public function getSocialProvider(string $provider): ?array
+    {
+        return $this->social_providers[$provider] ?? null;
+    }
+}
