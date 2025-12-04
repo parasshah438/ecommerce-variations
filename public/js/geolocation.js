@@ -22,8 +22,12 @@ class GeolocationManager {
             onLocationChanged: []
         };
         
-        // Initialize CSRF token
+        // Initialize CSRF token with validation
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        if (!this.csrfToken) {
+            console.warn('CSRF token not found. Some API calls may fail.');
+        }
         
         if (this.options.autoDetect) {
             this.detectLocation();
@@ -443,6 +447,64 @@ class GeolocationManager {
     }
     
     /**
+     * Show real-time pincode validation feedback
+     */
+    showPincodeValidationFeedback(pincode, feedbackContainer, inputElement) {
+        if (!pincode) {
+            feedbackContainer.innerHTML = '';
+            inputElement.className = inputElement.className.replace(/ (is-valid|is-invalid)/g, '');
+            return;
+        }
+        
+        const isValid = this.isValidPincodeForLookup(pincode);
+        const reason = this.getPincodeValidationReason(pincode);
+        
+        // Update input styling
+        inputElement.className = inputElement.className.replace(/ (is-valid|is-invalid)/g, '');
+        
+        if (pincode.length >= 3) {
+            if (isValid) {
+                inputElement.className += ' is-valid';
+                feedbackContainer.innerHTML = `
+                    <small class="text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Valid postal code format
+                    </small>
+                `;
+            } else {
+                inputElement.className += ' is-invalid';
+                feedbackContainer.innerHTML = `
+                    <small class="text-warning">
+                        <i class="bi bi-info-circle me-1"></i>
+                        ${reason}
+                    </small>
+                `;
+            }
+        }
+    }
+    
+    /**
+     * Cleanup method to prevent memory leaks
+     */
+    cleanup() {
+        // Clear timeouts
+        if (this.pincodeTimeout) {
+            clearTimeout(this.pincodeTimeout);
+            this.pincodeTimeout = null;
+        }
+        
+        // Clear callbacks
+        this.callbacks = {
+            onLocationDetected: [],
+            onLocationError: [],
+            onLocationChanged: []
+        };
+        
+        // Clear current location
+        this.currentLocation = null;
+    }
+    
+    /**
      * Auto-fill form fields with location data
      */
     fillForm(formSelector, fieldMapping = {}) {
@@ -621,18 +683,27 @@ class GeolocationManager {
             });
         }
         
-        // Pincode input
+        // Pincode input with real-time validation
         if (pincodeInput) {
             // Clear any existing timeout when creating new listener
             if (this.pincodeTimeout) {
                 clearTimeout(this.pincodeTimeout);
             }
             
+            // Add visual feedback container
+            const feedbackContainer = document.createElement('div');
+            feedbackContainer.className = 'pincode-feedback mt-1';
+            pincodeInput.parentNode.appendChild(feedbackContainer);
+            
             pincodeInput.addEventListener('input', (e) => {
                 // Remove non-alphanumeric for international support
                 e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
                 
                 const pincode = e.target.value.trim();
+                
+                // Real-time validation feedback
+                this.showPincodeValidationFeedback(pincode, feedbackContainer, pincodeInput);
+                
                 console.log('📮 Pincode input:', {
                     value: pincode,
                     length: pincode.length,

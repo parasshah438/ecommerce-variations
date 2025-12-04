@@ -153,6 +153,30 @@ config('cache.default')
 DB::table('cache')->count()
 ```
 
+Route::get('clear', function() {
+    Artisan::call('cache:clear');
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    Artisan::call('route:cache');
+    Artisan::call('view:clear');
+    return 'Cache cleared successfully!';
+});
+
+
+Route::get('cache', function() {
+    Artisan::call('config:cache');
+    return 'Cache clreated successfully!';
+});
+
+
+
+Route::get('cache', function() {
+    Artisan::call('optimize:clear');
+    Artisan::call('optimize');
+    return 'Cache clreated successfully!';
+});
+
+
 ## 🎉 **Bottom Line**
 
 **Your cache is already production-ready!** 

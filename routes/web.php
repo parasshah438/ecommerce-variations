@@ -84,22 +84,24 @@ Route::prefix('otp')->name('otp.')->group(function () {
 Route::post('/api/check-email', [App\Http\Controllers\Auth\RegisterController::class, 'checkEmail'])->name('api.check.email');
 Route::post('/api/check-mobile', [App\Http\Controllers\Auth\RegisterController::class, 'checkMobile'])->name('api.check.mobile');
 
-// Geolocation API routes
-Route::get('/api/geo-location', [App\Http\Controllers\GeoLocationController::class, 'getCountryCode'])->name('api.geo.location');
-Route::post('/api/location-details', [App\Http\Controllers\GeoLocationController::class, 'getLocationDetails'])->name('api.location.details');
-Route::get('/api/location-from-ip', [App\Http\Controllers\GeoLocationController::class, 'getLocationFromIP'])->name('api.location.from.ip');
-Route::get('/api/search-locations', [App\Http\Controllers\GeoLocationController::class, 'searchLocations'])->name('api.search.locations');
-Route::get('/api/pincode-details', [App\Http\Controllers\GeoLocationController::class, 'getPincodeDetails'])->name('api.pincode.details');
+// Geolocation API routes with rate limiting
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::get('/api/geo-location', [App\Http\Controllers\GeoLocationController::class, 'getCountryCode'])->name('api.geo.location');
+    Route::post('/api/location-details', [App\Http\Controllers\GeoLocationController::class, 'getLocationDetails'])->name('api.location.details');
+    Route::get('/api/location-from-ip', [App\Http\Controllers\GeoLocationController::class, 'getLocationFromIP'])->name('api.location.from.ip');
+    Route::get('/api/search-locations', [App\Http\Controllers\GeoLocationController::class, 'searchLocations'])->name('api.search.locations');
+    Route::get('/api/pincode-details', [App\Http\Controllers\GeoLocationController::class, 'getPincodeDetails'])->name('api.pincode.details');
+});
 
 // Location Demo Page
 Route::get('/location-demo', function () {
     return view('location-demo');
 })->name('location.demo');
 
-// Location Integration Example
-Route::get('/location-integration', function () {
+// Location Integration Example (Fixed duplicate route)
+Route::get('/location-integration-example', function () {
     return view('location-integration-example');
-})->name('location.integration');
+})->name('location.integration.example');
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
@@ -660,6 +662,9 @@ Route::get('/sitemap.xml', [App\Http\Controllers\PagesController::class, 'sitema
 
 // Custom 404 route (should be at the end)
 Route::fallback([App\Http\Controllers\PagesController::class, 'error404']);
+
+// Include WhatsApp routes
+require __DIR__.'/whatsapp.php';
 
 // Include email preview routes (only in development)
 if (app()->environment('local', 'testing')) {
