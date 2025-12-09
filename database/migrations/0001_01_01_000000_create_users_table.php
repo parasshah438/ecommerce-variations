@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -17,21 +14,23 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('country_code', 5)->nullable()->after('email');
-            $table->string('mobile_number', 15)->nullable()->after('country_code');
-            $table->string('avatar')->nullable()->after('mobile_number');
-            $table->enum('role', ['admin', 'manager', 'user'])->default('user')->after('avatar');
-            $table->enum('status', ['active', 'inactive', 'suspended'])->default('active')->after('role');
-            $table->date('date_of_birth')->nullable()->after('status');
-            $table->text('address')->nullable()->after('date_of_birth');
-            $table->string('city')->nullable()->after('address');
-            $table->string('country')->nullable()->after('city');
-            $table->text('bio')->nullable()->after('country');
+
+            // additional fields
+            $table->string('country_code', 5)->nullable();
+            $table->string('mobile_number', 15)->nullable();
+            $table->string('avatar')->nullable();
+            $table->enum('role', ['admin', 'manager', 'user'])->default('user');
+            $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
+            $table->date('date_of_birth')->nullable();
+            $table->text('address')->nullable();
+            $table->string('city')->nullable();
+            $table->string('country')->nullable();
+            $table->text('bio')->nullable();
+
             $table->rememberToken();
-            $table->softDeletes()->after('updated_at');
+            $table->softDeletes();
             $table->timestamps();
         });
-
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
@@ -49,9 +48,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('users');

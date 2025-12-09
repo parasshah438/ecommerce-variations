@@ -75,9 +75,7 @@
                         <a href="{{ route('admin.users.index') }}" class="btn btn-primary">
                             <i class="fas fa-users me-2"></i>Manage Users
                         </a>
-                        <a href="{{ route('admin.demo-forms') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-magic me-2"></i>View Demo Forms
-                        </a>
+                        
                     </div>
                 </div>
             </div>
