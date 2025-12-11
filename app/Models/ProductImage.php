@@ -28,7 +28,7 @@ class ProductImage extends Model
     public function getImageUrlAttribute()
     {
         if ($this->path) {
-            return Storage::url($this->path);
+            return Storage::disk('public')->url($this->path);
         }
         return asset('images/product-placeholder.jpg');
     }
@@ -49,10 +49,10 @@ class ProductImage extends Model
         // Try WebP first
         $webpPath = $directory . '/' . $filename . '.webp';
         if (Storage::disk('public')->exists($webpPath)) {
-            return Storage::url($webpPath);
+            return Storage::disk('public')->url($webpPath);
         }
         
-        return Storage::url($this->path);
+        return Storage::disk('public')->url($this->path);
     }
 
     /**
@@ -78,11 +78,11 @@ class ProductImage extends Model
         
         $webpPath = $directory . '/' . $filename . '.webp';
         if (Storage::disk('public')->exists($webpPath)) {
-            return Storage::url($webpPath);
+            return Storage::disk('public')->url($webpPath);
         }
         
         // Fallback to original image
-        return Storage::url($this->path);
+        return Storage::disk('public')->url($this->path);
     }
 
     /**
@@ -101,7 +101,7 @@ class ProductImage extends Model
         
         $thumbPath = $directory . '/' . $filename . '_' . $size . '.' . $extension;
         if (Storage::disk('public')->exists($thumbPath)) {
-            return Storage::url($thumbPath);
+            return Storage::disk('public')->url($thumbPath);
         }
         
         // Fallback to optimized image

@@ -160,20 +160,49 @@
                 </h5>
             </div>
             <div class="card-body">
-                @if($product->images->count() > 0)
+                @php
+                    $allImages = collect();
+                    
+                    // Add regular product images
+                    foreach($product->images as $image) {
+                        $allImages->push([
+                            'image' => $image,
+                            'type' => 'product',
+                            'label' => 'Product Image'
+                        ]);
+                    }
+                    
+                    // Add variation images
+                    foreach($product->variationImages as $varImage) {
+                        $allImages->push([
+                            'image' => $varImage,
+                            'type' => 'variation',
+                            'label' => 'Variation Image'
+                        ]);
+                    }
+                @endphp
+                
+                @if($allImages->count() > 0)
                     <div class="row g-2">
-                        @foreach($product->images as $image)
+                        @foreach($allImages as $item)
                         <div class="col-6">
                             <div class="position-relative">
-                                <img src="{{ Storage::url($image->path) }}" 
-                                     alt="{{ $image->alt }}" 
+                                <img src="{{ $item['image']->getThumbnailUrl(300) }}" 
+                                     alt="{{ $item['image']->alt }}" 
                                      class="img-fluid rounded"
-                                     style="width: 100%; height: 120px; object-fit: cover;">
+                                     style="width: 100%; height: 120px; object-fit: cover;"
+                                     loading="lazy"
+                                     onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
                                 <div class="position-absolute top-0 end-0 p-1">
-                                    <button class="btn btn-danger btn-sm" onclick="deleteImage({{ $image->id }})">
+                                    <button class="btn btn-danger btn-sm" onclick="deleteImage({{ $item['image']->id }}, '{{ $item['type'] }}')">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
+                                @if($item['type'] === 'variation')
+                                    <div class="position-absolute bottom-0 start-0 p-1">
+                                        <span class="badge bg-info">V</span>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                         @endforeach
@@ -182,7 +211,7 @@
                     <div class="text-center text-muted py-4">
                         <i class="bi bi-image fs-1 d-block mb-3"></i>
                         <h6>No images</h6>
-                        <p>Add some product images</p>
+                        <p>Add some product images or variation images</p>
                     </div>
                 @endif
             </div>
@@ -214,8 +243,8 @@
                 <div class="row text-center mt-3">
                     <div class="col-6">
                         <div class="border rounded p-3">
-                            <h4 class="mb-1">{{ $product->images->count() }}</h4>
-                            <small class="text-muted">Images</small>
+                            <h4 class="mb-1">{{ $product->images->count() + $product->variationImages->count() }}</h4>
+                            <small class="text-muted">Total Images</small>
                         </div>
                     </div>
                     <div class="col-6">
@@ -267,10 +296,33 @@ function editVariation(variationId) {
     alert('Edit variation functionality would open a modal or redirect to edit page');
 }
 
-function deleteImage(imageId) {
-    if (confirm('Are you sure you want to delete this image?')) {
-        // Implementation for image deletion
-        alert('Image deletion functionality');
+function deleteImage(imageId, imageType) {
+    const imageTypeLabel = imageType === 'variation' ? 'variation image' : 'product image';
+    if (confirm(`Are you sure you want to delete this ${imageTypeLabel}?`)) {
+        // Create form for image deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        
+        if (imageType === 'variation') {
+            form.action = `/admin/products/variation-images/${imageId}`;
+        } else {
+            form.action = `/admin/products/images/${imageId}`;
+        }
+        
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        
+        const tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = '_token';
+        tokenInput.value = '{{ csrf_token() }}';
+        
+        form.appendChild(methodInput);
+        form.appendChild(tokenInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

@@ -1390,6 +1390,9 @@
         </div>
     </div>
 
+    <!-- Hero Slider Section -->
+    @include('components.slider', ['sliders' => $sliders])
+
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">

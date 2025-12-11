@@ -87,7 +87,7 @@
                                 <div class="current-video mb-2">
                                     <p class="text-muted mb-2">Current video:</p>
                                     <video width="200" height="120" controls>
-                                        <source src="{{ asset('storage/' . $product->video) }}" type="video/mp4">
+                                        <source src="{{ Storage::disk('public')->url($product->video) }}" type="video/mp4">
                                         Your browser does not support the video tag.
                                     </video>
                                 </div>
@@ -118,7 +118,12 @@
                     <div id="main-images-preview" class="d-flex flex-wrap gap-2">
                         @foreach($product->images as $image)
                             <div class="position-relative me-2 mb-2">
-                                <img src="{{ asset('storage/' . $image->path) }}" alt="{{ $image->alt }}" width="80" class="rounded border">
+                                <img src="{{ $image->getThumbnailUrl(150) }}" 
+                                     alt="{{ $image->alt }}" 
+                                     width="80" 
+                                     class="rounded border"
+                                     loading="lazy"
+                                     onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
                                 <!-- Optionally add a delete button here -->
                             </div>
                         @endforeach
@@ -315,7 +320,12 @@
                        onchange="previewVariationImages(this, {{ $vIndex }})">
                 <div id="preview_{{ $vIndex }}" class="mt-1">
                     @foreach($variation->images as $img)
-                        <img src="{{ asset('storage/' . $img->path) }}" alt="{{ $img->alt }}" width="30" class="rounded border me-1 mb-1">
+                        <img src="{{ $img->getThumbnailUrl(150) }}" 
+                             alt="{{ $img->alt }}" 
+                             width="30" 
+                             class="rounded border me-1 mb-1"
+                             loading="lazy"
+                             onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
                     @endforeach
                 </div>
             </td>

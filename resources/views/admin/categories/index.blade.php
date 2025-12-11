@@ -116,7 +116,7 @@
                                 <div class="card h-100 shadow-sm border-0 hover-card">
                                     <div class="position-relative">
                                         @if($category->image)
-                                            <img src="{{ $category->image_url }}" 
+                                            <img src="{{ $category->getThumbnailUrl(500) }}"
                                                  class="card-img-top" 
                                                  style="height: 200px; object-fit: cover;"
                                                  alt="{{ $category->name }}">
@@ -221,7 +221,7 @@
                                 <tr>
                                     <td>
                                         @if($category->image)
-                                            <img src="{{ $category->image_url }}" 
+                                            <img src="{{ $category->getThumbnailUrl(150) }}" 
                                                  class="rounded" 
                                                  style="width: 50px; height: 50px; object-fit: cover;"
                                                  alt="{{ $category->name }}">

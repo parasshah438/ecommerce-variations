@@ -43,17 +43,52 @@
                                         @php
                                             $thumbnailImage = $product->getThumbnailImage();
                                         @endphp
-                                        @if($thumbnailImage)
-                                            <img src="{{ Storage::url($thumbnailImage->path) }}" 
-                                                 alt="{{ $product->name }}" 
-                                                 style="width: 50px; height: 50px; object-fit: cover;" 
-                                                 class="rounded">
-                                            @if(isset($thumbnailImage->product_variation_id) && $thumbnailImage->product_variation_id)
-                                                <span class="position-absolute badge bg-info rounded-pill variation-indicator" 
-                                                      title="Variation Image">V</span>
-                                            @elseif(get_class($thumbnailImage) === 'App\Models\ProductVariationImage')
-                                                <span class="position-absolute badge bg-primary rounded-pill variation-indicator" 
-                                                      title="Variation Image">V</span>
+                                        @if($thumbnailImage && $thumbnailImage->path)
+                                            @php
+                                                $isVariationImage = isset($thumbnailImage->product_variation_id) && $thumbnailImage->product_variation_id 
+                                                                   || get_class($thumbnailImage) === 'App\Models\ProductVariationImage';
+                                                
+                                                // Check if original file exists
+                                                $originalExists = Storage::disk('public')->exists($thumbnailImage->path);
+                                                
+                                                if ($originalExists) {
+                                                    $thumbnailUrl = $thumbnailImage->getThumbnailUrl(150);
+                                                    $pathInfo = pathinfo($thumbnailImage->path);
+                                                    $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_150.webp';
+                                                    $webpExists = Storage::disk('public')->exists($webpPath);
+                                                } else {
+                                                    $thumbnailUrl = asset('images/product-placeholder.jpg');
+                                                    $webpExists = false;
+                                                }
+                                            @endphp
+                                            
+                                            @if($originalExists)
+                                                <picture>
+                                                    @if($webpExists)
+                                                        <source srcset="{{ Storage::disk('public')->url($webpPath) }}" type="image/webp">
+                                                    @endif
+                                                    <img src="{{ $thumbnailUrl }}" 
+                                                         alt="{{ $product->name }}" 
+                                                         style="width: 50px; height: 50px; object-fit: cover;" 
+                                                         class="rounded"
+                                                         loading="lazy"
+                                                         onerror="handleImageError(this)">
+                                                </picture>
+                                                @if($isVariationImage)
+                                                    <span class="position-absolute badge bg-info rounded-pill variation-indicator" 
+                                                          title="Variation Image">V</span>
+                                                @endif
+                                            @else
+                                                <!-- File doesn't exist, show placeholder -->
+                                                <div class="bg-warning rounded d-flex align-items-center justify-content-center" 
+                                                     style="width: 50px; height: 50px;" 
+                                                     title="Image file not found">
+                                                    <i class="bi bi-exclamation-triangle text-white"></i>
+                                                </div>
+                                                @if($isVariationImage)
+                                                    <span class="position-absolute badge bg-info rounded-pill variation-indicator" 
+                                                          title="Variation Image">V</span>
+                                                @endif
                                             @endif
                                         @else
                                             <div class="bg-light rounded d-flex align-items-center justify-content-center" 
@@ -167,6 +202,39 @@
 .product-thumbnail {
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-thumbnail picture,
+.product-thumbnail img {
+    transition: opacity 0.3s ease;
+}
+
+.product-thumbnail img:not([src]) {
+    opacity: 0;
+}
+
+.product-thumbnail img[src] {
+    opacity: 1;
+}
+
+/* Optimized image loading animation */
+.product-thumbnail img {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+.product-thumbnail img[src]:not([src=""]) {
+    animation: none;
+    background: none;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 .variation-indicator {
@@ -176,6 +244,7 @@
     font-size: 0.6rem;
     transform: scale(0.8);
     z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
 .variation-info {
@@ -203,6 +272,26 @@
 .price-display strong {
     color: #28a745;
 }
+
+/* Better placeholder styling */
+.product-thumbnail .bg-light {
+    border: 1px dashed #dee2e6;
+    color: #6c757d;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .product-thumbnail {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    
+    .product-thumbnail picture img,
+    .product-thumbnail > div {
+        width: 40px !important;
+        height: 40px !important;
+    }
+}
 </style>
 @endpush
 
@@ -229,6 +318,28 @@ function deleteProduct(productId) {
         form.appendChild(tokenInput);
         document.body.appendChild(form);
         form.submit();
+    }
+}
+
+function handleImageError(img) {
+    try {
+        // Find the closest picture element or the image container
+        const pictureElement = img.closest('picture') || img.parentElement;
+        const container = pictureElement.closest('.product-thumbnail');
+        
+        if (container) {
+            container.innerHTML = '<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-image text-muted"></i></div>';
+        } else {
+            // Fallback: hide the image and show placeholder
+            img.style.display = 'none';
+            if (img.nextElementSibling) {
+                img.nextElementSibling.style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.warn('Image error handler failed:', error);
+        // Last resort: just hide the broken image
+        img.style.display = 'none';
     }
 }
 </script>

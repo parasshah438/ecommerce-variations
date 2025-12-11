@@ -17,6 +17,64 @@ require __DIR__.'/debug-image-optimizer.php';
 require __DIR__.'/debug-upload-test.php';
 require __DIR__.'/test-large-upload.php';
 
+// Slider debug route (bypass authentication)
+Route::get('/debug/sliders-test', function() {
+    try {
+        // Test if we can create controller instance
+        $controller = new \App\Http\Controllers\Admin\SliderController();
+        
+        // Test basic model access
+        $sliderCount = \App\Models\Slider::count();
+        
+        return response()->json([
+            'success' => true,
+            'controller_exists' => true,
+            'slider_count' => $sliderCount,
+            'view_path' => resource_path('views/admin/sliders/index.blade.php'),
+            'view_exists' => view()->exists('admin.sliders.index')
+        ], 200, [], JSON_PRETTY_PRINT);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500, [], JSON_PRETTY_PRINT);
+    }
+});
+
+// Category thumbnail debug
+Route::get('/debug/category-thumbnails', function() {
+    try {
+        $categories = App\Models\Category::whereNotNull('image')->take(5)->get();
+        $debug = [];
+        
+        foreach($categories as $cat) {
+            $debug[] = [
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'image_field' => $cat->image,
+                'thumbnail_150' => $cat->getThumbnailUrl(150),
+                'thumbnail_300' => $cat->getThumbnailUrl(300),
+                'image_url' => $cat->image_url,
+                'optimized_url' => $cat->optimized_image_url,
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'categories' => $debug
+        ], 200, [], JSON_PRETTY_PRINT);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500, [], JSON_PRETTY_PRINT);
+    }
+});
+
 // Location Integration Example
 Route::get('/location-integration', function () {
     return view('location-integration');

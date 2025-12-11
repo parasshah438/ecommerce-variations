@@ -4,12 +4,19 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Slider;
+use Illuminate\Support\Facades\Cache;
 
 class WelcomeController extends Controller
 {
     public function index()
     {
-        return view('welcome');
+        // Get active sliders for homepage with caching (1 week - for stable promotional banners)
+        $sliders = Cache::remember('home_sliders', now()->addWeek(), function () {
+            return Slider::active()->ordered()->get();
+        });
+        
+        return view('welcome', compact('sliders'));
     }
 
     public function getFeaturedProducts(Request $request)

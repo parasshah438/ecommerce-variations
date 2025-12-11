@@ -2,785 +2,423 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Facades\Storage;
+use App\Jobs\OptimizeImageJob;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\{Cache, Log, Queue, Storage};
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Spatie\ImageOptimizer\OptimizerChainFactory;
-use Illuminate\Http\UploadedFile;
 
 class ImageOptimizer
 {
-    /**
-     * Get Image Manager instance
-     */
-    private static function getImageManager()
-    {
-        return new ImageManager(new Driver());
-    }
-    /**
-     * Optimize uploaded image using Spatie Image Optimizer
-     */
-    public static function optimizeUploadedImage(UploadedFile $file, string $directory = 'uploads', array $options = [])
-    {
-        // Enhanced upload validation and debugging
-        $fileSize = $file->getSize();
-        $uploadError = $file->getError();
-        
-        // Log upload attempt details
-        \Log::info('ImageOptimizer: Processing upload', [
-            'original_name' => $file->getClientOriginalName(),
-            'size_bytes' => $fileSize,
-            'size_mb' => round($fileSize / (1024 * 1024), 2),
-            'mime_type' => $file->getMimeType(),
-            'upload_error' => $uploadError,
-            'is_valid' => $file->isValid(),
-            'php_upload_max' => ini_get('upload_max_filesize'),
-            'php_post_max' => ini_get('post_max_size')
-        ]);
-        
-        // Check for upload errors first
-        if ($uploadError !== UPLOAD_ERR_OK) {
-            $errorMessages = [
-                UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize directive',
-                UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE directive',
-                UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
-                UPLOAD_ERR_NO_FILE => 'No file was uploaded',
-                UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
-                UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-                UPLOAD_ERR_EXTENSION => 'File upload stopped by extension'
-            ];
-            
-            $errorMessage = $errorMessages[$uploadError] ?? 'Unknown upload error';
-            \Log::error('ImageOptimizer: Upload error detected', [
-                'error_code' => $uploadError,
-                'error_message' => $errorMessage,
-                'file_size' => $fileSize,
-                'file_name' => $file->getClientOriginalName()
-            ]);
-            
-            throw new \Exception("Upload error: {$errorMessage} (Code: {$uploadError})");
-        }
-        
-        // Validate file is valid
-        if (!$file->isValid()) {
-            throw new \Exception('Invalid file upload detected');
-        }
-        
-        // Memory management for large files
-        $originalMemoryLimit = ini_get('memory_limit');
-        
-        // Increase memory limit for files larger than 1MB (since we now handle up to 5MB)
-        if ($fileSize > 1024 * 1024) {
-            // Calculate required memory based on file size (image processing needs ~5x file size for 5MB images)
-            $requiredMemory = max(512, ($fileSize * 6) / (1024 * 1024)); // At least 512MB for 5MB images
-            ini_set('memory_limit', $requiredMemory . 'M');
-            set_time_limit(600); // 10 minutes for large files (up to 5MB)
-        }
-        
-        $options = array_merge([
-            'quality' => 85,
-            'maxWidth' => 1600, // Increased for 5MB images
-            'maxHeight' => 1600, // Increased for 5MB images
-            'generateWebP' => true,
-            'generateThumbnails' => true,
-            'thumbnailSizes' => [150, 300, 600, 900], // Added 900px thumbnail for larger images
-            'keepOriginal' => false,
-            'preserveAspectRatio' => true,
-        ], $options);
-
-        try {
-            // Validate file type and size (now supporting up to 5MB)
-            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
-                throw new \Exception('Unsupported file type: ' . $file->getMimeType());
-            }
-            
-            // Additional validation for 5MB limit
-            $maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
-            if ($fileSize > $maxFileSize) {
-                throw new \Exception('File size exceeds 5MB limit. Current size: ' . round($fileSize / (1024 * 1024), 2) . 'MB');
-            }
-
-            // Generate unique filename
-            $extension = strtolower($file->getClientOriginalExtension());
-            $filename = uniqid() . '_' . time();
-            $originalPath = $directory . '/' . $filename . '.' . $extension;
-            
-            // Ensure directory exists
-            $fullDirectoryPath = storage_path('app/public/' . $directory);
-            if (!is_dir($fullDirectoryPath)) {
-                mkdir($fullDirectoryPath, 0755, true);
-            }
-            
-            // Store the original file temporarily
-            $tempPath = $file->storeAs($directory, $filename . '.' . $extension, 'public');
-            $fullPath = storage_path('app/public/' . $tempPath);
-            
-            // Verify file was stored successfully
-            if (!file_exists($fullPath)) {
-                throw new \Exception('Failed to store uploaded file at: ' . $fullPath);
-            }
-
-            // Get file info for logging
-            $originalSize = filesize($fullPath);
-            
-            // Initialize optimizer chain
-            $optimizerChain = OptimizerChainFactory::create();
-            
-            // Check if any optimizers are available and optimize only if binaries exist
-            try {
-                $hasOptimizers = false;
-                $optimizers = $optimizerChain->getOptimizers();
-                foreach ($optimizers as $optimizer) {
-                    $binaryName = method_exists($optimizer, 'binaryName') ? $optimizer->binaryName() : null;
-                    if ($binaryName) {
-                        $checkCommand = PHP_OS_FAMILY === 'Windows' ? "where {$binaryName} 2>nul" : "which {$binaryName} 2>/dev/null";
-                        $output = shell_exec($checkCommand);
-                        if (!empty(trim($output))) {
-                            $hasOptimizers = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if ($hasOptimizers) {
-                    $optimizerChain->optimize($fullPath);
-                } else {
-                    \Log::info('No image optimizer binaries found, using Intervention Image only for optimization');
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Spatie optimizer failed, continuing with Intervention Image only: ' . $e->getMessage());
-            }
-            
-            // Process with Intervention Image for resizing and format conversion
-            $manager = self::getImageManager();
-            $image = $manager->read($fullPath);
-            
-            // Get original dimensions
-            $originalWidth = $image->width();
-            $originalHeight = $image->height();
-            
-            $needsResize = $originalWidth > $options['maxWidth'] || $originalHeight > $options['maxHeight'];
-            
-            // Resize if needed
-            if ($needsResize) {
-                if ($options['preserveAspectRatio']) {
-                    $image->scaleDown($options['maxWidth'], $options['maxHeight']);
-                } else {
-                    $image->resize($options['maxWidth'], $options['maxHeight']);
-                }
-                
-                // Save resized image
-                if (in_array($extension, ['jpg', 'jpeg'])) {
-                    $image->toJpeg($options['quality'])->save($fullPath);
-                } elseif ($extension === 'png') {
-                    $image->toPng()->save($fullPath);
-                } else {
-                    $image->toJpeg($options['quality'])->save($fullPath);
-                }
-                
-                // Re-optimize after resizing (only if optimizers are available)
-                if ($hasOptimizers) {
-                    try {
-                        $optimizerChain->optimize($fullPath);
-                    } catch (\Exception $e) {
-                        \Log::warning('Re-optimization after resizing failed: ' . $e->getMessage());
-                    }
-                }
-            }
-            
-            $optimizedSize = filesize($fullPath);
-            $compressionRatio = $originalSize > 0 ? round((($originalSize - $optimizedSize) / $originalSize) * 100, 2) : 0;
-            
-            $results = [
-                'original' => $tempPath,
-                'optimized' => $tempPath,
-                'original_size' => $originalSize,
-                'optimized_size' => $optimizedSize,
-                'compression_ratio' => $compressionRatio,
-                'dimensions' => [
-                    'width' => $image->width(),
-                    'height' => $image->height()
-                ]
-            ];
-            
-            // Generate WebP version if requested
-            if ($options['generateWebP']) {
-                try {
-                    $webpPath = $directory . '/' . $filename . '.webp';
-                    $webpFullPath = storage_path('app/public/' . $webpPath);
-                    $image->toWebp($options['quality'])->save($webpFullPath);
-                    
-                    if ($hasOptimizers) {
-                        try {
-                            $optimizerChain->optimize($webpFullPath);
-                        } catch (\Exception $e) {
-                            \Log::warning('WebP optimization failed: ' . $e->getMessage());
-                        }
-                    }
-                    
-                    $results['webp'] = $webpPath;
-                } catch (\Exception $e) {
-                    \Log::warning('WebP generation failed: ' . $e->getMessage());
-                }
-            }
-            
-            // Generate thumbnails if requested
-            if ($options['generateThumbnails'] && !empty($options['thumbnailSizes'])) {
-                $results['thumbnails'] = [];
-                foreach ($options['thumbnailSizes'] as $size) {
-                    try {
-                        $thumbPath = $directory . '/' . $filename . '_' . $size . '.' . $extension;
-                        $thumbFullPath = storage_path('app/public/' . $thumbPath);
-                        
-                        $thumbImage = $manager->read($fullPath);
-                        $thumbImage->scaleDown($size, $size);
-                        
-                        if (in_array($extension, ['jpg', 'jpeg'])) {
-                            $thumbImage->toJpeg($options['quality'])->save($thumbFullPath);
-                        } elseif ($extension === 'png') {
-                            $thumbImage->toPng()->save($thumbFullPath);
-                        } else {
-                            $thumbImage->toJpeg($options['quality'])->save($thumbFullPath);
-                        }
-                        
-                        if ($hasOptimizers) {
-                            try {
-                                $optimizerChain->optimize($thumbFullPath);
-                            } catch (\Exception $e) {
-                                \Log::warning("Thumbnail optimization failed for size {$size}: " . $e->getMessage());
-                            }
-                        }
-                        
-                        $results['thumbnails'][$size] = $thumbPath;
-                    } catch (\Exception $e) {
-                        \Log::warning("Thumbnail generation failed for size {$size}: " . $e->getMessage());
-                    }
-                }
-            }
-            
-            // Log successful optimization
-            \Log::info('Image optimization completed successfully', [
-                'original_size' => $originalSize,
-                'optimized_size' => $optimizedSize,
-                'compression_ratio' => $compressionRatio,
-                'webp_generated' => isset($results['webp']),
-                'thumbnails_count' => count($results['thumbnails'] ?? []),
-                'file_size_mb' => round($originalSize / (1024 * 1024), 2),
-                'dimensions' => $results['dimensions']
-            ]);
-            
-            // Restore original memory limit
-            ini_set('memory_limit', $originalMemoryLimit);
-            
-            return $results;
-            
-        } catch (\Exception $e) {
-            // Restore original memory limit
-            ini_set('memory_limit', $originalMemoryLimit);
-            
-            \Log::error('Image optimization failed: ' . $e->getMessage(), [
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'mime_type' => $file->getMimeType(),
-                'error_line' => $e->getLine(),
-                'error_file' => $e->getFile(),
-                'upload_error_code' => $file->getError()
-            ]);
-            
-            // Enhanced fallback: try different approaches based on error type
-            try {
-                // For upload errors, try alternative storage method
-                if ($file->getError() !== UPLOAD_ERR_OK) {
-                    \Log::info('Attempting alternative upload handling for error code: ' . $file->getError());
-                    
-                    // Try to get file content directly and save it
-                    $content = file_get_contents($file->getPathname());
-                    if ($content === false) {
-                        throw new \Exception('Cannot read file content from temporary location');
-                    }
-                    
-                    $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
-                    $path = $directory . '/' . $filename;
-                    $fullPath = storage_path('app/public/' . $path);
-                    
-                    // Ensure directory exists
-                    $fullDirectoryPath = storage_path('app/public/' . $directory);
-                    if (!is_dir($fullDirectoryPath)) {
-                        mkdir($fullDirectoryPath, 0755, true);
-                    }
-                    
-                    if (file_put_contents($fullPath, $content) === false) {
-                        throw new \Exception('Failed to write file content to storage');
-                    }
-                    
-                    \Log::info('Alternative upload method succeeded', ['path' => $path]);
-                    
-                    return [
-                        'original' => $path,
-                        'optimized' => $path,
-                        'error' => $e->getMessage(),
-                        'fallback_used' => true,
-                        'alternative_method' => true
-                    ];
-                }
-                
-                // Standard fallback for other errors
-                $path = $file->store($directory, 'public');
-                return [
-                    'original' => $path, 
-                    'optimized' => $path,
-                    'error' => $e->getMessage(),
-                    'fallback_used' => true
-                ];
-            } catch (\Exception $fallbackError) {
-                \Log::error('All fallback methods failed: ' . $fallbackError->getMessage());
-                throw new \Exception('Complete image upload failure. Original error: ' . $e->getMessage() . '. Fallback error: ' . $fallbackError->getMessage());
-            }
-        }
-    }
+    private static ?ImageManager $manager = null;
+    private static ?array $optimizers = null;
 
     /**
-     * Optimize existing image file
+     * Handle uploaded image with queue support
      */
-    public static function optimizeExistingImage(string $filePath, array $options = [])
+    public static function handleUpload(UploadedFile $file, string $directory = 'uploads', array $options = []): array
     {
-        $options = array_merge([
-            'quality' => 85,
-            'maxWidth' => 1600, // Increased for 5MB images
-            'maxHeight' => 1600, // Increased for 5MB images
-        ], $options);
-
-        try {
-            $fullPath = storage_path('app/public/' . $filePath);
-            
-            if (!file_exists($fullPath)) {
-                \Log::error('Image file not found: ' . $fullPath);
-                return false;
-            }
-            
-            // Create backup
-            $backupPath = $fullPath . '.backup';
-            copy($fullPath, $backupPath);
-            
-            // Optimize with Spatie Image Optimizer
-            $optimizerChain = OptimizerChainFactory::create();
-            
-            // Verify file exists
-            if (!file_exists($fullPath)) {
-                \Log::error('Image file not found for optimization: ' . $fullPath);
-                return false;
-            }
-            
-            $optimizerChain->optimize($fullPath);
-            
-            // Further optimization with Intervention Image
-            $manager = self::getImageManager();
-            $image = $manager->read($fullPath);
-            
-            // Resize if too large
-            if ($image->width() > $options['maxWidth'] || $image->height() > $options['maxHeight']) {
-                $image->scaleDown($options['maxWidth'], $options['maxHeight']);
-                $image->toJpeg($options['quality'])->save($fullPath);
-                
-                // Re-optimize after resizing
-                $optimizerChain->optimize($fullPath);
-            }
-            
-            return true;
-            
-        } catch (\Exception $e) {
-            \Log::error('Image optimization failed for existing file: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Optimize and convert image to WebP
-     */
-    public static function optimizeImage($imagePath, $quality = 80, $maxWidth = 1600) // Increased for 5MB images
-    {
-        try {
-            // Get the original image
-            $manager = self::getImageManager();
-            $image = $manager->read($imagePath);
-            
-            // Resize if too large
-            if ($image->width() > $maxWidth) {
-                $image->scaleDown($maxWidth);
-            }
-            
-            // Get file info
-            $pathInfo = pathinfo($imagePath);
-            $filename = $pathInfo['filename'];
-            $directory = $pathInfo['dirname'];
-            
-            // Save optimized original format
-            $image->toJpeg($quality)->save($imagePath);
-            
-            // Optimize with Spatie Image Optimizer
-            $optimizerChain = OptimizerChainFactory::create();
-            
-            // Verify file exists
-            if (!file_exists($imagePath)) {
-                \Log::error('Image file not found for optimization: ' . $imagePath);
-                return ['original' => $imagePath];
-            }
-            
-            $optimizerChain->optimize($imagePath);
-            
-            // Create WebP version
-            $webpPath = $directory . '/' . $filename . '.webp';
-            $image->toWebp($quality)->save($webpPath);
-            $optimizerChain->optimize($webpPath);
-            
-            // Create optimized JPEG fallback
-            $jpegPath = $directory . '/' . $filename . '_optimized.jpg';
-            $image->toJpeg($quality)->save($jpegPath);
-            $optimizerChain->optimize($jpegPath);
+        // Validate upload
+        self::validateUpload($file);
+        
+        // Store file immediately
+        $path = self::storeFile($file, $directory);
+        $config = config('image_optimizer');
+        
+        // Check if should queue optimization
+        if (($config['queue']['enabled'] ?? false) && $file->getSize() > ($config['queue']['size_threshold'] ?? 1048576)) {
+            OptimizeImageJob::dispatch($path, $options)->onQueue($config['queue']['queue_name']);
             
             return [
-                'webp' => $webpPath,
-                'jpeg' => $jpegPath,
-                'original' => $imagePath
-            ];
-            
-        } catch (\Exception $e) {
-            \Log::error('Image optimization failed: ' . $e->getMessage());
-            return ['original' => $imagePath];
-        }
-    }
-    
-    /**
-     * Generate responsive image HTML
-     */
-    public static function generateResponsiveImage($imagePath, $alt = '', $class = '', $sizes = [])
-    {
-        $defaultSizes = [
-            'sm' => 576,
-            'md' => 768,
-            'lg' => 992,
-            'xl' => 1200
-        ];
-        
-        $sizes = array_merge($defaultSizes, $sizes);
-        $pathInfo = pathinfo($imagePath);
-        $filename = $pathInfo['filename'];
-        $directory = $pathInfo['dirname'];
-        
-        // Generate srcset
-        $srcset = [];
-        foreach ($sizes as $breakpoint => $width) {
-            $resizedPath = $directory . '/' . $filename . '_' . $width . '.webp';
-            if (file_exists(public_path($resizedPath))) {
-                $srcset[] = $resizedPath . ' ' . $width . 'w';
-            }
-        }
-        
-        $html = '<picture>';
-        
-        // WebP source
-        if (!empty($srcset)) {
-            $html .= '<source type="image/webp" srcset="' . implode(', ', $srcset) . '">';
-        }
-        
-        // Fallback image
-        $html .= '<img src="' . $imagePath . '" alt="' . htmlspecialchars($alt) . '" class="' . $class . '" loading="lazy" decoding="async">';
-        $html .= '</picture>';
-        
-        return $html;
-    }
-    
-    /**
-     * Generate image with lazy loading
-     */
-    public static function lazyImage($src, $alt = '', $class = '', $placeholder = null)
-    {
-        $placeholder = $placeholder ?: 'data:image/svg+xml;base64,' . base64_encode(
-            '<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f8f9fa"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#6c757d">Loading...</text></svg>'
-        );
-        
-        return '<img src="' . $placeholder . '" data-src="' . $src . '" alt="' . htmlspecialchars($alt) . '" class="lazy ' . $class . '" loading="lazy" decoding="async">';
-    }
-
-    /**
-     * Batch optimize multiple images in a directory
-     */
-    public static function batchOptimizeDirectory(string $directory, array $options = [])
-    {
-        $options = array_merge([
-            'quality' => 85,
-            'maxWidth' => 1600, // Increased for 5MB images
-            'maxHeight' => 1600, // Increased for 5MB images
-            'allowedExtensions' => ['jpg', 'jpeg', 'png', 'gif', 'webp'], // Added webp support
-            'skipOptimized' => true,
-            'createBackup' => true,
-        ], $options);
-
-        $directoryPath = storage_path('app/public/' . $directory);
-        
-        if (!is_dir($directoryPath)) {
-            return ['error' => 'Directory not found: ' . $directoryPath];
-        }
-
-        $results = [
-            'processed' => 0,
-            'skipped' => 0,
-            'errors' => 0,
-            'total_size_before' => 0,
-            'total_size_after' => 0,
-            'files' => []
-        ];
-
-        $files = glob($directoryPath . '/*');
-        
-        foreach ($files as $filePath) {
-            if (!is_file($filePath)) {
-                continue;
-            }
-
-            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-            
-            if (!in_array($extension, $options['allowedExtensions'])) {
-                continue;
-            }
-
-            $relativePath = str_replace(storage_path('app/public/'), '', $filePath);
-            $sizeBefore = filesize($filePath);
-            
-            // Skip if already optimized (check for backup file)
-            if ($options['skipOptimized'] && file_exists($filePath . '.backup')) {
-                $results['skipped']++;
-                continue;
-            }
-
-            try {
-                $results['total_size_before'] += $sizeBefore;
-                
-                if (self::optimizeExistingImage($relativePath, $options)) {
-                    $sizeAfter = filesize($filePath);
-                    $results['total_size_after'] += $sizeAfter;
-                    $results['processed']++;
-                    
-                    $results['files'][] = [
-                        'file' => $relativePath,
-                        'size_before' => $sizeBefore,
-                        'size_after' => $sizeAfter,
-                        'compression' => round((($sizeBefore - $sizeAfter) / $sizeBefore) * 100, 2)
-                    ];
-                } else {
-                    $results['errors']++;
-                }
-            } catch (\Exception $e) {
-                $results['errors']++;
-                \Log::error('Batch optimization failed for file: ' . $relativePath, [
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-
-        $results['total_compression'] = $results['total_size_before'] > 0 
-            ? round((($results['total_size_before'] - $results['total_size_after']) / $results['total_size_before']) * 100, 2)
-            : 0;
-
-        return $results;
-    }
-
-    /**
-     * Handle large file uploads with enhanced error recovery
-     */
-    public static function handleLargeFileUpload(UploadedFile $file, string $directory = 'uploads', array $options = [])
-    {
-        $options = array_merge([
-            'skip_optimization' => false,
-            'force_store' => true,
-            'max_attempts' => 3
-        ], $options);
-        
-        $attempts = 0;
-        $lastError = null;
-        
-        while ($attempts < $options['max_attempts']) {
-            try {
-                $attempts++;
-                
-                \Log::info("Large file upload attempt {$attempts}", [
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_size' => $file->getSize(),
-                    'error_code' => $file->getError(),
-                    'is_valid' => $file->isValid()
-                ]);
-                
-                // If optimization is disabled or file has upload errors, just store it
-                if ($options['skip_optimization'] || $file->getError() !== UPLOAD_ERR_OK) {
-                    return self::simpleFileStore($file, $directory);
-                }
-                
-                // Try full optimization
-                return self::optimizeUploadedImage($file, $directory, $options);
-                
-            } catch (\Exception $e) {
-                $lastError = $e;
-                \Log::warning("Large file upload attempt {$attempts} failed: " . $e->getMessage());
-                
-                // On final attempt, try simple storage
-                if ($attempts === $options['max_attempts'] && $options['force_store']) {
-                    try {
-                        return self::simpleFileStore($file, $directory);
-                    } catch (\Exception $storeError) {
-                        \Log::error('Final simple storage attempt failed: ' . $storeError->getMessage());
-                    }
-                }
-                
-                // Wait a bit before retrying (in case it's a temporary issue)
-                if ($attempts < $options['max_attempts']) {
-                    usleep(500000); // 0.5 seconds
-                }
-            }
-        }
-        
-        throw new \Exception("All upload attempts failed. Last error: " . ($lastError ? $lastError->getMessage() : 'Unknown error'));
-    }
-    
-    /**
-     * Simple file storage without optimization
-     */
-    private static function simpleFileStore(UploadedFile $file, string $directory)
-    {
-        try {
-            // Check if file is accessible
-            if (!$file->isValid() && $file->getError() !== UPLOAD_ERR_OK) {
-                // Try direct file copy approach
-                $content = file_get_contents($file->getPathname());
-                if ($content === false) {
-                    throw new \Exception('Cannot access file content');
-                }
-                
-                $filename = uniqid() . '_' . time() . '.' . strtolower($file->getClientOriginalExtension());
-                $path = $directory . '/' . $filename;
-                $fullPath = storage_path('app/public/' . $path);
-                
-                // Ensure directory exists
-                $fullDirectoryPath = dirname($fullPath);
-                if (!is_dir($fullDirectoryPath)) {
-                    mkdir($fullDirectoryPath, 0755, true);
-                }
-                
-                if (file_put_contents($fullPath, $content) === false) {
-                    throw new \Exception('Failed to save file content');
-                }
-                
-                \Log::info('File stored using direct copy method', [
-                    'path' => $path,
-                    'size' => strlen($content)
-                ]);
-                
-                return [
-                    'original' => $path,
-                    'optimized' => $path,
-                    'simple_store' => true,
-                    'method' => 'direct_copy'
-                ];
-            }
-            
-            // Standard Laravel storage
-            $path = $file->store($directory, 'public');
-            
-            \Log::info('File stored using standard Laravel method', [
                 'path' => $path,
-                'size' => $file->getSize()
-            ]);
-            
-            return [
-                'original' => $path,
-                'optimized' => $path,
-                'simple_store' => true,
-                'method' => 'laravel_store'
+                'queued' => true,
+                'message' => 'File stored, optimization queued'
             ];
-            
+        }
+        
+        // Process immediately for small files
+        return self::processStoredImage($path, $options);
+    }
+
+    /**
+     * Process stored image file
+     */
+    public static function processStoredImage(string $path, array $options = []): array
+    {
+        $cacheKey = 'img_opt_' . md5($path . json_encode($options, JSON_UNESCAPED_SLASHES));
+        
+        if (config('image_optimizer.cache.enabled') && Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $fullPath = Storage::disk('public')->path($path);
+        if (!file_exists($fullPath)) {
+            throw new \Exception('File not found: ' . $path);
+        }
+
+        $config = config('image_optimizer');
+        $options = array_merge([
+            'quality' => $config['quality']['standard'],
+            'max_width' => $config['sizes']['max_width'],
+            'max_height' => $config['sizes']['max_height'],
+            'generate_webp' => $config['formats']['webp'],
+            'thumbnails' => $config['sizes']['thumbnails'],
+        ], $options);
+
+        try {
+            $originalSize = filesize($fullPath);
+            $result = [
+                'path' => $path,
+                'original_size' => $originalSize,
+                'variants' => []
+            ];
+
+            // Optimize main image
+            $optimized = self::optimizeImage($fullPath, $options);
+            $result['optimized_size'] = filesize($fullPath);
+            $result['compression_ratio'] = round((($originalSize - $result['optimized_size']) / $originalSize) * 100, 2);
+
+            // Generate WebP
+            if ($options['generate_webp']) {
+                $webpPath = self::generateWebP($fullPath, $options['quality']);
+                if ($webpPath) {
+                    $result['variants']['webp'] = str_replace(storage_path('app/public/'), '', $webpPath);
+                }
+            }
+
+            // Generate thumbnails (optimized - single image load)
+            $result['variants']['thumbnails'] = [];
+            if (!empty($options['thumbnails'])) {
+                $thumbnails = self::generateThumbnails($fullPath, $options['thumbnails'], $options);
+                foreach ($thumbnails as $size => $thumbPath) {
+                    $result['variants']['thumbnails'][$size] = str_replace(storage_path('app/public/'), '', $thumbPath);
+                }
+            }
+
+            // Cache result (clear old cache first)
+            if (config('image_optimizer.cache.enabled')) {
+                Cache::forget($cacheKey);
+                Cache::put($cacheKey, $result, config('image_optimizer.cache.ttl'));
+            }
+
+            return $result;
+
         } catch (\Exception $e) {
-            \Log::error('Simple file store failed: ' . $e->getMessage());
+            Log::error('Image processing failed', ['path' => $path, 'error' => $e->getMessage()]);
             throw $e;
         }
     }
 
     /**
-     * Check if image optimization binaries are available
+     * Validate uploaded file
      */
-    public static function checkOptimizerStatus()
+    private static function validateUpload(UploadedFile $file): void
     {
-        try {
-            $optimizerChain = OptimizerChainFactory::create();
-            $optimizers = $optimizerChain->getOptimizers();
-            
-            $status = [];
-            foreach ($optimizers as $optimizer) {
-                $className = get_class($optimizer);
-                $binaryName = method_exists($optimizer, 'binaryName') ? $optimizer->binaryName() : 'N/A';
-                
-                // Check if binary exists
-                $binaryExists = false;
-                if ($binaryName !== 'N/A') {
-                    $checkCommand = PHP_OS_FAMILY === 'Windows' ? "where {$binaryName} 2>nul" : "which {$binaryName} 2>/dev/null";
-                    $output = shell_exec($checkCommand);
-                    $binaryExists = !empty(trim($output));
-                }
-                
-                $status[] = [
-                    'class' => basename($className),
-                    'binary' => $binaryName,
-                    'available' => $binaryExists,
-                    'full_class' => $className
-                ];
-            }
-            
-            return $status;
-        } catch (\Exception $e) {
-            return ['error' => $e->getMessage()];
+        $config = config('image_optimizer.optimization', []);
+        
+        if ($file->getError() !== UPLOAD_ERR_OK) {
+            throw new \Exception('Upload failed with error code: ' . $file->getError());
+        }
+
+        if (!$file->isValid()) {
+            throw new \Exception('Invalid file upload');
+        }
+
+        if (!in_array($file->getMimeType(), $config['allowed_mime_types'] ?? ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+            throw new \Exception('Unsupported file type: ' . $file->getMimeType());
+        }
+
+        if ($file->getSize() > ($config['max_file_size'] ?? 5242880)) {
+            throw new \Exception('File size exceeds limit: ' . round($file->getSize() / 1024 / 1024, 2) . 'MB');
         }
     }
 
     /**
-     * Get optimization statistics for a directory
+     * Store uploaded file
      */
-    public static function getDirectoryStats(string $directory)
+    private static function storeFile(UploadedFile $file, string $directory): string
     {
-        $directoryPath = storage_path('app/public/' . $directory);
+        $filename = uniqid() . '_' . time() . '.' . strtolower($file->getClientOriginalExtension());
+        return $file->storeAs($directory, $filename, 'public');
+    }
+
+    /**
+     * Get singleton Image Manager
+     */
+    private static function getImageManager(): ImageManager
+    {
+        return self::$manager ??= new ImageManager(new Driver());
+    }
+
+    /**
+     * Optimize single image file
+     */
+    private static function optimizeImage(string $fullPath, array $options): bool
+    {
+        try {
+            // Use external optimizers if available
+            if (self::hasOptimizers()) {
+                $optimizerChain = OptimizerChainFactory::create();
+                $optimizerChain->optimize($fullPath);
+            }
+
+            // Resize with Intervention Image
+            $manager = self::getImageManager();
+            $image = $manager->read($fullPath);
+            if (!$image) {
+                throw new \Exception("Cannot read image");
+            }
+            
+            if ($image->width() > $options['max_width'] || $image->height() > $options['max_height']) {
+                $image->scaleDown($options['max_width'], $options['max_height']);
+                
+                $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+                if (in_array($extension, ['jpg', 'jpeg'])) {
+                    $image->toJpeg($options['quality'])->save($fullPath);
+                } else {
+                    $image->toPng()->save($fullPath);
+                }
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::warning('Image optimization failed', ['path' => $fullPath, 'error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
+     * Generate WebP variant
+     */
+    private static function generateWebP(string $fullPath, int $quality): ?string
+    {
+        try {
+            $pathInfo = pathinfo($fullPath);
+            $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '.webp';
+            $image = self::getImageManager()->read($fullPath);
+            $image->toWebp($quality)->save($webpPath);
+            return $webpPath;
+        } catch (\Exception $e) {
+            Log::warning('WebP generation failed', ['path' => $fullPath, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Generate multiple thumbnails efficiently using image cloning
+     */
+    private static function generateThumbnails(string $fullPath, array $sizes, array $options): array
+    {
+        $thumbnails = [];
         
-        if (!is_dir($directoryPath)) {
-            return ['error' => 'Directory not found'];
+        try {
+            // Load image once
+            $original = self::getImageManager()->read($fullPath);
+            $pathInfo = pathinfo($fullPath);
+            
+            foreach ($sizes as $size) {
+                try {
+                    $thumbPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
+                    
+                    // Clone the original image for each thumbnail
+                    $image = clone $original;
+                    $image->scaleDown($size, $size);
+                    
+                    $ext = strtolower($pathInfo['extension']);
+                    if (in_array($ext, ['jpg', 'jpeg'])) {
+                        $image->toJpeg($options['quality'])->save($thumbPath);
+                    } else {
+                        $image->toPng()->save($thumbPath);
+                    }
+                    
+                    $thumbnails[$size] = $thumbPath;
+                } catch (\Exception $e) {
+                    Log::warning('Individual thumbnail generation failed', [
+                        'path' => $fullPath, 
+                        'size' => $size, 
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Thumbnail batch generation failed', [
+                'path' => $fullPath, 
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return $thumbnails;
+    }
+
+    /**
+     * Legacy method - generate single thumbnail (kept for compatibility)
+     */
+    private static function generateThumbnail(string $fullPath, int $size, array $options): ?string
+    {
+        $thumbnails = self::generateThumbnails($fullPath, [$size], $options);
+        return $thumbnails[$size] ?? null;
+    }
+
+    /**
+     * Check if optimization binaries are available
+     */
+    private static function hasOptimizers(): bool
+    {
+        if (self::$optimizers !== null) {
+            return !empty(self::$optimizers);
         }
 
-        $stats = [
-            'total_files' => 0,
-            'total_size' => 0,
-            'image_files' => 0,
-            'optimized_files' => 0,
-            'file_types' => []
-        ];
-
-        $files = glob($directoryPath . '/*');
+        self::$optimizers = [];
         
-        foreach ($files as $filePath) {
-            if (!is_file($filePath)) {
+        try {
+            $config = config('image_optimizer.binaries', []);
+            foreach ($config as $name => $binary) {
+                if (self::binaryExists($binary)) {
+                    self::$optimizers[$name] = $binary;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::debug('Optimizer check failed', ['error' => $e->getMessage()]);
+        }
+
+        return !empty(self::$optimizers);
+    }
+
+    /**
+     * Check if binary exists (secure version)
+     */
+    private static function binaryExists(string $binary): bool
+    {
+        $binary = escapeshellarg($binary);
+        $command = PHP_OS_FAMILY === 'Windows' ? "where $binary 2>nul" : "which $binary 2>/dev/null";
+        
+        $output = null;
+        $returnVar = null;
+        exec($command, $output, $returnVar);
+        
+        return $returnVar === 0 && !empty($output);
+    }
+
+    /**
+     * Generate responsive image HTML
+     */
+    public static function responsiveImage(string $path, string $alt = '', array $attributes = []): string
+    {
+        $config = config('image_optimizer', []);
+        $cdnUrl = ($config['cdn']['enabled'] ?? false) ? rtrim($config['cdn']['url'] ?? '', '/') . '/' : '';
+        
+        $pathInfo = pathinfo($path);
+        $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '.webp';
+        
+        $srcset = [];
+        foreach ($config['sizes']['thumbnails'] as $size) {
+            $thumbPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
+            if (Storage::disk('public')->exists($thumbPath)) {
+                $srcset[] = $cdnUrl . Storage::url($thumbPath) . ' ' . $size . 'w';
+            }
+        }
+
+        $class = $attributes['class'] ?? '';
+        $loading = $attributes['loading'] ?? 'lazy';
+        
+        $html = '<picture>';
+        
+        if (Storage::disk('public')->exists($webpPath)) {
+            $html .= '<source type="image/webp" srcset="' . $cdnUrl . Storage::url($webpPath) . '">';
+        }
+        
+        if (!empty($srcset)) {
+            $html .= '<source srcset="' . implode(', ', $srcset) . '">';
+        }
+        
+        $html .= '<img src="' . $cdnUrl . Storage::url($path) . '" alt="' . htmlspecialchars($alt) . '" class="' . $class . '" loading="' . $loading . '">';
+        $html .= '</picture>';
+        
+        return $html;
+    }
+
+    /**
+     * Get optimization status
+     */
+    public static function getStatus(): array
+    {
+        $config = config('image_optimizer.binaries', []);
+        $status = [];
+        
+        foreach ($config as $name => $binary) {
+            $status[$name] = self::binaryExists($binary);
+        }
+        
+        return [
+            'binaries' => $status,
+            'queue_enabled' => config('image_optimizer.queue.enabled'),
+            'cache_enabled' => config('image_optimizer.cache.enabled'),
+            'cdn_enabled' => config('image_optimizer.cdn.enabled'),
+        ];
+    }
+
+    /**
+     * Legacy compatibility method
+     */
+    public static function optimizeUploadedImage(UploadedFile $file, string $directory = 'uploads', array $options = []): array
+    {
+        return self::handleUpload($file, $directory, $options);
+    }
+
+    /**
+     * Legacy method - use processStoredImage instead
+     */
+    public static function optimizeExistingImage(string $filePath, array $options = []): bool
+    {
+        try {
+            self::processStoredImage($filePath, $options);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Batch optimize directory
+     */
+    public static function batchOptimizeDirectory(string $directory, array $options = []): array
+    {
+        $config = config('image_optimizer');
+        $results = ['processed' => 0, 'errors' => 0, 'files' => []];
+        
+        $files = Storage::disk('public')->files($directory);
+        
+        foreach ($files as $file) {
+            if (!in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                 continue;
             }
 
-            $stats['total_files']++;
-            $stats['total_size'] += filesize($filePath);
-            
-            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-            $stats['file_types'][$extension] = ($stats['file_types'][$extension] ?? 0) + 1;
-            
-            if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $stats['image_files']++;
-                
-                if (file_exists($filePath . '.backup')) {
-                    $stats['optimized_files']++;
+            try {
+                if ($config['queue']['enabled']) {
+                    OptimizeImageJob::dispatch($file, $options)->onQueue($config['queue']['queue_name']);
+                } else {
+                    $result = self::processStoredImage($file, $options);
+                    $results['files'][] = $result;
                 }
+                $results['processed']++;
+            } catch (\Exception $e) {
+                $results['errors']++;
+                Log::error('Batch optimization failed', ['file' => $file, 'error' => $e->getMessage()]);
             }
         }
 
-        return $stats;
+        return $results;
+    }
+
+    /**
+     * Generate lazy loading placeholder
+     */
+    public static function lazyPlaceholder(int $width = 400, int $height = 300): string
+    {
+        return 'data:image/svg+xml;base64,' . base64_encode(
+            "<svg width='$width' height='$height' xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='#f8f9fa'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='#6c757d'>Loading...</text></svg>"
+        );
     }
 }

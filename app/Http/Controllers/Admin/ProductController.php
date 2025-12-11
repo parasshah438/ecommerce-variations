@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use App\Helpers\ImageOptimizer;
 use App\Models\Product;
 use App\Models\ProductVariation;
@@ -99,40 +100,37 @@ class ProductController extends Controller
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $file) {
                     try {
-                        // Check file size and use appropriate method
-                        $fileSize = $file->getSize();
-                        $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                        // Use new ImageOptimizer handleUpload method
+                        $optimizationResult = ImageOptimizer::handleUpload(
+                            $file,
+                            'products',
+                            [
+                                'quality' => 85,
+                                'max_width' => 1600,
+                                'max_height' => 1600,
+                                'force_resize' => false,
+                                'generate_webp' => true,
+                                'thumbnails' => [150, 300, 600]
+                            ]
+                        );
                         
-                        if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
-                            \Log::info('Using enhanced large file handler', [
-                                'file_name' => $file->getClientOriginalName(),
-                                'file_size' => $fileSize,
-                                'upload_error' => $file->getError()
-                            ]);
-                            
-                            $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'products', [
-                                'quality' => 85,
-                                'maxWidth' => 1600,
-                                'maxHeight' => 1600,
-                                'generateWebP' => true,
-                                'generateThumbnails' => true,
-                                'thumbnailSizes' => [150, 300, 600],
-                                'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
-                            ]);
+                        $imagePath = null;
+                        if (isset($optimizationResult['queued'])) {
+                            // Image was queued for processing
+                            $imagePath = $optimizationResult['path'];
+                            \Log::info('Product image queued for optimization', ['path' => $imagePath]);
                         } else {
-                            $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'products', [
-                                'quality' => 85,
-                                'maxWidth' => 1600,
-                                'maxHeight' => 1600,
-                                'generateWebP' => true,
-                                'generateThumbnails' => true,
-                                'thumbnailSizes' => [150, 300, 600]
+                            // Image was processed immediately
+                            $imagePath = $optimizationResult['path'];
+                            \Log::info('Product image optimized successfully', [
+                                'path' => $imagePath,
+                                'webp_generated' => isset($optimizationResult['webp_path'])
                             ]);
                         }
                         
                         ProductImage::create([
                             'product_id' => $product->id,
-                            'path' => $optimizationResult['optimized'],
+                            'path' => $imagePath,
                             'alt' => $product->name . ' - Image ' . ($index + 1),
                             'position' => $index,
                         ]);
@@ -206,35 +204,38 @@ class ProductController extends Controller
                     if ($request->hasFile($variationImageKey)) {
                         foreach ($request->file($variationImageKey) as $imageIndex => $file) {
                             try {
-                                // Check file size and use appropriate method
-                                $fileSize = $file->getSize();
-                                $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                                // Use new ImageOptimizer handleUpload method
+                                $optimizationResult = ImageOptimizer::handleUpload(
+                                    $file,
+                                    'variations',
+                                    [
+                                        'quality' => 85,
+                                        'max_width' => 800,
+                                        'max_height' => 800,
+                                        'force_resize' => false,
+                                        'generate_webp' => true,
+                                        'thumbnails' => [150, 300]
+                                    ]
+                                );
                                 
-                                if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
-                                    $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'variations', [
-                                        'quality' => 85,
-                                        'maxWidth' => 800,
-                                        'maxHeight' => 800,
-                                        'generateWebP' => true,
-                                        'generateThumbnails' => true,
-                                        'thumbnailSizes' => [150, 300],
-                                        'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
-                                    ]);
+                                $imagePath = null;
+                                if (isset($optimizationResult['queued'])) {
+                                    // Image was queued for processing
+                                    $imagePath = $optimizationResult['path'];
+                                    \Log::info('Variation image queued for optimization', ['path' => $imagePath]);
                                 } else {
-                                    $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'variations', [
-                                        'quality' => 85,
-                                        'maxWidth' => 800,
-                                        'maxHeight' => 800,
-                                        'generateWebP' => true,
-                                        'generateThumbnails' => true,
-                                        'thumbnailSizes' => [150, 300]
+                                    // Image was processed immediately
+                                    $imagePath = $optimizationResult['path'];
+                                    \Log::info('Variation image optimized successfully', [
+                                        'path' => $imagePath,
+                                        'webp_generated' => isset($optimizationResult['webp_path'])
                                     ]);
                                 }
                                 
                                 ProductVariationImage::create([
                                     'product_id' => $product->id,
                                     'product_variation_id' => $variation->id,
-                                    'path' => $optimizationResult['optimized'],
+                                    'path' => $imagePath,
                                     'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
                                     'position' => $imageIndex,
                                 ]);
@@ -298,6 +299,12 @@ class ProductController extends Controller
             }
 
             DB::commit();
+            
+            // Clear relevant caches
+            Cache::forget('featured_products');
+            Cache::forget('latest_products');
+            Cache::forget('category_products_' . $product->category_id);
+            
             return redirect()->route('admin.products.show', $product)->with('success', 'Product updated successfully!');
         } catch (\Exception $e) {
             DB::rollback();
@@ -388,34 +395,37 @@ class ProductController extends Controller
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $file) {
                     try {
-                        // Check file size and use appropriate method
-                        $fileSize = $file->getSize();
-                        $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                        // Use new ImageOptimizer handleUpload method
+                        $optimizationResult = ImageOptimizer::handleUpload(
+                            $file,
+                            'products',
+                            [
+                                'quality' => 85,
+                                'max_width' => 1600,
+                                'max_height' => 1600,
+                                'force_resize' => false,
+                                'generate_webp' => true,
+                                'thumbnails' => [150, 300, 600]
+                            ]
+                        );
                         
-                        if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
-                            $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'products', [
-                                'quality' => 85,
-                                'maxWidth' => 1600,
-                                'maxHeight' => 1600,
-                                'generateWebP' => true,
-                                'generateThumbnails' => true,
-                                'thumbnailSizes' => [150, 300, 600],
-                                'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
-                            ]);
+                        $imagePath = null;
+                        if (isset($optimizationResult['queued'])) {
+                            // Image was queued for processing
+                            $imagePath = $optimizationResult['path'];
+                            \Log::info('Product image queued for optimization', ['path' => $imagePath]);
                         } else {
-                            $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'products', [
-                                'quality' => 85,
-                                'maxWidth' => 1600,
-                                'maxHeight' => 1600,
-                                'generateWebP' => true,
-                                'generateThumbnails' => true,
-                                'thumbnailSizes' => [150, 300, 600]
+                            // Image was processed immediately
+                            $imagePath = $optimizationResult['path'];
+                            \Log::info('Product image optimized successfully', [
+                                'path' => $imagePath,
+                                'webp_generated' => isset($optimizationResult['webp_path'])
                             ]);
                         }
                         
                         ProductImage::create([
                             'product_id' => $product->id,
-                            'path' => $optimizationResult['optimized'],
+                            'path' => $imagePath,
                             'alt' => $product->name . ' - Image ' . ($index + 1),
                             'position' => $index,
                         ]);
@@ -465,35 +475,38 @@ class ProductController extends Controller
                     if ($request->hasFile($variationImageKey)) {
                         foreach ($request->file($variationImageKey) as $imageIndex => $file) {
                             try {
-                                // Check file size and use appropriate method
-                                $fileSize = $file->getSize();
-                                $isLargeFile = $fileSize > (3 * 1024 * 1024); // Files > 3MB
+                                // Use new ImageOptimizer handleUpload method
+                                $optimizationResult = ImageOptimizer::handleUpload(
+                                    $file,
+                                    'variations',
+                                    [
+                                        'quality' => 85,
+                                        'max_width' => 800,
+                                        'max_height' => 800,
+                                        'force_resize' => false,
+                                        'generate_webp' => true,
+                                        'thumbnails' => [150, 300]
+                                    ]
+                                );
                                 
-                                if ($isLargeFile || $file->getError() !== UPLOAD_ERR_OK) {
-                                    $optimizationResult = ImageOptimizer::handleLargeFileUpload($file, 'variations', [
-                                        'quality' => 85,
-                                        'maxWidth' => 800,
-                                        'maxHeight' => 800,
-                                        'generateWebP' => true,
-                                        'generateThumbnails' => true,
-                                        'thumbnailSizes' => [150, 300],
-                                        'skip_optimization' => $file->getError() !== UPLOAD_ERR_OK
-                                    ]);
+                                $imagePath = null;
+                                if (isset($optimizationResult['queued'])) {
+                                    // Image was queued for processing
+                                    $imagePath = $optimizationResult['path'];
+                                    \Log::info('Variation image queued for optimization', ['path' => $imagePath]);
                                 } else {
-                                    $optimizationResult = ImageOptimizer::optimizeUploadedImage($file, 'variations', [
-                                        'quality' => 85,
-                                        'maxWidth' => 800,
-                                        'maxHeight' => 800,
-                                        'generateWebP' => true,
-                                        'generateThumbnails' => true,
-                                        'thumbnailSizes' => [150, 300]
+                                    // Image was processed immediately
+                                    $imagePath = $optimizationResult['path'];
+                                    \Log::info('Variation image optimized successfully', [
+                                        'path' => $imagePath,
+                                        'webp_generated' => isset($optimizationResult['webp_path'])
                                     ]);
                                 }
                                 
                                 ProductVariationImage::create([
                                     'product_id' => $product->id,
                                     'product_variation_id' => $variation->id,
-                                    'path' => $optimizationResult['optimized'],
+                                    'path' => $imagePath,
                                     'alt' => $this->getVariationImageAlt($product, $variation, $imageIndex),
                                     'position' => $imageIndex,
                                 ]);
@@ -540,6 +553,11 @@ class ProductController extends Controller
             }
 
             DB::commit();
+
+            // Clear relevant caches
+            Cache::forget('featured_products');
+            Cache::forget('latest_products');
+            Cache::forget('category_products_' . $product->category_id);
 
             if ($variationsCreated > 0) {
                 $message = "Product created successfully with {$variationsCreated} variations!";

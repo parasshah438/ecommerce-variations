@@ -80,35 +80,32 @@ class CategoryController extends Controller
             $imageData = [];
             
             if ($request->hasFile('image') && $request->file('image')->isValid()) {
-                // Use ImageOptimizer for better compression and WebP generation
-                $optimizationResult = ImageOptimizer::optimizeUploadedImage(
+                // Use new ImageOptimizer method
+                $optimizationResult = ImageOptimizer::handleUpload(
                     $request->file('image'),
                     'categories',
                     [
                         'quality' => 85,
-                        'maxWidth' => 800,
-                        'maxHeight' => 600,
-                        'generateWebP' => true,
-                        'generateThumbnails' => true,
-                        'thumbnailSizes' => [150, 300]
+                        'max_width' => 800,
+                        'max_height' => 600,
+                        'generate_webp' => true,
+                        'thumbnails' => [150, 300]
                     ]
                 );
                 
-                if (isset($optimizationResult['optimized'])) {
-                    $imagePath = $optimizationResult['optimized'];
-                    $imageData = $optimizationResult;
-                    
-                    // Log optimization success
+                if (isset($optimizationResult['queued'])) {
+                    // Image was queued for processing
+                    $imagePath = $optimizationResult['path'];
+                    \Log::info('Category image queued for optimization', ['path' => $imagePath]);
+                } else {
+                    // Image was processed immediately
+                    $imagePath = $optimizationResult['path'];
                     \Log::info('Category image optimized successfully', [
                         'original_size' => $optimizationResult['original_size'] ?? 0,
                         'optimized_size' => $optimizationResult['optimized_size'] ?? 0,
                         'compression_ratio' => $optimizationResult['compression_ratio'] ?? 0,
-                        'webp_generated' => isset($optimizationResult['webp'])
+                        'webp_generated' => isset($optimizationResult['variants']['webp'])
                     ]);
-                } else {
-                    // Fallback to regular upload if optimization fails
-                    $filename = time() . '_' . Str::random(10) . '.' . $request->file('image')->getClientOriginalExtension();
-                    $imagePath = $request->file('image')->storeAs('categories', $filename, 'public');
                 }
             }
 
@@ -196,54 +193,46 @@ class CategoryController extends Controller
                 
                 if ($file->isValid()) {
                     try {
-                        // Use ImageOptimizer for better compression and WebP generation
-                        $optimizationResult = ImageOptimizer::optimizeUploadedImage(
+                        // Use new ImageOptimizer method
+                        $optimizationResult = ImageOptimizer::handleUpload(
                             $file,
                             'categories',
                             [
                                 'quality' => 85,
-                                'maxWidth' => 800,
-                                'maxHeight' => 600,
-                                'generateWebP' => true,
-                                'generateThumbnails' => true,
-                                'thumbnailSizes' => [150, 300]
+                                'max_width' => 800,
+                                'max_height' => 600,
+                                'generate_webp' => true,
+                                'thumbnails' => [150, 300]
                             ]
                         );
                         
-                        if (isset($optimizationResult['optimized'])) {
-                            $imagePath = $optimizationResult['optimized'];
-                            
-                            // Verify file was actually stored
-                            if (!Storage::disk('public')->exists($imagePath)) {
-                                throw new \Exception('Optimized file was not stored successfully');
-                            }
-                            
-                            // Delete old image and related files only after successful upload
-                            if ($oldImagePath) {
-                                $this->deleteImageFiles($oldImagePath);
-                            }
-                            
-                            // Log optimization success
+                        if (isset($optimizationResult['queued'])) {
+                            // Image was queued for processing
+                            $imagePath = $optimizationResult['path'];
+                            \Log::info('Category image queued for optimization', [
+                                'category_id' => $category->id,
+                                'path' => $imagePath
+                            ]);
+                        } else {
+                            // Image was processed immediately
+                            $imagePath = $optimizationResult['path'];
                             \Log::info('Category image updated and optimized', [
                                 'category_id' => $category->id,
                                 'original_size' => $optimizationResult['original_size'] ?? 0,
                                 'optimized_size' => $optimizationResult['optimized_size'] ?? 0,
                                 'compression_ratio' => $optimizationResult['compression_ratio'] ?? 0,
-                                'webp_generated' => isset($optimizationResult['webp'])
+                                'webp_generated' => isset($optimizationResult['variants']['webp'])
                             ]);
-                        } else {
-                            // Fallback to regular upload
-                            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                            $imagePath = $file->storeAs('categories', $filename, 'public');
-                            
-                            if (!Storage::disk('public')->exists($imagePath)) {
-                                throw new \Exception('File was not stored successfully');
-                            }
-                            
-                            // Delete old image
-                            if ($oldImagePath && Storage::disk('public')->exists($oldImagePath)) {
-                                Storage::disk('public')->delete($oldImagePath);
-                            }
+                        }
+                        
+                        // Verify file was actually stored
+                        if (!Storage::disk('public')->exists($imagePath)) {
+                            throw new \Exception('Optimized file was not stored successfully');
+                        }
+                        
+                        // Delete old image and related files only after successful upload
+                        if ($oldImagePath) {
+                            $this->deleteImageFiles($oldImagePath);
                         }
                         
                     } catch (\Exception $e) {

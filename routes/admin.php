@@ -54,6 +54,27 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::delete('/categories/{category}/remove-image', [CategoryController::class, 'removeImage'])->name('categories.remove_image');
     
+    // Sliders Management
+    Route::prefix('sliders')->name('sliders.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SliderController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\SliderController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\SliderController::class, 'store'])->name('store');
+        
+        // AJAX DataTables endpoint - MUST come before parameterized routes
+        Route::match(['GET', 'POST'], '/data', [\App\Http\Controllers\Admin\SliderController::class, 'data'])->name('data');
+        
+        // AJAX CRUD endpoints - MUST come before parameterized routes  
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\SliderController::class, 'bulkAction'])->name('bulk-action');
+        
+        // Parameterized routes - MUST come last
+        Route::get('/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'show'])->name('show');
+        Route::get('/{slider}/edit', [\App\Http\Controllers\Admin\SliderController::class, 'edit'])->name('edit');
+        Route::put('/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'update'])->name('update');
+        Route::delete('/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'destroy'])->name('destroy');
+        Route::post('/{slider}/toggle-status', [\App\Http\Controllers\Admin\SliderController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{slider}/remove-image', [\App\Http\Controllers\Admin\SliderController::class, 'removeImage'])->name('remove_image');
+    });
+    
     // Order Management Routes
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');

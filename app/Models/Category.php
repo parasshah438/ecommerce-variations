@@ -21,9 +21,21 @@ class Category extends Model
      */
     public function getImageUrlAttribute()
     {
-        if ($this->image) {
+        if (!$this->image) {
+            return asset('images/category-placeholder.svg');
+        }
+        
+        // Check in uploads directory first (current system)
+        $uploadPath = public_path('uploads/' . $this->image);
+        if (file_exists($uploadPath)) {
+            return asset('uploads/' . $this->image);
+        }
+        
+        // Check in storage/app/public (Laravel standard)
+        if (Storage::disk('public')->exists($this->image)) {
             return Storage::url($this->image);
         }
+        
         return asset('images/category-placeholder.svg');
     }
 
@@ -40,13 +52,20 @@ class Category extends Model
         $directory = $pathInfo['dirname'];
         $filename = $pathInfo['filename'];
         
-        // Try WebP first
+        // Try WebP first in uploads directory
+        $webpUploadPath = public_path('uploads/' . $directory . '/' . $filename . '.webp');
+        if (file_exists($webpUploadPath)) {
+            return asset('uploads/' . $directory . '/' . $filename . '.webp');
+        }
+        
+        // Try WebP in storage
         $webpPath = $directory . '/' . $filename . '.webp';
         if (Storage::disk('public')->exists($webpPath)) {
             return Storage::url($webpPath);
         }
         
-        return Storage::url($this->image);
+        // Fallback to original image
+        return $this->image_url;
     }
 
     /**
@@ -63,12 +82,30 @@ class Category extends Model
         $filename = $pathInfo['filename'];
         $extension = $pathInfo['extension'] ?? 'jpg';
         
-        $thumbPath = $directory . '/' . $filename . '_' . $size . '.' . $extension;
+        // Build thumbnail filename
+        $thumbnailName = $filename . '_' . $size . '.' . $extension;
+        
+        // Check in uploads directory first (current system)
+        $uploadPath = public_path('uploads/' . $directory . '/' . $thumbnailName);
+        if (file_exists($uploadPath)) {
+            return asset('uploads/' . $directory . '/' . $thumbnailName);
+        }
+        
+        // Check in storage/app/public (Laravel standard)
+        $thumbPath = $directory . '/' . $thumbnailName;
         if (Storage::disk('public')->exists($thumbPath)) {
             return Storage::url($thumbPath);
         }
         
-        // Fallback to original image
+        // Log missing thumbnail for debugging
+        \Log::debug('Thumbnail not found in both locations', [
+            'original_image' => $this->image,
+            'upload_path' => $uploadPath,
+            'storage_path' => $thumbPath,
+            'size' => $size
+        ]);
+        
+        // Fallback to optimized image (WebP if available)
         return $this->optimized_image_url;
     }
 
