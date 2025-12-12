@@ -46,7 +46,7 @@
                                     <div class="row align-items-center">
                                         <div class="col-md-2 col-3">
                                             @if($item->productVariation->product->images->count() > 0)
-                                                <img src="{{ asset('storage/' . $item->productVariation->product->images->first()->image_path) }}" 
+                                                <img src="{{ $item->productVariation->product->getThumbnailImage() ? $item->productVariation->product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
                                                      alt="{{ $item->productVariation->product->name }}"
                                                      class="img-fluid rounded">
                                             @else

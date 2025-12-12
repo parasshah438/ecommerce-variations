@@ -35,7 +35,7 @@
                     <!-- Product Image -->
                     <div class="position-relative">
                         @if($product->images->count() > 0)
-                            <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" 
+                            <img src="{{ $product->getThumbnailImage() ? $product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
                                  class="card-img-top" 
                                  alt="{{ $product->name }}"
                                  style="height: 250px; object-fit: cover;">

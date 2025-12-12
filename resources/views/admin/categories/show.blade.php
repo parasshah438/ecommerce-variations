@@ -179,10 +179,13 @@
                         @foreach($category->products->take(6) as $product)
                         <div class="col-md-4 mb-3">
                             <div class="card border-0 shadow-sm">
-                                @if($product->images->first())
-                                    <img src="{{ Storage::url($product->images->first()->image_path) }}" 
+                                @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                                @if($thumbnailImage)
+                                    <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                          class="card-img-top" style="height: 150px; object-fit: cover;"
-                                         alt="{{ $product->name }}">
+                                         alt="{{ $product->name }}"
+                                         loading="lazy"
+                                         onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                 @else
                                     <div class="card-img-top d-flex align-items-center justify-content-center bg-light" 
                                          style="height: 150px;">

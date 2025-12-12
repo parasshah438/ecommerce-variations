@@ -9,20 +9,28 @@
                     $productImage = $product->images->first();
                     $selectedImage = $variationImage ?? $productImage;
                     
-                    // Handle both external URLs and local paths
-                    $img = null;
-                    if ($selectedImage) {
-                        $img = str_starts_with($selectedImage->path, 'http') 
-                            ? $selectedImage->path 
-                            : asset('storage/' . $selectedImage->path);
-                    }
+                    // Use optimized image URLs with proper fallback
+                    $thumbnailImage = $product->getThumbnailImage();
                 @endphp
-                @if($img)
-                    <img src="{{$img}}" 
-                         class="card-img-top product-image" 
-                         style="height:250px;object-fit:fill;background-color:#f8f9fa;"
-                         alt="{{ $product->name }}"
-                         loading="lazy">
+                @if($thumbnailImage && $thumbnailImage->path && Storage::disk('public')->exists($thumbnailImage->path))
+                    <picture>
+                        @php
+                            $pathInfo = pathinfo($thumbnailImage->path);
+                            $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_300.webp';
+                        @endphp
+                        @if(Storage::disk('public')->exists($webpPath))
+                            <source srcset="{{ Storage::disk('public')->url($webpPath) }}" type="image/webp">
+                        @endif
+                        <img src="{{ $thumbnailImage->getThumbnailUrl(300) }}" 
+                             class="card-img-top product-image" 
+                             style="height:250px;object-fit:fill;background-color:#f8f9fa;"
+                             alt="{{ $product->name }}"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';">
+                    </picture>
+                    <div class="card-img-top bg-light align-items-center justify-content-center" style="height:250px; display: none;">
+                        <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                    </div>
                 @else
                     <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:250px;">
                         <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>

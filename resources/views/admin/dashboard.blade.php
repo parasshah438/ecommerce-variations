@@ -218,11 +218,14 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0">
-                                                @if($product->images->first())
-                                                    <img src="{{ Storage::url($product->images->first()->path) }}" 
+                                                @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                                                @if($thumbnailImage)
+                                                    <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                                          alt="{{ $product->name }}" 
                                                          style="width: 40px; height: 40px; object-fit: cover;" 
-                                                         class="rounded">
+                                                         class="rounded"
+                                                         loading="lazy"
+                                                         onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                                 @else
                                                     <div class="bg-light rounded d-flex align-items-center justify-content-center" 
                                                          style="width: 40px; height: 40px;">

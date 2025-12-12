@@ -30,10 +30,12 @@
                         <div class="card-body">
                             @if($sale->banner_image)
                                 <div class="mb-4">
-                                    <img src="{{ Storage::url($sale->banner_image) }}" 
+                                    <img src="{{ Storage::disk('public')->url($sale->banner_image) }}" 
                                          alt="{{ $sale->name }}" 
                                          class="img-fluid rounded" 
-                                         style="max-height: 300px; width: 100%; object-fit: cover;">
+                                         style="max-height: 300px; width: 100%; object-fit: cover;"
+                                         loading="lazy"
+                                         onerror="this.src='{{ asset('images/sale-placeholder.jpg') }}';">
                                 </div>
                             @endif
 
@@ -131,11 +133,14 @@
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        @if($product->getThumbnailImage())
-                                                            <img src="{{ Storage::url($product->getThumbnailImage()->image_path) }}" 
+                                                        @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                                                        @if($thumbnailImage)
+                                                            <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                                                  alt="{{ $product->name }}" 
                                                                  class="me-3 rounded"
-                                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                                                 style="width: 50px; height: 50px; object-fit: cover;"
+                                                                 loading="lazy"
+                                                                 onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">
                                                         @endif
                                                         <div>
                                                             <div class="fw-bold">{{ $product->name }}</div>

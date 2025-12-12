@@ -87,7 +87,7 @@
                                 <td>
                                     <div class="d-flex align-items-center">
                                         @if($variation->product->images->count() > 0)
-                                            <img src="{{ asset('storage/' . $variation->product->images->first()->image_path) }}" 
+                                            <img src="{{ $variation->product->getThumbnailImage() ? $variation->product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
                                                  alt="{{ $variation->product->name }}" 
                                                  class="rounded me-3" 
                                                  style="width: 50px; height: 50px; object-fit: cover;">

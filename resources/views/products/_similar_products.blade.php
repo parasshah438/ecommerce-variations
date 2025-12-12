@@ -35,11 +35,27 @@
                                         <!-- Product Image -->
                                         <div class="product-image position-relative">
                                             <a href="{{ route('products.show', $similarProduct->slug) }}" class="d-block">
-                                                @if($similarProduct->images && $similarProduct->images->first())
-                                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($similarProduct->images->first()->path) }}" 
-                                                         alt="{{ $similarProduct->name }}" 
-                                                         class="card-img-top product-img"
-                                                         loading="lazy">
+                                                @php
+                                                    $similarThumbnailImage = $similarProduct->getThumbnailImage();
+                                                @endphp
+                                                @if($similarThumbnailImage && $similarThumbnailImage->path)
+                                                    <picture>
+                                                        @php
+                                                            $pathInfo = pathinfo($similarThumbnailImage->path);
+                                                            $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_300.webp';
+                                                        @endphp
+                                                        @if(Storage::disk('public')->exists($webpPath))
+                                                            <source srcset="{{ Storage::disk('public')->url($webpPath) }}" type="image/webp">
+                                                        @endif
+                                                        <img src="{{ $similarThumbnailImage->getThumbnailUrl(300) }}" 
+                                                             alt="{{ $similarProduct->name }}" 
+                                                             class="card-img-top product-img"
+                                                             loading="lazy"
+                                                             onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';">
+                                                    </picture>
+                                                    <div class="card-img-top bg-light align-items-center justify-content-center" style="height: 200px; display: none;">
+                                                        <i class="bi bi-image text-muted fs-1"></i>
+                                                    </div>
                                                 @else
                                                     <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
                                                         <i class="bi bi-image text-muted fs-1"></i>

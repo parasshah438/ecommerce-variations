@@ -214,10 +214,12 @@
                                     <label for="banner_image">Banner Image</label>
                                     @if($sale->banner_image)
                                         <div class="mb-2">
-                                            <img src="{{ Storage::url($sale->banner_image) }}" 
+                                            <img src="{{ Storage::disk('public')->url($sale->banner_image) }}" 
                                                  alt="Current banner" 
                                                  class="img-thumbnail" 
-                                                 style="max-height: 150px;">
+                                                 style="max-height: 150px;"
+                                                 loading="lazy"
+                                                 onerror="this.src='{{ asset('images/sale-placeholder.jpg') }}';">
                                             <small class="d-block text-muted">Current banner image</small>
                                         </div>
                                     @endif
@@ -385,11 +387,12 @@
                                                             @endphp
                                                             
                                                             @if($thumbnailImage)
-                                                                <img src="{{ asset('storage/' . $thumbnailImage->image_path) }}" 
+                                                                <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                                                      alt="{{ $product->name }}" 
                                                                      class="me-3"
                                                                      style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #dee2e6;"
-                                                                     onerror="this.src='{{ asset('images/no-image.png') }}'">
+                                                                     loading="lazy"
+                                                                     onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                                             @else
                                                                 <div class="me-3 d-flex align-items-center justify-content-center" 
                                                                      style="width: 60px; height: 60px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;">

@@ -833,7 +833,7 @@
                                      onclick="selectProduct(this, {{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->default_variation ? $product->default_variation->id : 'null' }})">
                                     <div class="text-center">
                                         @if($product->thumbnail)
-                                            <img src="{{ asset('storage/' . $product->thumbnail->image_path) }}" 
+                                            <img src="{{ $product->getThumbnailImage() ? $product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
                                                  alt="{{ $product->name }}" 
                                                  class="img-fluid mb-2" 
                                                  style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
@@ -990,11 +990,14 @@
                     <div class="col-lg-3 col-md-6">
                         <div class="product-card h-100">
                             <div class="position-relative mb-3">
-                                @if($product->thumbnail)
-                                    <img src="{{ asset('storage/' . $product->thumbnail->image_path) }}" 
+                                @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                                @if($thumbnailImage)
+                                    <img src="{{ $thumbnailImage->getThumbnailUrl(200) }}" 
                                          alt="{{ $product->name }}" 
                                          class="img-fluid rounded-3" 
-                                         style="width: 100%; height: 200px; object-fit: cover;">
+                                         style="width: 100%; height: 200px; object-fit: cover;"
+                                         loading="lazy"
+                                         onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                 @else
                                     <div class="bg-light rounded-3 p-4 text-center" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
                                         <i class="bi bi-person display-1 text-primary"></i>

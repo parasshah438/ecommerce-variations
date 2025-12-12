@@ -11,16 +11,33 @@
                     $productImage = $product->images->first();
                     $selectedImage = $variationImage ?? $productImage;
                     
-                    // Handle both external URLs and local paths
-                    if ($selectedImage) {
-                        $imageUrl = str_starts_with($selectedImage->path, 'http') 
-                            ? $selectedImage->path 
-                            : \Illuminate\Support\Facades\Storage::url($selectedImage->path);
-                    } else {
-                        $imageUrl = 'https://via.placeholder.com/400x300?text=No+Image';
-                    }
+                    // Use optimized image URLs with proper fallback
+                    $thumbnailImage = $product->getThumbnailImage();
                 @endphp
-                <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="card-img-top product-image" style="height: 250px; object-fit: contain; background-color: #f8f9fa;">
+                @if($thumbnailImage && $thumbnailImage->path && Storage::disk('public')->exists($thumbnailImage->path))
+                    <picture>
+                        @php
+                            $pathInfo = pathinfo($thumbnailImage->path);
+                            $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_300.webp';
+                        @endphp
+                        @if(Storage::disk('public')->exists($webpPath))
+                            <source srcset="{{ Storage::disk('public')->url($webpPath) }}" type="image/webp">
+                        @endif
+                        <img src="{{ $thumbnailImage->getThumbnailUrl(300) }}" 
+                             alt="{{ $product->name }}" 
+                             class="card-img-top product-image" 
+                             style="height: 250px; object-fit: contain; background-color: #f8f9fa;"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';">
+                    </picture>
+                    <div class="card-img-top bg-light align-items-center justify-content-center" style="height: 250px; display: none;">
+                        <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                    </div>
+                @else
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 250px;">
+                        <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                    </div>
+                @endif
                 
                 <!-- Badges -->
                 <div class="position-absolute top-0 start-0 p-2">

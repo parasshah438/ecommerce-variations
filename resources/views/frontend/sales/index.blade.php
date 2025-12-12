@@ -27,9 +27,11 @@
                     <div class="sale-card card shadow-lg border-0 h-100 position-relative overflow-hidden">
                         @if($sale->banner_image)
                             <div class="sale-image position-relative">
-                                <img src="{{ Storage::url($sale->banner_image) }}" 
+                                <img src="{{ Storage::disk('public')->url($sale->banner_image) }}" 
                                      class="card-img-top" alt="{{ $sale->name }}" 
-                                     style="height: 250px; object-fit: cover;">
+                                     style="height: 250px; object-fit: cover;"
+                                     loading="lazy"
+                                     onerror="this.src='{{ asset('images/sale-placeholder.jpg') }}';">
                                 <div class="sale-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
                                     <div class="text-center text-white">
                                         <div class="sale-badge bg-danger text-white rounded-pill px-4 py-2 fw-bold fs-5 mb-3">

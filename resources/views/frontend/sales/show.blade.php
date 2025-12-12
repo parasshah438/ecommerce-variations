@@ -8,9 +8,11 @@
     <div class="sale-header position-relative">
         @if($sale->banner_image)
             <div class="sale-banner-container position-relative">
-                <img src="{{ Storage::url($sale->banner_image) }}" 
+                <img src="{{ Storage::disk('public')->url($sale->banner_image) }}" 
                      class="w-100" alt="{{ $sale->name }}" 
-                     style="height: 400px; object-fit: cover;">
+                     style="height: 400px; object-fit: cover;"
+                     loading="lazy"
+                     onerror="this.src='{{ asset('images/sale-placeholder.jpg') }}';">>
                 <div class="sale-banner-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center">
                     <div class="container">
                         <div class="row">

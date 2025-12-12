@@ -163,11 +163,14 @@
                         <div class="col-6">
                             <div class="card h-100">
                                 <div style="height: 120px; overflow: hidden;">
-                                    @if($item->product->images->count() > 0)
-                                        <img src="{{ asset('storage/' . $item->product->images->first()->image_path) }}" 
+                                    @php $thumbnailImage = $item->product->getThumbnailImage(); @endphp
+                                    @if($thumbnailImage)
+                                        <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                              class="card-img-top" 
                                              style="height: 100%; object-fit: cover;"
-                                             alt="{{ $item->product->name }}">
+                                             alt="{{ $item->product->name }}"
+                                             loading="lazy"
+                                             onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                     @else
                                         <div class="bg-light d-flex align-items-center justify-content-center h-100">
                                             <i class="bi bi-image text-muted fs-4"></i>
@@ -198,11 +201,14 @@
                         <div class="col-6">
                             <div class="card h-100">
                                 <div style="height: 120px; overflow: hidden;">
-                                    @if($product->images->count() > 0)
-                                        <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" 
+                                    @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                                    @if($thumbnailImage)
+                                        <img src="{{ $thumbnailImage->getThumbnailUrl(150) }}" 
                                              class="card-img-top" 
                                              style="height: 100%; object-fit: cover;"
-                                             alt="{{ $product->name }}">
+                                             alt="{{ $product->name }}"
+                                             loading="lazy"
+                                             onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                     @else
                                         <div class="bg-light d-flex align-items-center justify-content-center h-100">
                                             <i class="bi bi-image text-muted fs-4"></i>

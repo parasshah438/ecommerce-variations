@@ -33,10 +33,13 @@
 
                 <!-- Product Image -->
                 <div class="product-image position-relative overflow-hidden">
-                    @if($product->getThumbnailImage())
-                        <img src="{{ Storage::url($product->getThumbnailImage()->image_path) }}" 
+                    @php $thumbnailImage = $product->getThumbnailImage(); @endphp
+                    @if($thumbnailImage)
+                        <img src="{{ $thumbnailImage->getThumbnailUrl(200) }}" 
                              class="card-img-top" alt="{{ $product->name }}" 
-                             style="height: 200px; object-fit: cover;">
+                             style="height: 200px; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.parentElement.nextElementSibling.style.display='flex';">
                     @else
                         <div class="bg-light d-flex align-items-center justify-content-center" 
                              style="height: 200px;">

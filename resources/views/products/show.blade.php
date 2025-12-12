@@ -63,9 +63,9 @@
                             class="w-100" 
                             controls 
                             style="max-height: 300px; object-fit: cover;"
-                            poster="{{ $product->images->first()?->path ? asset('storage/' . $product->images->first()->path) : '' }}">
-                            <source src="{{ asset('storage/' . $product->video) }}" type="video/mp4">
-                            <source src="{{ asset('storage/' . $product->video) }}" type="video/webm">
+                            poster="{{ $product->images->first()?->getThumbnailUrl(600) ?? asset('images/product-placeholder.jpg') }}">
+                            <source src="{{ Storage::disk('public')->url($product->video) }}" type="video/mp4">
+                            <source src="{{ Storage::disk('public')->url($product->video) }}" type="video/webm">
                             Your browser does not support the video tag.
                         </video>
                     </div>

@@ -169,7 +169,7 @@
                                                         if ($selectedImage) {
                                                             $imageUrl = str_starts_with($selectedImage->path, 'http') 
                                                                 ? $selectedImage->path 
-                                                                : \Illuminate\Support\Facades\Storage::url($selectedImage->path);
+                                                                : $selectedImage->getThumbnailUrl(300);
                                                         } else {
                                                             $imageUrl = asset('images/no-image.png');
                                                         }

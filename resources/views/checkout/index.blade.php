@@ -502,9 +502,12 @@
                                     <div class="product-item">
                                         <div class="d-flex align-items-center">
                                             <div class="position-relative me-3">
-                                                @if($item->variation->images->first())
-                                                    <img src="{{ asset('storage/' . $item->variation->images->first()->image_path) }}" 
-                                                         alt="{{ $item->variation->product->name }}" class="product-image">
+                                                @php $variationImage = $item->variation->images->first(); @endphp
+                                                @if($variationImage)
+                                                    <img src="{{ $variationImage->getThumbnailUrl(100) }}" 
+                                                         alt="{{ $item->variation->product->name }}" class="product-image"
+                                                         loading="lazy"
+                                                         onerror="this.src='{{ asset('images/product-placeholder.jpg') }}';">>
                                                 @else
                                                     <div class="product-image bg-light d-flex align-items-center justify-content-center">
                                                         <i class="bi bi-image text-muted"></i>
