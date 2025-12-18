@@ -13,12 +13,14 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        // TODO: For even better performance, add these database indexes:
-        // CREATE INDEX idx_products_category_created ON products(category_id, created_at);
-        // CREATE INDEX idx_products_brand_created ON products(brand_id, created_at);
-        // CREATE INDEX idx_products_price ON products(price);
-        // CREATE INDEX idx_product_variations_product_id ON product_variations(product_id);
-        
+
+        $cacheKey = 'products:' . md5(json_encode([
+            'route' => optional($request->route())->getName(),
+            'path'  => $request->path(),
+            'query' => $request->query(),
+            'page'  => $request->get('page', 1),
+        ]));
+
         $query = Product::with([
             'images' => function($q) { $q->select('id', 'product_id', 'path', 'position')->orderBy('position'); },
             'variations' => function($q) { $q->select('id', 'product_id', 'price', 'attribute_value_ids'); },
@@ -32,7 +34,7 @@ class ProductController extends Controller
                         str_contains($request->path(), 'new-arrivals');
         
         if ($isNewArrivals) {
-            $query->where('created_at', '>=', now()->subDays(10));
+            $query->where('created_at', '>=', now()->subDays(30));
         }
         
         // Search filter
@@ -45,8 +47,10 @@ class ProductController extends Controller
         }
         
         // Category filter
-        if ($request->has('categories') && is_array($request->categories)) {
-            $query->whereIn('category_id', $request->categories);
+        if (!empty($request->categories)) {
+            if ($request->has('categories') && is_array($request->categories)) {
+                $query->whereIn('category_id', $request->categories);
+            }
         }
         
         // Brand filter
@@ -163,8 +167,12 @@ class ProductController extends Controller
                 break;
         }
         
-        $products = $query->paginate($request->get('per_page', 8)); // Reduced from 12 to 8 for better performance
-        
+       
+        $products = \Cache::remember($cacheKey, now()->addMinutes(30), function () use ($query, $request) {
+            return $query->paginate($request->get('per_page', 8));
+        });
+
+
         // Add price range calculation and default ratings for each product
         $products->getCollection()->transform(function ($product) {
             if ($product->variations->count() > 0) {
@@ -211,10 +219,10 @@ class ProductController extends Controller
         });
         
         // Get available categories and brands for filters - CACHED
-        $categories = \Cache::remember('categories_with_products', 1800, function() {
+        $categories = \Cache::remember('categories_with_products', 86400, function() {
             return \App\Models\Category::select('id', 'name', 'slug')->has('products')->get();
         });
-        $brands = \Cache::remember('brands_with_products', 1800, function() {
+        $brands = \Cache::remember('brands_with_products', 86400, function() {
             return \App\Models\Brand::select('id', 'name', 'slug')->has('products')->get();
         });
         
@@ -224,10 +232,10 @@ class ProductController extends Controller
         
         if (!$request->ajax()) {
             // Get available sizes for filters - CACHED for better performance
-            if ($sizeAttribute = \Cache::remember('size_attribute', 3600, function() {
+            if ($sizeAttribute = \Cache::remember('size_attribute', 86400, function() {
                 return \App\Models\Attribute::where('name', 'Size')->orWhere('slug', 'size')->first();
             })) {
-                $sizes = \Cache::remember('product_sizes_with_counts', 600, function() use ($sizeAttribute) {
+                $sizes = \Cache::remember('product_sizes_with_counts', 86400, function() use ($sizeAttribute) {
                     // Get all sizes for this attribute
                     $allSizes = \DB::table('attribute_values')
                         ->where('attribute_id', $sizeAttribute->id)
@@ -255,10 +263,10 @@ class ProductController extends Controller
             }
             
             // Get available colors for filters - CACHED for better performance  
-            if ($colorAttribute = \Cache::remember('color_attribute', 3600, function() {
+            if ($colorAttribute = \Cache::remember('color_attribute', 86400, function() {
                 return \App\Models\Attribute::where('name', 'Color')->orWhere('slug', 'color')->first();
             })) {
-                $colors = \Cache::remember('product_colors_with_counts', 600, function() use ($colorAttribute) {
+                $colors = \Cache::remember('product_colors_with_counts', 86400, function() use ($colorAttribute) {
                     return \DB::table('attribute_values as av')
                         ->select('av.*', \DB::raw('COUNT(DISTINCT pv.product_id) as products_count'))
                         ->join('product_variations as pv', function($join) {
@@ -277,7 +285,7 @@ class ProductController extends Controller
         }
         
         // Get price range for slider - CACHED
-        $priceRange = \Cache::remember('product_price_range', 3600, function() {
+        $priceRange = \Cache::remember('product_price_range', 86400, function() {
             return Product::selectRaw('MIN(price) as min_price, MAX(price) as max_price')->first();
         });
         

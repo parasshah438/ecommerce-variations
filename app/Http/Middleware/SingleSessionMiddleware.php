@@ -61,7 +61,25 @@ class SingleSessionMiddleware
         }
         
         // Check if current session matches the stored active session
-        return $user->active_session_id === $currentSessionId;
+        if ($user->active_session_id === $currentSessionId) {
+            return true;
+        }
+        
+        // Allow fresh logins (login within last 10 seconds) to handle race conditions
+        if ($user->last_login_at && $user->last_login_at->diffInSeconds(now()) < 10) {
+            Log::info('Allowing fresh login session mismatch', [
+                'user_id' => $user->id,
+                'current_session' => $currentSessionId,
+                'stored_session' => $user->active_session_id,
+                'login_time' => $user->last_login_at,
+            ]);
+            
+            // Update the session ID to current one
+            $user->update(['active_session_id' => $currentSessionId]);
+            return true;
+        }
+        
+        return false;
     }
     
     /**

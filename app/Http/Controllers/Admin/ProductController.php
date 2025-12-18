@@ -736,4 +736,247 @@ class ProductController extends Controller
             return back()->withErrors(['error' => 'Failed to duplicate product: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * Remove the specified product from storage.
+     * Deletes all related data including variations, images, and stock.
+     */
+    public function destroy(Product $product)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete all product images (with automatic file cleanup)
+            foreach ($product->images as $image) {
+                $image->delete(); // Uses model's delete method which handles file cleanup
+            }
+
+            // Delete all variation-related data
+            foreach ($product->variations as $variation) {
+                // Delete variation images (with automatic file cleanup)
+                foreach ($variation->images as $image) {
+                    $image->delete(); // Uses model's delete method which handles file cleanup
+                }
+
+                // Delete variation stock
+                $variation->stock()->delete();
+                
+                // Delete the variation itself
+                $variation->delete();
+            }
+
+            // Delete the product itself
+            $product->delete();
+
+            // Clear any cached data
+            Cache::tags(['products'])->flush();
+
+            DB::commit();
+
+            return redirect()->route('admin.products.index')->with('success', 'Product deleted successfully along with all related data!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to delete product: ' . $e->getMessage(), ['product_id' => $product->id]);
+            return back()->withErrors(['error' => 'Failed to delete product: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remove the specified product image from storage.
+     */
+    public function destroyImage(ProductImage $image)
+    {
+        try {
+            // Delete the image file and all its variants
+            $image->delete(); // Uses model's delete method which handles file cleanup
+
+            return response()->json(['success' => true, 'message' => 'Image deleted successfully!']);
+        } catch (\Exception $e) {
+            \Log::error('Failed to delete product image: ' . $e->getMessage(), ['image_id' => $image->id]);
+            return response()->json(['success' => false, 'message' => 'Failed to delete image: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remove the specified product variation from storage.
+     */
+    public function destroyVariation(ProductVariation $variation)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete variation images (with automatic file cleanup)
+            foreach ($variation->images as $image) {
+                $image->delete(); // Uses model's delete method which handles file cleanup
+            }
+
+            // Delete variation stock
+            $variation->stock()->delete();
+            
+            // Delete the variation itself
+            $variation->delete();
+
+            // Clear any cached data
+            Cache::tags(['products'])->flush();
+
+            DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'Variation deleted successfully!']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to delete variation: ' . $e->getMessage(), ['variation_id' => $variation->id]);
+            return response()->json(['success' => false, 'message' => 'Failed to delete variation: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Store new product images.
+     */
+    public function storeImage(Request $request, Product $product)
+    {
+        $request->validate([
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+        ]);
+
+        try {
+            $uploadedImages = [];
+
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $file) {
+                    try {
+                        // Use ImageOptimizer for consistent image processing
+                        $optimizationResult = ImageOptimizer::handleUpload(
+                            $file,
+                            'products',
+                            [
+                                'quality' => 85,
+                                'max_width' => 1200,
+                                'max_height' => 1200,
+                                'force_resize' => false,
+                                'generate_webp' => true,
+                                'thumbnails' => [150, 300, 600]
+                            ]
+                        );
+
+                        $imagePath = $optimizationResult['path'];
+
+                        // Create product image record
+                        $image = ProductImage::create([
+                            'product_id' => $product->id,
+                            'path' => $imagePath,
+                            'alt' => $product->name . ' - Image ' . ($product->images()->count() + $index + 1),
+                            'position' => $product->images()->count() + $index,
+                        ]);
+
+                        $uploadedImages[] = $image;
+
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to process product image: ' . $e->getMessage());
+                        // Continue with other images instead of failing completely
+                    }
+                }
+            }
+
+            // Clear any cached data
+            Cache::tags(['products'])->flush();
+
+            return response()->json([
+                'success' => true, 
+                'message' => count($uploadedImages) . ' image(s) uploaded successfully!',
+                'images' => $uploadedImages
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to store product images: ' . $e->getMessage(), ['product_id' => $product->id]);
+            return response()->json(['success' => false, 'message' => 'Failed to upload images: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Store a new product variation.
+     */
+    public function storeVariation(Request $request, Product $product)
+    {
+        $request->validate([
+            'attributes' => 'required|array',
+            'sku' => 'nullable|string|max:100',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'min_qty' => 'nullable|integer|min:1',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Generate SKU if not provided
+            $sku = $request->input('sku') ?: $this->generateSku($product, $request->input('attributes'));
+
+            // Create the variation
+            $variation = ProductVariation::create([
+                'product_id' => $product->id,
+                'sku' => $sku,
+                'price' => $request->input('price'),
+                'min_qty' => $request->input('min_qty', 1),
+                'attribute_value_ids' => $request->input('attributes'),
+            ]);
+
+            // Create stock record
+            VariationStock::create([
+                'product_variation_id' => $variation->id,
+                'quantity' => $request->input('stock'),
+                'in_stock' => $request->input('stock') > 0,
+            ]);
+
+            // Handle variation images
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $file) {
+                    try {
+                        // Use ImageOptimizer for consistent image processing
+                        $optimizationResult = ImageOptimizer::handleUpload(
+                            $file,
+                            'variations',
+                            [
+                                'quality' => 85,
+                                'max_width' => 800,
+                                'max_height' => 800,
+                                'force_resize' => false,
+                                'generate_webp' => true,
+                                'thumbnails' => [150, 300]
+                            ]
+                        );
+
+                        $imagePath = $optimizationResult['path'];
+
+                        // Create variation image record
+                        ProductVariationImage::create([
+                            'product_id' => $product->id,
+                            'product_variation_id' => $variation->id,
+                            'path' => $imagePath,
+                            'alt' => $this->getVariationImageAlt($product, $variation, $index),
+                            'position' => $index,
+                        ]);
+
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to process variation image: ' . $e->getMessage());
+                        // Continue with other images instead of failing completely
+                    }
+                }
+            }
+
+            // Clear any cached data
+            Cache::tags(['products'])->flush();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Variation created successfully!',
+                'variation' => $variation->load(['stock', 'images'])
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to store variation: ' . $e->getMessage(), ['product_id' => $product->id]);
+            return response()->json(['success' => false, 'message' => 'Failed to create variation: ' . $e->getMessage()], 500);
+        }
+    }
 }

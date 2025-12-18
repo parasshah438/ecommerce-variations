@@ -137,16 +137,23 @@ class SocialLoginController extends Controller
 
             // Login user
             Auth::login($user, true);
+            
+            // Regenerate session after login to ensure consistency
+            request()->session()->regenerate();
+            
+            // Update the session ID again after regeneration
+            $user->update(['active_session_id' => session()->getId()]);
 
             Log::info('Social login successful', [
                 'provider' => $provider,
                 'user_id' => $user->id,
                 'email' => $user->email,
+                'session_id' => session()->getId(),
                 'has_avatar' => !empty($user->avatar),
                 'total_social_providers' => count($user->social_providers ?? [])
             ]);
 
-            return redirect()->intended(route('welcome'))->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
+            return redirect()->intended(route('dashboard'))->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
 
         } catch (Exception $e) {
             Log::error('Social login callback failed', [
