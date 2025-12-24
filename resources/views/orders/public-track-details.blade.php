@@ -153,11 +153,18 @@
                     @foreach($order->items as $item)
                         <div class="p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
                             <div class="d-flex align-items-start">
-                                @if($item->productVariation->product->featured_image)
-                                    <img src="{{ $item->productVariation->product->featured_image }}" 
-                                         alt="{{ $item->productVariation->product->name }}" 
-                                         class="rounded me-3"
-                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                @if($item->productVariation && $item->productVariation->product)
+                                    @if($item->productVariation->product->featured_image)
+                                        <img src="{{ $item->productVariation->product->featured_image }}" 
+                                             alt="{{ $item->productVariation->product->name }}" 
+                                             class="rounded me-3"
+                                             style="width: 50px; height: 50px; object-fit: cover;">
+                                    @else
+                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                             style="width: 50px; height: 50px;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    @endif
                                 @else
                                     <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
                                          style="width: 50px; height: 50px;">
@@ -165,7 +172,13 @@
                                     </div>
                                 @endif
                                 <div class="flex-grow-1">
-                                    <h6 class="mb-1 small">{{ $item->productVariation->product->name }}</h6>
+                                    <h6 class="mb-1 small">
+                                        @if($item->productVariation && $item->productVariation->product)
+                                            {{ $item->productVariation->product->name }}
+                                        @else
+                                            Product unavailable
+                                        @endif
+                                    </h6>
                                     <div class="small text-muted mb-1">
                                         SKU: {{ $item->productVariation->sku }}
                                     </div>

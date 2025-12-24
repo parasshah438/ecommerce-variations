@@ -29,4 +29,26 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductVariation::class, 'product_variation_id');
     }
+
+    /**
+     * Get the product name safely, handling null relationships
+     */
+    public function getProductNameAttribute()
+    {
+        if ($this->productVariation && $this->productVariation->product) {
+            return $this->productVariation->product->name;
+        }
+        return 'Product unavailable';
+    }
+
+    /**
+     * Get the product safely
+     */
+    public function getProductAttribute()
+    {
+        if ($this->productVariation && $this->productVariation->product) {
+            return $this->productVariation->product;
+        }
+        return null;
+    }
 }

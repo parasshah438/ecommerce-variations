@@ -201,6 +201,9 @@
 <!-- Razorpay SDK -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
+<!-- Geolocation SDK -->
+<script src="{{ asset('js/geolocation.js') }}"></script>
+
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
@@ -326,6 +329,16 @@
                             <!-- New Address Form -->
                             <div id="newAddressForm" class="{{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'd-none' : '' }}">
                                 <h6 class="fw-semibold mb-3">{{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'Add new address:' : 'Enter delivery address:' }}</h6>
+                                
+                                <!-- Location Picker Widget -->
+                                <div class="mb-4">
+                                    <h6 class="fw-semibold mb-3">
+                                        <i class="bi bi-geo-alt text-primary me-2"></i>
+                                        Quick Location Setup
+                                    </h6>
+                                    <div id="locationPicker"></div>
+                                </div>
+                                
                                 <div class="row g-3">
                                     <!-- Basic Information -->
                                     <div class="col-md-6">
@@ -399,9 +412,11 @@
                                     <div class="col-md-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="zip" name="zip" 
-                                                   value="{{ old('zip') }}" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}>
+                                                   value="{{ old('zip') }}" {{ auth()->user()->addresses && auth()->user()->addresses->count() > 0 ? 'disabled' : 'required' }}
+                                                   maxlength="10">
                                             <label for="zip">PIN Code *</label>
                                         </div>
+                                        <div id="zipFeedback" class="mt-1"></div>
                                     </div>
                                     
                                     <!-- Additional Information -->
@@ -598,6 +613,52 @@
                 @method('PUT')
                 <input type="hidden" id="edit_address_id" name="address_id">
                 <div class="modal-body">
+                    <!-- Location Picker Widget for Edit Modal -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="bi bi-geo-alt text-primary me-2"></i>
+                            Quick Location Setup
+                        </h6>
+                        <div id="editLocationPicker">
+                            <div class="location-picker">
+                                <div class="location-detect mb-3">
+                                    <button type="button" class="btn btn-primary location-detect-btn">
+                                        <i class="bi bi-geo-alt me-2"></i>
+                                        Use My Current Location
+                                    </button>
+                                    <div class="location-loading" style="display: none;">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Detecting location...
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <div class="location-search-container position-relative">
+                                            <input type="text" class="form-control" placeholder="Search for area, city, or landmark..."
+                                             autocomplete="off">
+                                            <div class="location-search-results position-absolute w-100 bg-white border rounded shadow-sm" 
+                                            style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3">
+                                        <input type="text" class="form-control location-pincode-input" 
+                                        placeholder="Enter Pincode" maxlength="10" title="Enter postal/ZIP code (5-10 characters)">
+                                        <div class="pincode-feedback mt-1"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="location-info" style="display: none;">
+                                    <div class="alert alert-success">
+                                        <strong>Location Detected:</strong>
+                                        <span class="location-display"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="row g-3">
                         <!-- Basic Information -->
                         <div class="col-md-6">
@@ -658,9 +719,10 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating">
-                                <input type="text" class="form-control" id="edit_zip" name="zip" required>
+                                <input type="text" class="form-control" id="edit_zip" name="zip" required maxlength="10">
                                 <label for="edit_zip">PIN Code *</label>
                             </div>
+                            <div id="editZipFeedback" class="mt-1"></div>
                         </div>
                         
                         <!-- Additional Information -->
@@ -735,6 +797,11 @@ function toggleNewAddress() {
         });
         // Add required attributes to new address form
         addNewAddressRequirements();
+        
+        // Initialize location features if not already done (only for pincode auto-fill)
+        if (!window.checkoutGeoManager) {
+            initializeLocationFeatures();
+        }
     } else {
         form.classList.add('d-none');
         clearNewAddressRequirements();
@@ -744,23 +811,61 @@ function toggleNewAddress() {
 }
 
 function addNewAddressRequirements() {
-    document.querySelectorAll('#newAddressForm input, #newAddressForm textarea').forEach(input => {
-        input.required = true;
-        input.disabled = false; // Enable fields when showing new address form
+    // Only apply required to actual form fields, exclude location picker inputs
+    const requiredFieldSelectors = [
+        '#name', '#type', '#phone', '#address_line', '#city', '#state', '#zip'
+    ];
+    
+    requiredFieldSelectors.forEach(selector => {
+        const field = document.querySelector(selector);
+        if (field) {
+            field.required = true;
+            field.disabled = false;
+        }
+    });
+    
+    // Enable optional fields without marking as required
+    const optionalFieldSelectors = [
+        '#alternate_phone', '#landmark', '#delivery_instructions'
+    ];
+    
+    optionalFieldSelectors.forEach(selector => {
+        const field = document.querySelector(selector);
+        if (field) {
+            field.disabled = false;
+        }
     });
 }
 
 function clearNewAddressRequirements() {
-    document.querySelectorAll('#newAddressForm input, #newAddressForm textarea').forEach(input => {
-        input.required = false;
-        input.disabled = true; // Disable fields so they won't be submitted
+    // Clear required from actual form fields and disable them
+    const allFieldSelectors = [
+        '#name', '#type', '#phone', '#alternate_phone', '#address_line', 
+        '#landmark', '#city', '#state', '#zip', '#delivery_instructions'
+    ];
+    
+    allFieldSelectors.forEach(selector => {
+        const field = document.querySelector(selector);
+        if (field) {
+            field.required = false;
+            field.disabled = true;
+        }
     });
 }
 
 function clearNewAddressForm() {
-    document.querySelectorAll('#newAddressForm input, #newAddressForm textarea').forEach(input => {
-        input.value = '';
-        input.disabled = true;
+    // Clear values from actual form fields only
+    const allFieldSelectors = [
+        '#name', '#type', '#phone', '#alternate_phone', '#address_line', 
+        '#landmark', '#city', '#state', '#zip', '#delivery_instructions'
+    ];
+    
+    allFieldSelectors.forEach(selector => {
+        const field = document.querySelector(selector);
+        if (field) {
+            field.value = '';
+            field.disabled = true;
+        }
     });
 }
 
@@ -1020,6 +1125,34 @@ function handlePaymentCancellation(orderId) {
     alert('Payment cancelled. You can try again.');
 }
 
+// Show location message function
+function showLocationMessage(message, type) {
+    // Remove existing messages
+    const existingMessages = document.querySelectorAll('.alert-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+    const icon = type === 'error' ? 'bi-exclamation-triangle' : 'bi-check-circle';
+    
+    const messageHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show alert-message mt-3" role="alert">
+            <i class="bi ${icon} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.querySelector('.container').insertAdjacentHTML('beforeend', messageHtml);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const alert = document.querySelector('.alert-message');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // If no saved addresses, show new address form
@@ -1036,7 +1169,166 @@ document.addEventListener('DOMContentLoaded', function() {
             checkIcon.style.display = 'block';
         }
     }
+    
+    // Initialize location functionality
+    initializeLocationFeatures();
 });
+
+ function showLocationMessage(message, type) {
+            // Remove existing messages
+            const existingMessages = document.querySelectorAll('.alert-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+            const icon = type === 'error' ? 'bi-exclamation-triangle' : 'bi-check-circle';
+            
+            const messageHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show alert-message mt-3" role="alert">
+                    <i class="bi ${icon} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.querySelector('.container').insertAdjacentHTML('beforeend', messageHtml);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const alert = document.querySelector('.alert-message');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+// Initialize Geolocation Features
+function initializeLocationFeatures() {
+    // Initialize Geolocation Manager
+    const geoManager = new GeolocationManager({
+        autoDetect: false,
+        fallbackToIP: true
+    });
+    
+    //Create location picker widget only if new address form exists
+    const locationPickerContainer = document.getElementById('locationPicker');
+    if (locationPickerContainer) {
+        const locationPicker = geoManager.createLocationPicker('#locationPicker', {
+            showDetectButton: true,
+            showSearchBox: true,
+            showPincodeInput: true,
+            detectButtonText: 'Use My Current Location',
+            placeholder: 'Search for area, city, or landmark...',
+            pincodePlaceholder: 'Enter Pincode'
+        });
+    }
+    
+    // Listen for location detection events
+    geoManager.on('onLocationDetected', function(location) {
+        console.log('Location detected:', location);
+        fillCheckoutAddressForm(location);
+        showLocationMessage('Location detected successfully!', 'success');
+    });
+    
+    geoManager.on('onLocationError', function(error) {
+        console.error('Location error:', error);
+        showLocationMessage('Failed to detect location. Please enter manually.', 'warning');
+    });
+    
+    geoManager.on('onLocationChanged', function(data) {
+        console.log('Location changed:', data);
+        fillCheckoutAddressForm(data.new);
+    });
+    
+    // Add pincode change handler to existing ZIP field
+    const zipField = document.getElementById('zip');
+    const zipFeedback = document.getElementById('zipFeedback');
+    let zipTimeout = null;
+    
+    if (zipField && zipFeedback) {
+        zipField.addEventListener('input', function(e) {
+            // Clean input - remove non-alphanumeric
+            e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
+            
+            const pincode = e.target.value.trim();
+            
+            // Show real-time validation feedback
+            geoManager.showPincodeValidationFeedback(pincode, zipFeedback, zipField);
+            
+            // Clear previous timeout
+            if (zipTimeout) {
+                clearTimeout(zipTimeout);
+            }
+            
+            // Auto-fill address if valid pincode
+            if (geoManager.isValidPincodeForLookup(pincode)) {
+                zipTimeout = setTimeout(async () => {
+                    try {
+                        zipFeedback.innerHTML = `
+                            <small class="text-info">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                Looking up location...
+                            </small>
+                        `;
+                        
+                        const countryCode = geoManager.detectCountryFromPincode(pincode);
+                        const location = await geoManager.getPincodeDetails(pincode, countryCode);
+                        
+                        // Fill form fields with location data
+                        fillCheckoutAddressForm(location, false); // Don't fill pincode as user is typing it
+                        
+                        zipFeedback.innerHTML = `
+                            <small class="text-success">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Location found: ${location.city || 'N/A'}, ${location.state || 'N/A'}
+                            </small>
+                        `;
+                    } catch (error) {
+                        console.error('Pincode lookup failed:', error);
+                        zipFeedback.innerHTML = `
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Could not find location for this pincode
+                            </small>
+                        `;
+                    }
+                }, 800);
+            }
+        });
+    }
+    
+    // Store geoManager globally for other functions to use
+    window.checkoutGeoManager = geoManager;
+}
+
+// Fill checkout address form with location data from pincode lookup
+function fillCheckoutAddressForm(location, includePincode = true) {
+    console.log('Filling checkout form with location:', location);
+    
+    // Map location data to form fields
+    const fieldMapping = {
+        'city': location.city || '',
+        'state': location.state || '',
+        'address_line': location.area || location.road || location.formatted_address || '',
+        'zip': location.pincode || '',
+    };
+    
+    // Fill form fields
+    Object.keys(fieldMapping).forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (field && fieldMapping[fieldName]) {
+            field.value = fieldMapping[fieldName];
+            
+            // Remove any validation classes and add success
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+            
+            // Trigger change event
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+    
+    console.log('Form filled with pincode location data');
+}
 
 // Address Management Functions
 function editAddress(addressId) {
@@ -1058,6 +1350,8 @@ function editAddress(addressId) {
             console.log('Address data loaded:', address);
             // Populate edit modal
             fillEditModal(address);
+            // Initialize location features for edit modal
+            initializeEditModalLocationFeatures();
             // Show modal
             const editModal = new bootstrap.Modal(document.getElementById('editAddressModal'));
             editModal.show();
@@ -1203,6 +1497,313 @@ function updateAddress() {
         console.error('Error updating address:', error);
         toastr.error('Failed to update address: ' + error.message);
     });
+}
+
+// Initialize Location Features for Edit Modal
+function initializeEditModalLocationFeatures() {
+    console.log('Initializing edit modal location features');
+    
+    // Initialize location picker for edit modal
+    const editLocationPickerContainer = document.getElementById('editLocationPicker');
+    if (editLocationPickerContainer) {
+        // Set up detect location button
+        const detectBtn = editLocationPickerContainer.querySelector('.location-detect-btn');
+        const loadingDiv = editLocationPickerContainer.querySelector('.location-loading');
+        
+        if (detectBtn) {
+            detectBtn.addEventListener('click', function() {
+                console.log('Detect location button clicked in edit modal');
+                detectBtn.style.display = 'none';
+                loadingDiv.style.display = 'block';
+                
+                // Use browser's geolocation API directly
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        async function(position) {
+                            console.log('Location detected:', position.coords);
+                            try {
+                                // Reverse geocode to get address details
+                                const location = await reverseGeocode(position.coords.latitude, position.coords.longitude);
+                                fillEditModalAddressForm(location);
+                                
+                                // Show location info
+                                const locationInfo = editLocationPickerContainer.querySelector('.location-info');
+                                const locationDisplay = editLocationPickerContainer.querySelector('.location-display');
+                                if (locationInfo && locationDisplay) {
+                                    locationDisplay.textContent = `${location.city || 'Unknown'}, ${location.state || 'Unknown'}`;
+                                    locationInfo.style.display = 'block';
+                                }
+                                
+                                showLocationMessage('Location detected successfully!', 'success');
+                            } catch (error) {
+                                console.error('Reverse geocoding failed:', error);
+                                showLocationMessage('Location detected but unable to get address details.', 'warning');
+                            }
+                        },
+                        function(error) {
+                            console.error('Geolocation failed:', error);
+                            showLocationMessage('Failed to detect location. Please enter manually.', 'error');
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 300000
+                        }
+                    );
+                } else {
+                    console.error('Geolocation not supported');
+                    showLocationMessage('Location detection not supported by your browser.', 'error');
+                }
+                
+                // Reset button state after timeout
+                setTimeout(() => {
+                    detectBtn.style.display = 'block';
+                    loadingDiv.style.display = 'none';
+                }, 10000);
+            });
+        }
+    }
+    
+    // Add pincode change handler to location picker pincode input in edit modal
+    const editLocationPincodeInput = editLocationPickerContainer ? editLocationPickerContainer.querySelector('.location-pincode-input') : null;
+    const editLocationPincodeFeedback = editLocationPickerContainer ? editLocationPickerContainer.querySelector('.pincode-feedback') : null;
+    let editLocationPincodeTimeout = null;
+    
+    if (editLocationPincodeInput && editLocationPincodeFeedback) {
+        console.log('Setting up location picker pincode handler for edit modal');
+        editLocationPincodeInput.addEventListener('input', function(e) {
+            console.log('Edit location picker pincode input changed:', e.target.value);
+            
+            // Clean input - remove non-alphanumeric
+            e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
+            
+            const pincode = e.target.value.trim();
+            
+            // Basic pincode validation
+            if (pincode.length === 0) {
+                editLocationPincodeFeedback.innerHTML = '';
+                editLocationPincodeInput.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            
+            // Show real-time validation feedback
+            const isValid = /^[0-9A-Za-z]{5,10}$/.test(pincode);
+            if (isValid) {
+                editLocationPincodeFeedback.innerHTML = `<small class="text-success"><i class="bi bi-check-circle me-1"></i>Valid format</small>`;
+                editLocationPincodeInput.classList.add('is-valid');
+                editLocationPincodeInput.classList.remove('is-invalid');
+            } else {
+                editLocationPincodeFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Invalid format (5-10 characters)</small>`;
+                editLocationPincodeInput.classList.add('is-invalid');
+                editLocationPincodeInput.classList.remove('is-valid');
+            }
+            
+            // Clear previous timeout
+            if (editLocationPincodeTimeout) {
+                clearTimeout(editLocationPincodeTimeout);
+            }
+            
+            // Auto-fill address if valid pincode (6 digits for India)
+            if (/^[0-9]{6}$/.test(pincode)) {
+                console.log('Valid location picker pincode detected for lookup:', pincode);
+                editLocationPincodeTimeout = setTimeout(async () => {
+                    try {
+                        editLocationPincodeFeedback.innerHTML = `
+                            <small class="text-info">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                Looking up location...
+                            </small>
+                        `;
+                        
+                        console.log('Fetching pincode details for location picker:', pincode);
+                        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                        const data = await response.json();
+                        
+                        console.log('Location picker pincode API response:', data);
+                        
+                        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                            const postOffice = data[0].PostOffice[0];
+                            const location = {
+                                city: postOffice.District,
+                                state: postOffice.State,
+                                area: postOffice.Name,
+                                pincode: pincode
+                            };
+                            
+                            console.log('Location data from location picker pincode:', location);
+                            
+                            // Fill form fields with location data including pincode
+                            fillEditModalAddressForm(location, true);
+                            
+                            editLocationPincodeFeedback.innerHTML = `
+                                <small class="text-success">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Location found: ${location.city || 'N/A'}, ${location.state || 'N/A'}
+                                </small>
+                            `;
+                        } else {
+                            throw new Error('Pincode not found in database');
+                        }
+                    } catch (error) {
+                        console.error('Edit modal location picker - Pincode lookup failed:', error);
+                        editLocationPincodeFeedback.innerHTML = `
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Could not find location for this pincode
+                            </small>
+                        `;
+                    }
+                }, 800);
+            }
+        });
+    }
+    
+    // Add pincode change handler to edit ZIP field
+    const editZipField = document.getElementById('edit_zip');
+    const editZipFeedback = document.getElementById('editZipFeedback');
+    let editZipTimeout = null;
+    
+    if (editZipField && editZipFeedback) {
+        console.log('Setting up form pincode handler for edit modal');
+        editZipField.addEventListener('input', function(e) {
+            console.log('Edit form pincode input changed:', e.target.value);
+            
+            // Clean input - remove non-alphanumeric
+            e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
+            
+            const pincode = e.target.value.trim();
+            
+            // Basic pincode validation
+            if (pincode.length === 0) {
+                editZipFeedback.innerHTML = '';
+                editZipField.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            
+            // Show real-time validation feedback
+            const isValid = /^[0-9A-Za-z]{5,10}$/.test(pincode);
+            if (isValid) {
+                editZipFeedback.innerHTML = `<small class="text-success"><i class="bi bi-check-circle me-1"></i>Valid format</small>`;
+                editZipField.classList.add('is-valid');
+                editZipField.classList.remove('is-invalid');
+            } else {
+                editZipFeedback.innerHTML = `<small class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Invalid format (5-10 characters)</small>`;
+                editZipField.classList.add('is-invalid');
+                editZipField.classList.remove('is-valid');
+            }
+            
+            // Clear previous timeout
+            if (editZipTimeout) {
+                clearTimeout(editZipTimeout);
+            }
+            
+            // Auto-fill address if valid pincode (6 digits for India)
+            if (/^[0-9]{6}$/.test(pincode)) {
+                console.log('Valid form pincode detected for lookup:', pincode);
+                editZipTimeout = setTimeout(async () => {
+                    try {
+                        editZipFeedback.innerHTML = `
+                            <small class="text-info">
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                Looking up location...
+                            </small>
+                        `;
+                        
+                        console.log('Fetching pincode details for form field:', pincode);
+                        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                        const data = await response.json();
+                        
+                        console.log('Form pincode API response:', data);
+                        
+                        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                            const postOffice = data[0].PostOffice[0];
+                            const location = {
+                                city: postOffice.District,
+                                state: postOffice.State,
+                                area: postOffice.Name,
+                                pincode: pincode
+                            };
+                            
+                            console.log('Location data from form pincode:', location);
+                            
+                            // Fill form fields with location data (don't fill pincode as user is typing it)
+                            fillEditModalAddressForm(location, false);
+                            
+                            editZipFeedback.innerHTML = `
+                                <small class="text-success">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Location found: ${location.city || 'N/A'}, ${location.state || 'N/A'}
+                                </small>
+                            `;
+                        } else {
+                            throw new Error('Pincode not found in database');
+                        }
+                    } catch (error) {
+                        console.error('Edit modal form - Pincode lookup failed:', error);
+                        editZipFeedback.innerHTML = `
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Could not find location for this pincode
+                            </small>
+                        `;
+                    }
+                }, 800);
+            }
+        });
+    }
+}
+
+// Reverse geocode coordinates to get address
+async function reverseGeocode(lat, lng) {
+    try {
+        // Try with a free geocoding service
+        const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+        const data = await response.json();
+        
+        return {
+            city: data.city || data.locality || '',
+            state: data.principalSubdivision || '',
+            area: data.localityInfo?.administrative?.[0]?.name || '',
+            formatted_address: data.localityLanguageRequested || ''
+        };
+    } catch (error) {
+        console.error('Reverse geocoding failed:', error);
+        throw error;
+    }
+}
+
+// Fill edit modal address form with location data
+function fillEditModalAddressForm(location, includePincode = true) {
+    console.log('Filling edit modal form with location:', location, 'includePincode:', includePincode);
+    
+    // Map location data to edit form fields
+    const fieldMapping = {
+        'edit_city': location.city || '',
+        'edit_state': location.state || '',
+        'edit_address_line': location.area || location.road || location.formatted_address || ''
+    };
+    
+    // Include pincode if requested
+    if (includePincode && location.pincode) {
+        fieldMapping['edit_zip'] = location.pincode;
+    }
+    
+    // Fill form fields
+    Object.keys(fieldMapping).forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (field && fieldMapping[fieldName]) {
+            field.value = fieldMapping[fieldName];
+            
+            // Remove any validation classes and add success
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+            
+            // Trigger change event
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+    
+    console.log('Edit modal form filled with location data');
 }
 </script>
 @endsection

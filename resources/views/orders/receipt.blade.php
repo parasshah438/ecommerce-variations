@@ -206,7 +206,13 @@
         <div class="items-section">
             @foreach($order->items as $item)
                 <div class="item">
-                    <div class="item-name">{{ $item->productVariation->product->name }}</div>
+                    <div class="item-name">
+                        @if($item->productVariation && $item->productVariation->product)
+                            {{ $item->productVariation->product->name }}
+                        @else
+                            Product unavailable
+                        @endif
+                    </div>
                     <div class="item-details">
                         SKU: {{ $item->productVariation->sku }}
                         @if($item->productVariation->attributeValues->count() > 0)

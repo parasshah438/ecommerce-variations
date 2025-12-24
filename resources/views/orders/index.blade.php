@@ -265,12 +265,21 @@
                                                 <span class="text-muted me-2">Items:</span>
                                                 <div class="d-flex flex-wrap">
                                                     @foreach($order->items->take(3) as $item)
-                                                        <span class="badge bg-light text-dark me-1 mb-1">
-                                                            {{ $item->productVariation->product->name }}
-                                                            @if($item->quantity > 1)
-                                                                ({{ $item->quantity }})
-                                                            @endif
-                                                        </span>
+                                                        @if($item->productVariation && $item->productVariation->product)
+                                                            <span class="badge bg-light text-dark me-1 mb-1">
+                                                                {{ $item->productVariation->product->name }}
+                                                                @if($item->quantity > 1)
+                                                                    ({{ $item->quantity }})
+                                                                @endif
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark me-1 mb-1">
+                                                                Product unavailable
+                                                                @if($item->quantity > 1)
+                                                                    ({{ $item->quantity }})
+                                                                @endif
+                                                            </span>
+                                                        @endif
                                                     @endforeach
                                                     @if($order->items->count() > 3)
                                                         <span class="badge bg-secondary">+{{ $order->items->count() - 3 }} more</span>
@@ -383,7 +392,11 @@
                                                                    name="return_items[]" value="{{ $item->id }}" 
                                                                    id="returnItem{{ $item->id }}">
                                                             <label class="form-check-label" for="returnItem{{ $item->id }}">
-                                                                {{ $item->productVariation->product->name }} (Qty: {{ $item->quantity }})
+                                                                @if($item->productVariation && $item->productVariation->product)
+                                                                    {{ $item->productVariation->product->name }} (Qty: {{ $item->quantity }})
+                                                                @else
+                                                                    Product unavailable (Qty: {{ $item->quantity }})
+                                                                @endif
                                                             </label>
                                                         </div>
                                                     @endforeach

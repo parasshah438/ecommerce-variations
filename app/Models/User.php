@@ -215,4 +215,14 @@ class User extends Authenticatable
     {
         return $this->social_providers[$provider] ?? null;
     }
+
+    public function wishlist()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

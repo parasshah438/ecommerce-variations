@@ -267,7 +267,13 @@
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
-                            <strong>{{ $item->productVariation->product->name }}</strong><br>
+                            <strong>
+                                @if($item->productVariation && $item->productVariation->product)
+                                    {{ $item->productVariation->product->name }}
+                                @else
+                                    Product unavailable
+                                @endif
+                            </strong><br>
                             <small>SKU: {{ $item->productVariation->sku }}</small>
                             @if($item->productVariation->attributeValues->count() > 0)
                                 <br>

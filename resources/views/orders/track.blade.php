@@ -165,7 +165,7 @@
                                 <div class="p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
                                     <div class="row align-items-center">
                                         <div class="col-3">
-                                            @if($item->productVariation->product->images->count() > 0)
+                                            @if($item->productVariation && $item->productVariation->product && $item->productVariation->product->images->count() > 0)
                                                 <img src="{{ $item->productVariation->product->getThumbnailImage() ? $item->productVariation->product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
                                                      alt="{{ $item->productVariation->product->name }}"
                                                      class="img-fluid rounded">
@@ -176,7 +176,13 @@
                                             @endif
                                         </div>
                                         <div class="col-9">
-                                            <h6 class="mb-1">{{ $item->productVariation->product->name }}</h6>
+                                            <h6 class="mb-1">
+                                                @if($item->productVariation && $item->productVariation->product)
+                                                    {{ $item->productVariation->product->name }}
+                                                @else
+                                                    Product unavailable
+                                                @endif
+                                            </h6>
                                             <small class="text-muted">Qty: {{ $item->quantity }}</small>
                                             <div class="fw-bold">₹{{ number_format($item->price * $item->quantity, 2) }}</div>
                                         </div>

@@ -385,6 +385,16 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::delete('/address/{address}', [FrontCheckout::class, 'deleteAddress'])->name('address.delete');
     Route::post('/address/{address}/set-default', [FrontCheckout::class, 'setDefaultAddress'])->name('address.set_default');
 
+    // Additional Address Routes
+    Route::prefix('addresses')->name('addresses.')->group(function () {
+        Route::get('/', [App\Http\Controllers\AddressController::class, 'index'])->name('index');
+        Route::get('/data', [App\Http\Controllers\AddressController::class, 'data'])->name('data');
+        Route::post('/', [App\Http\Controllers\AddressController::class, 'store'])->name('store');
+        Route::get('/{address}/edit', [App\Http\Controllers\AddressController::class, 'edit'])->name('edit');
+        Route::put('/{address}', [App\Http\Controllers\AddressController::class, 'update'])->name('update');
+        Route::delete('/{address}', [App\Http\Controllers\AddressController::class, 'destroy'])->name('destroy');
+        Route::patch('/{address}/set-default', [App\Http\Controllers\AddressController::class, 'setDefault'])->name('set-default');
+    });
 
 
 	// Old admin routes - commented out, now using admin.php routes
