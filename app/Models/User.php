@@ -90,6 +90,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's recent views.
+     */
+    public function recentViews()
+    {
+        return $this->hasMany(RecentView::class);
+    }
+
+    /**
      * Get the mobile attribute (for backward compatibility)
      */
     public function getMobileAttribute()

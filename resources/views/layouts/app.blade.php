@@ -36,6 +36,126 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
         }
 
+        /* Sidebar Search Styles */
+        .sidebar-search {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .sidebar-search-input {
+            background: var(--sidebar-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-search-input:focus {
+            background: var(--card-bg);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+            outline: none;
+        }
+
+        .sidebar-search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 0.875rem;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-clear:hover {
+            color: var(--text-primary);
+            background: var(--sidebar-hover);
+        }
+
+        .search-results {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 1rem;
+            right: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .search-results-header {
+            padding: 0.75rem 1rem 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-results-list {
+            padding: 0.5rem 0;
+        }
+
+        .search-result-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .search-result-item:hover {
+            background: var(--sidebar-hover);
+            color: var(--primary-color);
+        }
+
+        .search-result-item .result-icon {
+            display: inline-block;
+            width: 20px;
+            margin-right: 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .search-result-item .result-text {
+            font-size: 0.875rem;
+        }
+
+        .search-highlight {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-color);
+            font-weight: 600;
+            padding: 0.1em 0.2em;
+            border-radius: 3px;
+        }
+
         [data-theme="dark"] {
             --primary-color: #818cf8;
             --primary-hover: #6366f1;
@@ -616,62 +736,7 @@
 </head>
 <body>
     <div id="app">
-        <!-- Sidebar -->
-        <nav class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-icon">{{ strtoupper(substr(config('app.name', 'E'), 0, 1)) }}</div>
-                <div class="logo-text">
-                    <h5>{{ config('app.name', 'ECommerce') }}</h5>
-                    <small>User Dashboard</small>
-                </div>
-            </div>
-            
-            <div class="nav-section">
-                <div class="nav-section-title">Main</div>
-                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                    <i class="bi bi-speedometer2"></i>Dashboard
-                </a>
-                <a class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="">
-                    <i class="bi bi-person-circle"></i>My Profile
-                </a>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Shopping</div>
-                <a class="nav-link {{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">
-                    <i class="bi bi-bag-check"></i>My Orders
-                    @if(auth()->user()->orders()->where('status', 'pending')->count() > 0)
-                        <span class="badge bg-warning rounded-pill ms-auto">{{ auth()->user()->orders()->where('status', 'pending')->count() }}</span>
-                    @endif
-                </a>
-                <a class="nav-link {{ request()->routeIs('wishlist.*') ? 'active' : '' }}" href="{{ route('wishlist.index') }}">
-                    <i class="bi bi-heart"></i>Wishlist
-                    @if(auth()->user()->wishlist()->count() > 0)
-                        <span class="badge bg-danger rounded-pill ms-auto">{{ auth()->user()->wishlist()->count() }}</span>
-                    @endif
-                </a>
-                <a class="nav-link {{ request()->routeIs('cart.*') ? 'active' : '' }}" href="{{ route('cart.index') }}">
-                    <i class="bi bi-cart3"></i>Shopping Cart
-                    @if(session('cart') && count(session('cart')) > 0)
-                        <span class="badge bg-primary rounded-pill ms-auto">{{ count(session('cart')) }}</span>
-                    @endif
-                </a>
-                <a class="nav-link {{ request()->routeIs('addresses.*') ? 'active' : '' }}" href="">
-                    <i class="bi bi-geo-alt"></i>Addresses
-                </a>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Support</div>
-                <a class="nav-link {{ request()->routeIs('support.*') ? 'active' : '' }}" href="">
-                    <i class="bi bi-headset"></i>Help Center
-                </a>
-                <a class="nav-link" href="{{ route('home') }}" target="_blank">
-                    <i class="bi bi-shop"></i>Visit Store
-                    <i class="bi bi-box-arrow-up-right ms-auto" style="font-size: 0.75rem;"></i>
-                </a>
-            </div>
-        </nav>
+        @include('partials.sidebar')
 
         <!-- Main Content -->
         <main class="main-content">
@@ -869,6 +934,138 @@
             }, 500);
             @php session(['dashboard_visited' => true]); @endphp
         @endif
+
+        // Sidebar Search Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('sidebarSearchInput');
+            const searchClear = document.getElementById('searchClear');
+            const searchResults = document.getElementById('searchResults');
+            const searchResultsList = document.getElementById('searchResultsList');
+            const noSearchResults = document.getElementById('noSearchResults');
+            const navLinks = document.querySelectorAll('.nav-link[data-keywords]');
+
+            let searchTimeout;
+
+            // Collect all searchable items
+            const searchableItems = Array.from(navLinks).map(link => {
+                const icon = link.querySelector('i').className;
+                const text = link.querySelector('.nav-text') ? 
+                    link.querySelector('.nav-text').textContent.trim() : 
+                    link.textContent.replace(/\s+/g, ' ').trim();
+                const keywords = link.getAttribute('data-keywords') || '';
+                const href = link.getAttribute('href');
+                
+                return {
+                    element: link,
+                    text: text,
+                    keywords: keywords,
+                    icon: icon,
+                    href: href,
+                    searchText: (text + ' ' + keywords).toLowerCase()
+                };
+            });
+
+            function performSearch(query) {
+                if (!query.trim()) {
+                    searchResults.classList.add('d-none');
+                    return;
+                }
+
+                const results = searchableItems.filter(item => 
+                    item.searchText.includes(query.toLowerCase())
+                );
+
+                searchResultsList.innerHTML = '';
+
+                if (results.length === 0) {
+                    noSearchResults.classList.remove('d-none');
+                    searchResultsList.classList.add('d-none');
+                } else {
+                    noSearchResults.classList.add('d-none');
+                    searchResultsList.classList.remove('d-none');
+
+                    results.forEach(result => {
+                        const resultItem = document.createElement('a');
+                        resultItem.className = 'search-result-item';
+                        resultItem.href = result.href;
+                        
+                        // Highlight matching text
+                        let highlightedText = result.text;
+                        const regex = new RegExp(`(${query})`, 'gi');
+                        highlightedText = highlightedText.replace(regex, '<span class="search-highlight">$1</span>');
+                        
+                        resultItem.innerHTML = `
+                            <i class="${result.icon} result-icon"></i>
+                            <span class="result-text">${highlightedText}</span>
+                        `;
+                        
+                        resultItem.addEventListener('click', () => {
+                            searchInput.value = '';
+                            searchResults.classList.add('d-none');
+                            searchClear.classList.add('d-none');
+                        });
+                        
+                        searchResultsList.appendChild(resultItem);
+                    });
+                }
+
+                searchResults.classList.remove('d-none');
+            }
+
+            // Search input event listeners
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                if (query) {
+                    searchClear.classList.remove('d-none');
+                } else {
+                    searchClear.classList.add('d-none');
+                }
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            });
+
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim()) {
+                    performSearch(this.value);
+                }
+            });
+
+            // Clear search
+            searchClear.addEventListener('click', function() {
+                searchInput.value = '';
+                searchResults.classList.add('d-none');
+                this.classList.add('d-none');
+                searchInput.focus();
+            });
+
+            // Close search results when clicking outside
+            document.addEventListener('click', function(event) {
+                const isClickInsideSearch = searchInput.contains(event.target) || 
+                                          searchResults.contains(event.target) ||
+                                          searchClear.contains(event.target);
+                
+                if (!isClickInsideSearch) {
+                    searchResults.classList.add('d-none');
+                }
+            });
+
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    searchResults.classList.add('d-none');
+                    this.blur();
+                } else if (event.key === 'Enter') {
+                    const firstResult = searchResultsList.querySelector('.search-result-item');
+                    if (firstResult) {
+                        firstResult.click();
+                    }
+                }
+            });
+        });
     </script>
     @stack('scripts')
 </body>

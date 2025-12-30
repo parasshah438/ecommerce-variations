@@ -1,4 +1,547 @@
-@extends('layouts.frontend')
+@extends('layouts.app')
+
+@section('title', 'My Wishlist')
+
+@section('breadcrumb')
+<li class="breadcrumb-item active" aria-current="page">Wishlist</li>
+@endsection
+
+@section('content')
+@php
+    // Fallback for undefined variables
+    $totalItems = $totalItems ?? (isset($wishlistItems) ? $wishlistItems->total() : 0);
+    
+    // If wishlistItems is not set, create an empty paginator
+    if (!isset($wishlistItems)) {
+        $wishlistItems = new \Illuminate\Pagination\LengthAwarePaginator(
+            collect([]), 
+            0, 
+            12, 
+            1, 
+            ['path' => request()->url()]
+        );
+    }
+@endphp
+
+<div class="content-wrapper">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="h4 mb-1 text-primary fw-bold">
+                        <i class="bi bi-heart-fill me-2 text-danger"></i>My Wishlist
+                    </h2>
+                    <p class="text-muted mb-0">
+                        @if($totalItems > 0)
+                            {{ $totalItems }} item{{ $totalItems > 1 ? 's' : '' }} saved for later
+                        @else
+                            Your wishlist is empty
+                        @endif
+                    </p>
+                </div>
+                @if($totalItems > 0)
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearWishlist()">
+                        <i class="bi bi-trash me-1"></i>Clear All
+                    </button>
+                    <a href="{{ route('home') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-shop me-1"></i>Continue Shopping
+                    </a>
+                </div>
+                @endif
+            </div>
+
+            @if($wishlistItems->count() > 0)
+                <!-- Wishlist Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon danger mx-auto">
+                                <i class="bi bi-heart-fill"></i>
+                            </div>
+                            <div class="stat-value">{{ $totalItems }}</div>
+                            <div class="stat-label">Saved Items</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon success mx-auto">
+                                <i class="bi bi-currency-dollar"></i>
+                            </div>
+                            <div class="stat-value">
+                                ${{ number_format($wishlistItems->sum(function($item) { 
+                                    return optional($item->product) ? $item->product->getBestSalePrice() : 0; 
+                                }), 2) }}
+                            </div>
+                            <div class="stat-label">Total Value</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon warning mx-auto">
+                                <i class="bi bi-tag-fill"></i>
+                            </div>
+                            <div class="stat-value">
+                                ${{ number_format($wishlistItems->sum(function($item) { 
+                                    if (!$item->product) return 0;
+                                    $original = $item->product->price;
+                                    $sale = $item->product->getBestSalePrice();
+                                    return $original - $sale;
+                                }), 2) }}
+                            </div>
+                            <div class="stat-label">Potential Savings</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Grid -->
+                <div class="row g-4">
+                    @foreach($wishlistItems as $wishlistItem)
+                        @php $product = $wishlistItem->product; @endphp
+                        <div class="col-6 col-md-4 col-lg-3" id="wishlist-item-{{ $product->id }}">
+                            <div class="card product-card h-100 border-0 shadow-sm">
+                                <!-- Product Image -->
+                                <div class="card-img-wrapper position-relative">
+                                    @php
+                                        $thumbnail = $product->getThumbnailImage();
+                                        $imageUrl = null;
+                                        
+                                        if ($thumbnail) {
+                                            // Try different possible image path formats
+                                            if (isset($thumbnail->image_path)) {
+                                                $imageUrl = asset('storage/' . $thumbnail->image_path);
+                                            } elseif (isset($thumbnail->path)) {
+                                                $imageUrl = asset('storage/' . $thumbnail->path);
+                                            } elseif (isset($thumbnail->url)) {
+                                                $imageUrl = $thumbnail->url;
+                                            }
+                                        }
+                                        
+                                        // Fallback to first image if thumbnail method doesn't work
+                                        if (!$imageUrl && $product->images && $product->images->count() > 0) {
+                                            $firstImage = $product->images->first();
+                                            if (isset($firstImage->image_path)) {
+                                                $imageUrl = asset('storage/' . $firstImage->image_path);
+                                            } elseif (isset($firstImage->path)) {
+                                                $imageUrl = asset('storage/' . $firstImage->path);
+                                            }
+                                        }
+                                    @endphp
+                                    @if($imageUrl)
+                                        <img src="{{ $imageUrl }}" 
+                                             class="card-img-top product-img" 
+                                             alt="{{ $product->name }}"
+                                             style="height: 200px; object-fit: cover;"
+                                             onerror="this.parentElement.innerHTML='<div class=&quot;placeholder-img d-flex align-items-center justify-content-center bg-light&quot; style=&quot;height: 200px;&quot;><i class=&quot;bi bi-image text-muted&quot; style=&quot;font-size: 3rem;&quot;></i></div>'">
+                                    @else
+                                        <div class="placeholder-img d-flex align-items-center justify-content-center bg-light" 
+                                             style="height: 200px;">
+                                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                        </div>
+                                    @endif
+                                    
+                                    <!-- Sale Badge -->
+                                    @php
+                                        $discountPercent = $product->getDiscountPercentage();
+                                    @endphp
+                                    @if($discountPercent > 0)
+                                        <div class="position-absolute top-0 start-0 m-2">
+                                            <span class="badge bg-danger">{{ $discountPercent }}% OFF</span>
+                                        </div>
+                                    @endif
+
+                                    <!-- Added Time -->
+                                    <div class="position-absolute bottom-0 start-0 m-2">
+                                        <span class="badge bg-dark bg-opacity-75 text-white small">
+                                            <i class="bi bi-heart me-1"></i>{{ $wishlistItem->created_at->diffForHumans() }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Product Details -->
+                                <div class="card-body p-3">
+                                    <h6 class="card-title mb-2 text-truncate" style="font-size: 0.9rem;">
+                                        <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none text-dark">
+                                            {{ $product->name }}
+                                        </a>
+                                    </h6>
+                                    
+                                    @if($product->category)
+                                        <p class="text-muted small mb-2">{{ $product->category->name }}</p>
+                                    @endif
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="price">
+                                        @php
+                                            $bestPrice = $product->getBestSalePrice();
+                                            $hasDiscount = $bestPrice < $product->price;
+                                        @endphp
+                                        @if($hasDiscount)
+                                            <span class="text-danger fw-bold">${{ number_format($bestPrice, 2) }}</span>
+                                            <small class="text-muted text-decoration-line-through ms-1">
+                                                ${{ number_format($product->price, 2) }}
+                                            </small>
+                                        @else
+                                            <span class="text-primary fw-bold">${{ number_format($product->price, 2) }}</span>
+                                        @endif
+                                        </div>
+                                        
+                                        <!-- Stock Status -->
+                                        @php
+                                            // Check if product has stock through variations or direct stock attribute
+                                            $hasStock = false;
+                                            if (isset($product->stock) && $product->stock > 0) {
+                                                $hasStock = true;
+                                            } elseif ($product->variations && $product->variations->count() > 0) {
+                                                $hasStock = $product->variations->sum(function($variation) {
+                                                    return optional($variation->stock)->quantity ?? 0;
+                                                }) > 0;
+                                            } else {
+                                                $hasStock = true; // Default to in stock if no stock system
+                                            }
+                                        @endphp
+                                        @if($hasStock)
+                                            <span class="badge bg-success small">In Stock</span>
+                                        @else
+                                            <span class="badge bg-danger small">Out of Stock</span>
+                                        @endif
+                                    </div>
+
+                                    <!-- Action Buttons -->
+                                    <div class="d-flex flex-column gap-2">
+                                        <a href="{{ route('products.show', $product->slug) }}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </a>
+                                        <div class="d-flex gap-2">
+                                            @php
+                                                // Check stock status (reuse the logic from above)
+                                                $hasStock = false;
+                                                if (isset($product->stock) && $product->stock > 0) {
+                                                    $hasStock = true;
+                                                } elseif ($product->variations && $product->variations->count() > 0) {
+                                                    $hasStock = $product->variations->sum(function($variation) {
+                                                        return optional($variation->stock)->quantity ?? 0;
+                                                    }) > 0;
+                                                } else {
+                                                    $hasStock = true; // Default to in stock if no stock system
+                                                }
+                                            @endphp
+                                            @if($hasStock)
+                                                <button class="btn btn-success btn-sm flex-grow-1" onclick="addToCart({{ $product->id }})">
+                                                    <i class="bi bi-cart-plus me-1"></i>Add to Cart
+                                                </button>
+                                            @else
+                                                <button class="btn btn-outline-secondary btn-sm flex-grow-1" disabled>
+                                                    <i class="bi bi-x-circle me-1"></i>Out of Stock
+                                                </button>
+                                            @endif
+                                            <button class="btn btn-danger btn-sm" 
+                                                    onclick="removeFromWishlist({{ $product->id }})"
+                                                    title="Remove from wishlist">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Pagination -->
+                @if($wishlistItems->hasPages())
+                    <div class="d-flex justify-content-center mt-5">
+                        {{ $wishlistItems->links() }}
+                    </div>
+                @endif
+            @else
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-heart text-muted mb-3" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mb-3">Your Wishlist is Empty</h4>
+                        <p class="text-muted mb-4">
+                            Save products you love by clicking the heart icon.<br>
+                            Your favorite items will appear here for easy access.
+                        </p>
+                        <a href="{{ route('home') }}" class="btn btn-primary">
+                            <i class="bi bi-shop me-2"></i>Start Shopping
+                        </a>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+.product-card {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.card-img-wrapper {
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+}
+
+.product-img {
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-img {
+    transform: scale(1.05);
+}
+
+/* Remove button styling - Force visibility */
+.remove-btn,
+button.remove-btn,
+.product-card .remove-btn,
+.card .remove-btn {
+    width: 32px !important;
+    height: 32px !important;
+    opacity: 1 !important;
+    z-index: 1000 !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    visibility: visible !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 2px solid white !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    background-color: #dc3545 !important;
+}
+
+.remove-btn:hover,
+button.remove-btn:hover,
+.product-card .remove-btn:hover,
+.card .remove-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+
+.remove-btn i,
+button.remove-btn i,
+.product-card .remove-btn i,
+.card .remove-btn i {
+    font-size: 1rem !important;
+    font-weight: bold !important;
+    color: white !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.remove-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.remove-btn:focus {
+    opacity: 1 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.remove-btn i {
+    font-size: 1rem !important;
+    font-weight: bold;
+    color: white !important;
+}
+
+/* Ensure remove button is visible on mobile */
+@media (max-width: 768px) {
+    .remove-btn {
+        width: 36px !important;
+        height: 36px !important;
+        opacity: 1 !important;
+    }
+    
+    .remove-btn i {
+        font-size: 1.2rem !important;
+    }
+}
+
+/* Card positioning */
+.card-img-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+.product-card {
+    position: relative;
+    z-index: 1;
+}
+
+.product-card .position-absolute {
+    z-index: 10;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.placeholder-img {
+    border-radius: 12px 12px 0 0;
+}
+
+.stat-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+    .product-card .card-body {
+        padding: 1rem;
+    }
+    
+    .product-card .card-title {
+        font-size: 0.85rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+}
+
+[data-theme="dark"] .product-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .placeholder-img {
+    background: var(--sidebar-hover) !important;
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+// Remove from wishlist
+function removeFromWishlist(productId) {
+    if (confirm('Are you sure you want to remove this item from your wishlist?')) {
+        fetch(`/wishlist/${productId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`wishlist-item-${productId}`).style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    document.getElementById(`wishlist-item-${productId}`).remove();
+                    location.reload(); // Reload to update counts
+                }, 300);
+                toastr.success(data.message);
+                
+                // Update wishlist count in sidebar
+                updateWishlistCount(data.wishlist_count);
+            } else {
+                toastr.error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            toastr.error('Failed to remove item from wishlist.');
+        });
+    }
+}
+
+// Clear wishlist
+function clearWishlist() {
+    if (confirm('Are you sure you want to clear your entire wishlist? This action cannot be undone.')) {
+        window.location.href = '{{ route('wishlist.clear') }}';
+    }
+}
+
+// Add to cart
+function addToCart(productId) {
+    fetch('/cart/add', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+            product_id: productId,
+            quantity: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toastr.success(data.message);
+        } else {
+            toastr.error(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Failed to add item to cart.');
+    });
+}
+
+// Update wishlist count in sidebar
+function updateWishlistCount(count) {
+    const wishlistBadge = document.querySelector('.nav-link[href*="wishlist"] .badge');
+    if (wishlistBadge) {
+        if (count > 0) {
+            wishlistBadge.textContent = count;
+            wishlistBadge.style.display = 'inline-block';
+        } else {
+            wishlistBadge.style.display = 'none';
+        }
+    }
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<style>
+@keyframes fadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.8); }
+}
+</style>
+@endpush
+@endsection@extends('layouts.frontend')
 
 @section('title', 'My Wishlist - ' . config('app.name'))
 

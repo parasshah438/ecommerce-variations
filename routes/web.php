@@ -330,6 +330,95 @@ Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 
 
 // Authenticated routes - requiring single session
 Route::middleware(['auth', 'single.session'])->group(function () {
+    // Debug route to check product images (remove in production)
+    Route::get('/debug-product-images', function() {
+        try {
+            $product = \App\Models\Product::with(['images'])->first();
+            if (!$product) {
+                return response()->json(['error' => 'No products found']);
+            }
+            
+            $thumbnail = $product->getThumbnailImage();
+            
+            return response()->json([
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'images_count' => $product->images->count(),
+                'images' => $product->images->map(function($img) {
+                    return [
+                        'id' => $img->id,
+                        'image_path' => $img->image_path ?? null,
+                        'path' => $img->path ?? null,
+                        'url' => $img->url ?? null,
+                        'attributes' => array_keys($img->getAttributes())
+                    ];
+                }),
+                'thumbnail' => $thumbnail ? [
+                    'id' => $thumbnail->id ?? null,
+                    'image_path' => $thumbnail->image_path ?? null,
+                    'path' => $thumbnail->path ?? null,
+                    'url' => $thumbnail->url ?? null,
+                    'attributes' => array_keys($thumbnail->getAttributes())
+                ] : null
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    })->name('debug.product.images');
+
+    // Debug route for wishlist (remove in production)
+    Route::get('/debug-wishlist', function() {
+        try {
+            if (!\Schema::hasTable('wishlists')) {
+                return response()->json([
+                    'error' => 'Wishlists table does not exist',
+                    'user_id' => auth()->id(),
+                    'wishlist_table_exists' => false,
+                    'products_table_exists' => \Schema::hasTable('products'),
+                    'message' => 'Please run: php artisan migrate'
+                ]);
+            }
+
+            $wishlistItems = \App\Models\Wishlist::with(['product'])
+                ->where('user_id', auth()->id())
+                ->paginate(12);
+            $totalItems = \App\Models\Wishlist::where('user_id', auth()->id())->count();
+            
+            return response()->json([
+                'wishlistItems_count' => $wishlistItems->count(),
+                'totalItems' => $totalItems,
+                'user_id' => auth()->id(),
+                'wishlist_table_exists' => \Schema::hasTable('wishlists'),
+                'products_table_exists' => \Schema::hasTable('products'),
+                'recent_views_table_exists' => \Schema::hasTable('recent_views')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+                'wishlist_table_exists' => \Schema::hasTable('wishlists'),
+                'products_table_exists' => \Schema::hasTable('products'),
+                'recent_views_table_exists' => \Schema::hasTable('recent_views'),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    })->name('debug.wishlist');
+
+    // Recent Views routes
+    Route::get('/recent-views', [\App\Http\Controllers\RecentViewController::class, 'index'])->name('recent-views.index');
+    Route::delete('/recent-views/{id}', [\App\Http\Controllers\RecentViewController::class, 'destroy'])->name('recent-views.destroy');
+    Route::post('/recent-views/clear-all', [\App\Http\Controllers\RecentViewController::class, 'clear'])->name('recent-views.clear');
+    
+    // Enhanced Wishlist routes
+    Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist', [\App\Http\Controllers\WishlistController::class, 'store'])->name('wishlist.store');
+    Route::delete('/wishlist/{id}', [\App\Http\Controllers\WishlistController::class, 'destroy'])->name('wishlist.destroy');
+    Route::delete('/wishlist', [\App\Http\Controllers\WishlistController::class, 'clear'])->name('wishlist.clear');
+    Route::get('/wishlist/count', [\App\Http\Controllers\WishlistController::class, 'getCount'])->name('wishlist.count');
+
     // Cart routes
     Route::post('/cart/add', [FrontCart::class, 'add'])->name('cart.add');
     Route::post('/cart/update', [FrontCart::class, 'update'])->name('cart.update');
@@ -394,6 +483,16 @@ Route::middleware(['auth', 'single.session'])->group(function () {
         Route::put('/{address}', [App\Http\Controllers\AddressController::class, 'update'])->name('update');
         Route::delete('/{address}', [App\Http\Controllers\AddressController::class, 'destroy'])->name('destroy');
         Route::patch('/{address}/set-default', [App\Http\Controllers\AddressController::class, 'setDefault'])->name('set-default');
+    });
+
+    // Profile Management Routes
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/manage', [App\Http\Controllers\ProfileController::class, 'manage'])->name('manage');
+        Route::put('/manage', [App\Http\Controllers\ProfileController::class, 'updateProfile'])->name('update');
+        Route::get('/password', [App\Http\Controllers\ProfileController::class, 'password'])->name('password');
+        Route::put('/password', [App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('password.update');
+        Route::delete('/delete', [App\Http\Controllers\ProfileController::class, 'deleteAccount'])->name('delete');
+        Route::post('/upload-avatar', [App\Http\Controllers\ProfileController::class, 'uploadAvatar'])->name('avatar.upload');
     });
 
 

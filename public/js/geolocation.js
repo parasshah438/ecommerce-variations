@@ -548,58 +548,38 @@ class GeolocationManager {
      */
     createLocationPicker(container, options = {}) {
         const config = {
-            showDetectButton: true,
-            showSearchBox: true,
-            showPincodeInput: true,
-            placeholder: 'Search for area, city, or landmark...',
             pincodePlaceholder: 'Enter Pincode',
-            detectButtonText: 'Detect My Location',
+            detectButtonText: 'Use My Current Location',
             ...options
         };
-        
+
         const containerEl = typeof container === 'string' ? document.querySelector(container) : container;
-        
         if (!containerEl) {
             console.error('Container not found for location picker');
             return;
         }
-        
+
+        // Pincode input and detect location button on one line (col-md-6 style)
         const html = `
             <div class="location-picker">
-                ${config.showDetectButton ? `
-                    <div class="location-detect mb-3">
-                        <button type="button" class="btn btn-primary location-detect-btn">
+                <div class="row align-items-center mb-3">
+                    
+                    <div class="col-12 col-md-6">
+                        <button type="button" class="btn btn-primary w-100 location-detect-btn">
                             <i class="bi bi-geo-alt me-2"></i>
                             ${config.detectButtonText}
                         </button>
-                        <div class="location-loading" style="display: none;">
+                        <div class="location-loading mt-2" style="display: none;">
                             <div class="spinner-border spinner-border-sm me-2"></div>
                             Detecting location...
                         </div>
                     </div>
-                ` : ''}
-                
-                <div class="row">
-                    ${config.showSearchBox ? `
-                        <div class="col-md-8 mb-3">
-                            <div class="location-search-container position-relative">
-                                <input type="text" class="form-control location-search-input" 
-                                       placeholder="${config.placeholder}" autocomplete="off">
-                                <div class="location-search-results position-absolute w-100 bg-white border rounded shadow-sm" 
-                                     style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${config.showPincodeInput ? `
-                        <div class="col-md-4 mb-3">
-                            <input type="text" class="form-control location-pincode-input" 
-                                   placeholder="${config.pincodePlaceholder}" maxlength="10" 
-                                   title="Enter postal/ZIP code (5-10 characters)">
-                        </div>
-                    ` : ''}
+                    <div class="col-12 col-md-6">
+                        <input type="text" class="form-control location-pincode-input" 
+                            placeholder="${config.pincodePlaceholder}" maxlength="10" 
+                            title="Enter postal/ZIP code (5-10 characters)">
+                    </div>
                 </div>
-                
                 <div class="location-info" style="display: none;">
                     <div class="alert alert-success">
                         <strong>Location Detected:</strong>
@@ -608,129 +588,60 @@ class GeolocationManager {
                 </div>
             </div>
         `;
-        
+
         containerEl.innerHTML = html;
-        
-        // Bind events
-        this.bindLocationPickerEvents(containerEl);
-        
+        // Only bind pincode input and detect button events
+        this.bindSimplePickerEvents(containerEl);
         return containerEl;
     }
     
     /**
      * Bind events for location picker
      */
-    bindLocationPickerEvents(container) {
+    // Only bind pincode input and detect button events for the simplified picker
+    bindSimplePickerEvents(container) {
         const detectBtn = container.querySelector('.location-detect-btn');
         const loading = container.querySelector('.location-loading');
-        const searchInput = container.querySelector('.location-search-input');
-        const searchResults = container.querySelector('.location-search-results');
         const pincodeInput = container.querySelector('.location-pincode-input');
         const locationInfo = container.querySelector('.location-info');
         const locationDisplay = container.querySelector('.location-display');
-        
-        let searchTimeout;
-        
-        // Detect location button
+        if (!pincodeInput) return;
+
+        // Add visual feedback container
+        const feedbackContainer = document.createElement('div');
+        feedbackContainer.className = 'pincode-feedback mt-1';
+        pincodeInput.parentNode.appendChild(feedbackContainer);
+
+        pincodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
+            const pincode = e.target.value.trim();
+            this.showPincodeValidationFeedback(pincode, feedbackContainer, pincodeInput);
+            if (this.pincodeTimeout) {
+                clearTimeout(this.pincodeTimeout);
+            }
+            if (this.isValidPincodeForLookup(pincode)) {
+                this.pincodeTimeout = setTimeout(() => {
+                    this.handlePincodeChange(pincode, locationInfo, locationDisplay);
+                }, 800);
+            }
+        });
+
         if (detectBtn) {
             detectBtn.addEventListener('click', () => {
                 detectBtn.style.display = 'none';
                 loading.style.display = 'block';
-                
                 this.detectLocation()
                     .then((location) => {
                         this.showLocationInfo(locationInfo, locationDisplay, location);
                     })
                     .catch((error) => {
                         console.error('Location detection failed:', error);
-                        alert('Failed to detect location. Please try manual search.');
+                        alert('Failed to detect location. Please try manual entry.');
                     })
                     .finally(() => {
                         detectBtn.style.display = 'block';
                         loading.style.display = 'none';
                     });
-            });
-        }
-        
-        // Search input
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                
-                clearTimeout(searchTimeout);
-                
-                if (query.length >= 3) {
-                    searchTimeout = setTimeout(() => {
-                        this.searchLocations(query)
-                            .then((results) => {
-                                this.showSearchResults(searchResults, results, locationInfo, locationDisplay);
-                            })
-                            .catch((error) => {
-                                console.error('Search failed:', error);
-                                searchResults.style.display = 'none';
-                            });
-                    }, 500);
-                } else {
-                    searchResults.style.display = 'none';
-                }
-            });
-            
-            // Hide results when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!container.contains(e.target)) {
-                    searchResults.style.display = 'none';
-                }
-            });
-        }
-        
-        // Pincode input with real-time validation
-        if (pincodeInput) {
-            // Clear any existing timeout when creating new listener
-            if (this.pincodeTimeout) {
-                clearTimeout(this.pincodeTimeout);
-            }
-            
-            // Add visual feedback container
-            const feedbackContainer = document.createElement('div');
-            feedbackContainer.className = 'pincode-feedback mt-1';
-            pincodeInput.parentNode.appendChild(feedbackContainer);
-            
-            pincodeInput.addEventListener('input', (e) => {
-                // Remove non-alphanumeric for international support
-                e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
-                
-                const pincode = e.target.value.trim();
-                
-                // Real-time validation feedback
-                this.showPincodeValidationFeedback(pincode, feedbackContainer, pincodeInput);
-                
-                console.log('📮 Pincode input:', {
-                    value: pincode,
-                    length: pincode.length,
-                    shouldTrigger: this.isValidPincodeForLookup(pincode)
-                });
-                
-                // Clear previous timeout
-                if (this.pincodeTimeout) {
-                    clearTimeout(this.pincodeTimeout);
-                }
-                
-                // Validate pincode before making API call
-                if (this.isValidPincodeForLookup(pincode)) {
-                    console.log('⏱️ Scheduling pincode lookup with 800ms delay...');
-                    
-                    // Add debouncing to prevent excessive API calls
-                    this.pincodeTimeout = setTimeout(() => {
-                        console.log('🚀 Executing pincode lookup for:', pincode);
-                        this.handlePincodeChange(pincode, locationInfo, locationDisplay);
-                    }, 800); // 800ms delay to reduce API calls while typing
-                } else {
-                    console.log('❌ Pincode not valid for lookup:', {
-                        value: pincode,
-                        length: pincode.length,
-                        reason: this.getPincodeValidationReason(pincode)
-                    });
-                }
             });
         }
     }

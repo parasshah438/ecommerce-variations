@@ -27,9 +27,9 @@ class AddressController extends Controller
         foreach ($addresses as $address) {
             // Type badge
             $badgeClass = match($address->type) {
-                'shipping' => 'bg-primary',
-                'billing' => 'bg-success', 
-                'both' => 'bg-info',
+                'home' => 'bg-primary',
+                'work' => 'bg-success', 
+                'other' => 'bg-info',
                 default => 'bg-secondary'
             };
             $typeBadge = '<span class="badge ' . $badgeClass . '">' . ucfirst($address->type) . '</span>';
@@ -83,12 +83,8 @@ class AddressController extends Controller
      */
     public function store(Request $request)
     {
-        // Handle checkbox value - convert to proper boolean
-        $data = $request->all();
-        $data['is_default'] = $request->has('is_default') ? 1 : 0;
-
-        $validator = Validator::make($data, [
-            'type' => 'required|in:shipping,billing,both',
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:home,work,other',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'company' => 'nullable|string|max:255',
@@ -99,7 +95,7 @@ class AddressController extends Controller
             'postal_code' => 'required|string|max:20',
             'country' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
-            'is_default' => 'in:0,1',
+            'is_default' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -109,14 +105,31 @@ class AddressController extends Controller
             ], 422);
         }
 
-        $addressData = $validator->validated();
-        $addressData['user_id'] = auth()->id();
+        $validatedData = $validator->validated();
+        
+        // Map form fields to database fields
+        $addressData = [
+            'user_id' => auth()->id(),
+            'type' => $validatedData['type'],
+            'name' => trim($validatedData['first_name'] . ' ' . $validatedData['last_name']),
+            'phone' => $validatedData['phone'],
+            'address_line' => $validatedData['address_line_1'] . ($validatedData['address_line_2'] ? ', ' . $validatedData['address_line_2'] : ''),
+            'city' => $validatedData['city'],
+            'state' => $validatedData['state'],
+            'zip' => $validatedData['postal_code'],
+            'country' => $validatedData['country'] ?? 'India',
+            'landmark' => $validatedData['company'] ?? null, // Using company field as landmark for now
+        ];
+        
+        // Handle checkbox - if not present or false, set to false, otherwise true
+        $addressData['is_default'] = $request->has('is_default') && $request->input('is_default') ? true : false;
+
+        // If this address is set as default, unset others
+        if ($addressData['is_default']) {
+            auth()->user()->addresses()->update(['is_default' => false]);
+        }
 
         $address = Address::create($addressData);
-
-        if ($addressData['is_default'] == 1) {
-            $address->setAsDefault();
-        }
 
         return response()->json([
             'success' => true,
@@ -137,9 +150,27 @@ class AddressController extends Controller
             ], 403);
         }
 
+        // Convert database fields back to form fields
+        $addressLineParts = explode(', ', $address->address_line, 2);
+        
+        $formData = [
+            'id' => $address->id,
+            'type' => $address->type,
+            'name' => $address->name,
+            'company' => $address->landmark ?? '',
+            'address_line_1' => $addressLineParts[0] ?? $address->address_line,
+            'address_line_2' => $addressLineParts[1] ?? '',
+            'city' => $address->city,
+            'state' => $address->state,
+            'postal_code' => $address->zip,
+            'country' => $address->country,
+            'phone' => $address->phone,
+            'is_default' => $address->is_default,
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => $address
+            'data' => $formData
         ]);
     }
 
@@ -156,12 +187,8 @@ class AddressController extends Controller
             ], 403);
         }
 
-        // Handle checkbox value - convert to proper boolean
-        $data = $request->all();
-        $data['is_default'] = $request->has('is_default') ? 1 : 0;
-
-        $validator = Validator::make($data, [
-            'type' => 'required|in:shipping,billing,both',
+        $validator = Validator::make($request->all(), [
+            'type' => 'required|in:home,work,other',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'company' => 'nullable|string|max:255',
@@ -172,7 +199,7 @@ class AddressController extends Controller
             'postal_code' => 'required|string|max:20',
             'country' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
-            'is_default' => 'in:0,1',
+            'is_default' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -182,12 +209,31 @@ class AddressController extends Controller
             ], 422);
         }
 
-        $addressData = $validator->validated();
-        $address->update($addressData);
+        $validatedData = $validator->validated();
+        
+        // Map form fields to database fields
+        $addressData = [
+            'type' => $validatedData['type'],
+            'name' => trim($validatedData['first_name'] . ' ' . $validatedData['last_name']),
+            'phone' => $validatedData['phone'],
+            'address_line' => $validatedData['address_line_1'] . ($validatedData['address_line_2'] ? ', ' . $validatedData['address_line_2'] : ''),
+            'city' => $validatedData['city'],
+            'state' => $validatedData['state'],
+            'zip' => $validatedData['postal_code'],
+            'country' => $validatedData['country'] ?? 'India',
+            'landmark' => $validatedData['company'] ?? null, // Using company field as landmark for now
+        ];
+        
+        // Handle checkbox - if not present or false, set to false, otherwise true
+        $isDefault = $request->has('is_default') && $request->input('is_default') ? true : false;
+        $addressData['is_default'] = $isDefault;
 
-        if ($addressData['is_default'] == 1) {
-            $address->setAsDefault();
+        // If this address is set as default, unset others
+        if ($isDefault && !$address->is_default) {
+            auth()->user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
+
+        $address->update($addressData);
 
         return response()->json([
             'success' => true,
