@@ -44,38 +44,28 @@
 
                                 @if($user->password)
                                     <div class="mb-4">
-                                        <div class="form-floating">
-                                            <input type="password" 
-                                                   class="form-control @error('current_password') is-invalid @enderror" 
-                                                   id="current_password" 
-                                                   name="current_password" 
-                                                   required
-                                                   placeholder="Enter current password">
-                                            <label for="current_password">
-                                                <i class="bi bi-key me-2"></i>Current Password *
-                                            </label>
-                                            @error('current_password')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="current_password" class="form-label"><i class="bi bi-key me-2"></i>Current Password *</label>
+                                        <input type="password" 
+                                               class="form-control @error('current_password') is-invalid @enderror" 
+                                               id="current_password" 
+                                               name="current_password" 
+                                               required>
+                                        @error('current_password')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 <div class="mb-4">
-                                    <div class="form-floating">
-                                        <input type="password" 
-                                               class="form-control @error('new_password') is-invalid @enderror" 
-                                               id="new_password" 
-                                               name="new_password" 
-                                               required
-                                               placeholder="Enter new password">
-                                        <label for="new_password">
-                                            <i class="bi bi-lock me-2"></i>New Password *
-                                        </label>
-                                        @error('new_password')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
-                                    </div>
+                                    <label for="new_password" class="form-label"><i class="bi bi-lock me-2"></i>New Password *</label>
+                                    <input type="password" 
+                                           class="form-control @error('new_password') is-invalid @enderror" 
+                                           id="new_password" 
+                                           name="new_password" 
+                                           required>
+                                    @error('new_password')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                     
                                     <!-- Password Strength Meter -->
                                     <div class="password-strength mt-3">
@@ -90,20 +80,15 @@
                                 </div>
 
                                 <div class="mb-4">
-                                    <div class="form-floating">
-                                        <input type="password" 
-                                               class="form-control @error('new_password_confirmation') is-invalid @enderror" 
-                                               id="new_password_confirmation" 
-                                               name="new_password_confirmation" 
-                                               required
-                                               placeholder="Confirm new password">
-                                        <label for="new_password_confirmation">
-                                            <i class="bi bi-lock-fill me-2"></i>Confirm New Password *
-                                        </label>
-                                        @error('new_password_confirmation')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
-                                    </div>
+                                    <label for="new_password_confirmation" class="form-label"><i class="bi bi-lock-fill me-2"></i>Confirm New Password *</label>
+                                    <input type="password" 
+                                           class="form-control @error('new_password_confirmation') is-invalid @enderror" 
+                                           id="new_password_confirmation" 
+                                           name="new_password_confirmation" 
+                                           required>
+                                    @error('new_password_confirmation')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
 
                                 <!-- Password Requirements -->
@@ -225,8 +210,68 @@
     }
 
     /* Form Styling */
+    .form-floating {
+        position: relative;
+    }
+
+    .form-floating > .form-control,
+    .form-floating > .form-select {
+        height: calc(3.5rem + 2px);
+        padding: 1rem 0.75rem;
+        background: var(--sidebar-hover);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
     .form-floating > label {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        padding: 1rem 0.75rem;
+        pointer-events: none;
+        border-radius: 10px;
         color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        background: transparent;
+    }
+
+    .form-floating > .form-control:focus,
+    .form-floating > .form-select:focus {
+        background: var(--card-bg);
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        color: var(--text-primary);
+    }
+
+    .form-floating > .form-control:not(:placeholder-shown) ~ label,
+    .form-floating > .form-select:not(:placeholder-shown) ~ label,
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-select:focus ~ label {
+        opacity: 0.65;
+        transform: scale(0.85) translateY(-1.5rem) translateX(-0.15rem);
+        background: var(--card-bg);
+        padding: 0.35rem 0.5rem;
+        border-radius: 6px;
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .form-floating > .form-control::placeholder {
+        color: transparent;
+    }
+
+    .form-floating > .form-select {
+        padding-top: 1rem;
+        padding-bottom: 0.625rem;
     }
 
     .form-control:focus,
@@ -321,15 +366,16 @@
 
     [data-theme="dark"] .card-body {
         background: var(--card-bg) !important;
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .password-requirements {
         background: rgba(102, 126, 234, 0.05) !important;
-        border-color: rgba(102, 126, 234, 0.2) !important;
+        border-color: var(--border-color) !important;
     }
 
     [data-theme="dark"] .requirement {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .requirement.met {
@@ -339,31 +385,31 @@
     }
 
     [data-theme="dark"] .form-floating > label {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .form-control,
     [data-theme="dark"] .form-select {
-        background-color: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
+        background-color: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .form-control:focus,
     [data-theme="dark"] .form-select:focus {
-        background-color: #374151;
+        background-color: var(--card-bg);
         border-color: #667eea;
-        color: #f9fafb;
+        color: var(--text-primary);
         box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
     }
 
     [data-theme="dark"] .form-control::placeholder {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .form-select option {
-        background-color: #374151;
-        color: #f9fafb;
+        background-color: var(--card-bg);
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .form-control.is-invalid:focus {
@@ -386,16 +432,16 @@
     }
 
     [data-theme="dark"] .text-muted {
-        color: #9ca3af !important;
+        color: var(--text-secondary) !important;
     }
 
     [data-theme="dark"] .border-top {
-        border-color: #4b5563 !important;
+        border-color: var(--border-color) !important;
     }
 
     [data-theme="dark"] .strength-meter {
-        background: #374151;
-        border-color: #4b5563;
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
     }
 
     [data-theme="dark"] .btn-outline-secondary {
@@ -415,6 +461,20 @@
 
     [data-theme="dark"] .btn-primary:hover {
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    [data-theme="dark"] h3,
+    [data-theme="dark"] h5,
+    [data-theme="dark"] h6 {
+        color: var(--text-primary);
+    }
+
+    [data-theme="dark"] .list-unstyled li {
+        color: var(--text-secondary);
+    }
+
+    [data-theme="dark"] .text-success {
+        color: #4ade80 !important;
     }
 
     /* Responsive Design */

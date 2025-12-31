@@ -126,74 +126,60 @@
                                 @method('PUT')
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $user->name) }}" required>
-                                            <label for="name"><i class="bi bi-person me-2"></i>Full Name *</label>
-                                            @error('name')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="name" class="form-label"><i class="bi bi-person me-2"></i>Full Name *</label>
+                                        <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $user->name) }}" required>
+                                        @error('name')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $user->email) }}" required>
-                                            <label for="email"><i class="bi bi-envelope me-2"></i>Email Address *</label>
-                                            @error('email')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="email" class="form-label"><i class="bi bi-envelope me-2"></i>Email Address *</label>
+                                        <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $user->email) }}" required>
+                                        @error('email')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="tel" class="form-control @error('mobile') is-invalid @enderror" id="mobile" name="mobile" value="{{ old('mobile', $user->mobile) }}" placeholder="Enter mobile number">
-                                            <label for="mobile"><i class="bi bi-telephone me-2"></i>Mobile Number</label>
-                                            @error('mobile')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="mobile" class="form-label"><i class="bi bi-telephone me-2"></i>Mobile Number</label>
+                                        <input type="tel" class="form-control @error('mobile') is-invalid @enderror" id="mobile" name="mobile" value="{{ old('mobile', $user->mobile) }}">
+                                        @error('mobile')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="tel" class="form-control @error('phone') is-invalid @enderror" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" placeholder="Enter alternative phone">
-                                            <label for="phone"><i class="bi bi-telephone-fill me-2"></i>Alternative Phone</label>
-                                            @error('phone')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="phone" class="form-label"><i class="bi bi-telephone-fill me-2"></i>Alternative Phone</label>
+                                        <input type="tel" class="form-control @error('phone') is-invalid @enderror" id="phone" name="phone" value="{{ old('phone', $user->phone) }}">
+                                        @error('phone')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" id="date_of_birth" name="date_of_birth" 
-                                                   value="{{ old('date_of_birth', $user->date_of_birth?->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}">
-                                            <label for="date_of_birth"><i class="bi bi-calendar me-2"></i>Date of Birth</label>
-                                            @error('date_of_birth')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="date_of_birth" class="form-label"><i class="bi bi-calendar me-2"></i>Date of Birth</label>
+                                        <input type="date" class="form-control @error('date_of_birth') is-invalid @enderror" id="date_of_birth" name="date_of_birth"
+                                               value="{{ old('date_of_birth', $user->date_of_birth?->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}">
+                                        @error('date_of_birth')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <select class="form-select @error('gender') is-invalid @enderror" id="gender" name="gender">
-                                                <option value="">Select Gender</option>
-                                                <option value="male" {{ old('gender', $user->gender) === 'male' ? 'selected' : '' }}>Male</option>
-                                                <option value="female" {{ old('gender', $user->gender) === 'female' ? 'selected' : '' }}>Female</option>
-                                                <option value="other" {{ old('gender', $user->gender) === 'other' ? 'selected' : '' }}>Other</option>
-                                                <option value="prefer_not_to_say" {{ old('gender', $user->gender) === 'prefer_not_to_say' ? 'selected' : '' }}>Prefer not to say</option>
-                                            </select>
-                                            <label for="gender"><i class="bi bi-person-badge me-2"></i>Gender</label>
-                                            @error('gender')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="gender" class="form-label"><i class="bi bi-person-badge me-2"></i>Gender</label>
+                                        <select class="form-select @error('gender') is-invalid @enderror" id="gender" name="gender">
+                                            <option value="" disabled selected>Select Gender</option>
+                                            <option value="male" {{ old('gender', $user->gender) === 'male' ? 'selected' : '' }}>Male</option>
+                                            <option value="female" {{ old('gender', $user->gender) === 'female' ? 'selected' : '' }}>Female</option>
+                                            <option value="other" {{ old('gender', $user->gender) === 'other' ? 'selected' : '' }}>Other</option>
+                                            <option value="prefer_not_to_say" {{ old('gender', $user->gender) === 'prefer_not_to_say' ? 'selected' : '' }}>Prefer not to say</option>
+                                        </select>
+                                        @error('gender')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-12">
-                                        <div class="form-floating">
-                                            <textarea class="form-control @error('bio') is-invalid @enderror" id="bio" name="bio" style="height: 100px" maxlength="500" placeholder="Tell us about yourself">{{ old('bio', $user->bio) }}</textarea>
-                                            <label for="bio"><i class="bi bi-chat-left-text me-2"></i>Bio</label>
-                                            @error('bio')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <label for="bio" class="form-label"><i class="bi bi-chat-left-text me-2"></i>Bio</label>
+                                        <textarea class="form-control @error('bio') is-invalid @enderror" id="bio" name="bio" style="height: 100px" maxlength="500">{{ old('bio', $user->bio) }}</textarea>
+                                        @error('bio')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
                                         <div class="form-text mt-2">Tell us a bit about yourself (max 500 characters)</div>
                                     </div>
                                 </div>
@@ -214,27 +200,27 @@
                                     <h5 class="fw-bold mb-4"><i class="bi bi-bell me-2"></i>Notification Preferences</h5>
                                     <div class="row g-3 mb-4">
                                         <div class="col-12">
-                                            <div class="form-check form-switch p-3 rounded-3 pref-card">
-                                                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
-                                                <label class="form-check-label ms-2" for="emailNotifications">
+                                            <div class="pref-card p-3 rounded-3 d-flex align-items-start">
+                                                <input class="form-check-input mt-1" type="checkbox" id="emailNotifications" checked>
+                                                <label class="form-check-label ms-3 flex-grow-1" for="emailNotifications">
                                                     <strong><i class="bi bi-envelope me-2"></i>Email Notifications</strong>
                                                     <div class="small text-muted mt-1">Receive order updates and promotions via email</div>
                                                 </label>
                                             </div>
                                         </div>
                                         <div class="col-12">
-                                            <div class="form-check form-switch p-3 rounded-3 pref-card">
-                                                <input class="form-check-input" type="checkbox" id="smsNotifications">
-                                                <label class="form-check-label ms-2" for="smsNotifications">
+                                            <div class="pref-card p-3 rounded-3 d-flex align-items-start">
+                                                <input class="form-check-input mt-1" type="checkbox" id="smsNotifications">
+                                                <label class="form-check-label ms-3 flex-grow-1" for="smsNotifications">
                                                     <strong><i class="bi bi-chat-dots me-2"></i>SMS Notifications</strong>
                                                     <div class="small text-muted mt-1">Receive order updates via SMS</div>
                                                 </label>
                                             </div>
                                         </div>
                                         <div class="col-12">
-                                            <div class="form-check form-switch p-3 rounded-3 pref-card">
-                                                <input class="form-check-input" type="checkbox" id="marketingEmails" checked>
-                                                <label class="form-check-label ms-2" for="marketingEmails">
+                                            <div class="pref-card p-3 rounded-3 d-flex align-items-start">
+                                                <input class="form-check-input mt-1" type="checkbox" id="marketingEmails" checked>
+                                                <label class="form-check-label ms-3 flex-grow-1" for="marketingEmails">
                                                     <strong><i class="bi bi-megaphone me-2"></i>Marketing Communications</strong>
                                                     <div class="small text-muted mt-1">Receive promotional offers and new product updates</div>
                                                 </label>
@@ -247,24 +233,20 @@
                                     <h5 class="fw-bold mb-4"><i class="bi bi-gear me-2"></i>Shopping Preferences</h5>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <div class="form-floating">
-                                                <select class="form-select" id="preferredLanguage">
-                                                    <option value="en" selected>English</option>
-                                                    <option value="hi">Hindi</option>
-                                                    <option value="es">Spanish</option>
-                                                </select>
-                                                <label for="preferredLanguage"><i class="bi bi-globe me-2"></i>Preferred Language</label>
-                                            </div>
+                                            <label for="preferredLanguage" class="form-label"><i class="bi bi-globe me-2"></i>Preferred Language</label>
+                                            <select class="form-select" id="preferredLanguage">
+                                                <option value="en" selected>English</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="es">Spanish</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="form-floating">
-                                                <select class="form-select" id="preferredCurrency">
-                                                    <option value="INR" selected>Indian Rupee (₹)</option>
-                                                    <option value="USD">US Dollar ($)</option>
-                                                    <option value="EUR">Euro (€)</option>
-                                                </select>
-                                                <label for="preferredCurrency"><i class="bi bi-currency-rupee me-2"></i>Currency</label>
-                                            </div>
+                                            <label for="preferredCurrency" class="form-label"><i class="bi bi-currency-rupee me-2"></i>Currency</label>
+                                            <select class="form-select" id="preferredCurrency">
+                                                <option value="INR" selected>Indian Rupee (₹)</option>
+                                                <option value="USD">US Dollar ($)</option>
+                                                <option value="EUR">Euro (€)</option>
+                                            </select>
                                         </div>
                                     </div>
 
@@ -427,24 +409,97 @@
     }
 
     /* Form Styling */
-    .form-floating > label {
-        color: var(--text-secondary);
+    .form-floating {
+        position: relative;
     }
 
-    .form-control:focus,
-    .form-select:focus {
+    .form-floating > .form-control,
+    .form-floating > .form-select {
+        height: calc(3.5rem + 2px);
+        padding: 1rem 0.75rem;
+        background: var(--sidebar-hover);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-floating > label {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        padding: 1rem 0.75rem;
+        pointer-events: none;
+        border-radius: 10px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        background: transparent;
+    }
+
+    .form-floating > .form-control:focus,
+    .form-floating > .form-select:focus {
+        background: var(--card-bg);
         border-color: #667eea;
-        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        color: var(--text-primary);
+    }
+
+    .form-floating > .form-control:not(:placeholder-shown) ~ label,
+    .form-floating > .form-select:not(:placeholder-shown) ~ label,
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-select:focus ~ label {
+        opacity: 0.65;
+        transform: scale(0.85) translateY(-1.5rem) translateX(-0.15rem);
+        background: var(--card-bg);
+        padding: 0.35rem 0.5rem;
+        border-radius: 6px;
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .form-floating > .form-control::placeholder {
+        color: transparent;
+    }
+
+    .form-floating > .form-select {
+        padding-top: 1rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .form-check-input {
+        width: 1.25em;
+        height: 1.25em;
+        margin-top: 0.3em;
+        border: 2px solid var(--border-color);
+        background-color: var(--sidebar-hover);
+        border-radius: 0.35em;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
 
     .form-check-input:checked {
         background-color: #667eea;
         border-color: #667eea;
+        box-shadow: inset 0 0.25rem 0.25rem rgba(0, 0, 0, 0.1);
     }
 
     .form-check-input:focus {
         border-color: #667eea;
-        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+        color: var(--text-primary);
+        font-weight: 500;
     }
 
     /* Tab Styling */
@@ -513,12 +568,12 @@
     /* Dark Mode Support */
     [data-theme="dark"] .profile-header {
         background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
-        border-color: rgba(102, 126, 234, 0.3);
+        border-color: var(--border-color);
     }
 
     [data-theme="dark"] .form-check-input {
-        background-color: #374151;
-        border-color: #4b5563;
+        background-color: var(--sidebar-hover);
+        border-color: var(--border-color);
     }
 
     [data-theme="dark"] .form-check-input:checked {
@@ -527,17 +582,17 @@
     }
 
     [data-theme="dark"] .form-floating > label {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .pref-card {
-        background: #374151;
-        border-color: #4b5563;
+        background: var(--sidebar-hover);
+        border-color: var(--border-color);
     }
 
     [data-theme="dark"] .pref-card:hover {
-        background: #4b5563;
-        border-color: #6b7280;
+        background: var(--border-color);
+        border-color: var(--text-secondary);
     }
 
     [data-theme="dark"] .card {
@@ -545,35 +600,42 @@
         border-color: var(--border-color) !important;
     }
 
+    [data-theme="dark"] .card-header {
+        background: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
+    }
+
     [data-theme="dark"] .card-body {
         background: var(--card-bg) !important;
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .form-control,
     [data-theme="dark"] .form-select {
-        background-color: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
+        background-color: var(--sidebar-hover);
+        border-color: var(--border-color);
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .form-control:focus,
     [data-theme="dark"] .form-select:focus {
-        background-color: #374151;
+        background-color: var(--card-bg);
         border-color: #667eea;
-        color: #f9fafb;
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
     }
 
     [data-theme="dark"] .form-control::placeholder {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .form-select option {
-        background-color: #374151;
-        color: #f9fafb;
+        background-color: var(--card-bg);
+        color: var(--text-primary);
     }
 
     [data-theme="dark"] .nav-tabs .nav-link {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .nav-tabs .nav-link:hover {
@@ -586,19 +648,81 @@
     }
 
     [data-theme="dark"] .form-text {
-        color: #9ca3af;
+        color: var(--text-secondary);
     }
 
     [data-theme="dark"] .text-muted {
-        color: #9ca3af !important;
+        color: var(--text-secondary) !important;
     }
 
     [data-theme="dark"] .border-top {
-        border-color: #4b5563 !important;
+        border-color: var(--border-color) !important;
     }
 
     [data-theme="dark"] hr {
-        border-color: #4b5563;
+        border-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .invalid-feedback {
+        color: #f87171;
+    }
+
+    [data-theme="dark"] .stat-card {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .stat-card:hover {
+        box-shadow: var(--shadow-lg);
+    }
+
+    [data-theme="dark"] h2,
+    [data-theme="dark"] h3,
+    [data-theme="dark"] h4,
+    [data-theme="dark"] h5,
+    [data-theme="dark"] h6 {
+        color: var(--text-primary);
+    }
+
+    [data-theme="dark"] .btn-outline-primary {
+        color: #667eea;
+        border-color: #667eea;
+    }
+
+    [data-theme="dark"] .btn-outline-primary:hover {
+        background-color: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+
+    [data-theme="dark"] .btn-outline-success {
+        color: #22c55e;
+        border-color: #22c55e;
+    }
+
+    [data-theme="dark"] .btn-outline-success:hover {
+        background-color: #22c55e;
+        border-color: #22c55e;
+        color: white;
+    }
+
+    [data-theme="dark"] .btn-outline-info {
+        color: #06b6d4;
+        border-color: #06b6d4;
+    }
+
+    [data-theme="dark"] .btn-outline-info:hover {
+        background-color: #06b6d4;
+        border-color: #06b6d4;
+        color: white;
+    }
+
+    [data-theme="dark"] .card-body {
+        color: var(--text-primary);
+    }
+
+    [data-theme="dark"] .text-danger {
+        color: #f87171 !important;
     }
 
     /* Responsive Design */
