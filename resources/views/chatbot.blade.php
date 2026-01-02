@@ -215,13 +215,15 @@
                 <div class="chatbot-messages" id="chatMessages">
                     <div class="message bot">
                         <div class="message-content">
-                            👋 Hello! I'm your shopping assistant. I'm here to help you with:
+                            👋 Hello @if(auth()->check()){{ auth()->user()->name }}@else User @endif! Welcome to your shopping assistant! 😊<br><br>
+                            I'm here to help you with:
                             <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                                <li>Finding products</li>
-                                <li>Understanding our services</li>
-                                <li>Shopping process and features</li>
-                                <li>Orders and support</li>
+                                <li>🔍 Finding products and deals</li>
+                                <li>🛒 Shopping assistance and recommendations</li>
+                                <li>📦 Orders, shipping, and returns</li>
+                                <li>❓ Questions about our services</li>
                             </ul>
+                            <br>How can I help make your shopping experience better today?
                         </div>
                     </div>
                     <div class="message bot" id="suggestionsContainer" style="display: none;">
@@ -376,6 +378,9 @@
             // Split by product pattern and format
             const formatted = formatProductResponse(text);
             contentDiv.innerHTML = formatted;
+        } else if (sender === 'bot' && (text.includes('<br>') || text.includes('😊'))) {
+            // Handle HTML content in bot messages (like greetings)
+            contentDiv.innerHTML = text;
         } else {
             contentDiv.textContent = text;
         }

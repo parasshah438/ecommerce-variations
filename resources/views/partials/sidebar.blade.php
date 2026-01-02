@@ -461,6 +461,8 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
 }
 
 .sidebar .nav-link:hover {
@@ -478,6 +480,11 @@ document.addEventListener('DOMContentLoaded', function() {
 .sidebar .nav-link i {
     width: 20px;
     margin-right: 0.8rem;
+    flex-shrink: 0;
+}
+
+.sidebar .nav-link .badge {
+    margin-left: auto;
 }
 
 /* Delete account modal enhancements */
@@ -533,15 +540,17 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 768px) {
     .sidebar {
         position: fixed;
-        left: -280px;
+        left: 0;
+        top: 0;
         z-index: 1050;
         width: 280px;
         height: 100vh;
-        transition: left 0.3s ease;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(-100%);
     }
     
-    .sidebar.show {
-        left: 0;
+    .sidebar.active {
+        transform: translateX(0);
     }
     
     .sidebar-backdrop {
@@ -557,7 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
         transition: all 0.3s ease;
     }
     
-    .sidebar-backdrop.show {
+    .sidebar-backdrop.active {
         opacity: 1;
         visibility: visible;
     }

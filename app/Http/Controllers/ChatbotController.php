@@ -36,15 +36,55 @@ class ChatbotController extends Controller
             // Track conversation analytics
             $this->trackConversationMetrics($userMessage, $intent, $userId);
 
-            //Check if user is asking about products
-            $productKeywords = ['product', 'have', 'available', 'sell', 'buy', 'price', 'cost', 'laptop', 'phone', 'shirt', 'shoe', 'item', 'what do you', 'do you have', 'show me', 'find', 'search', 'looking for'];
+            // Check for greetings first (before product queries)
+            $greetingKeywords = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings', 'howdy', 'hiya', 'what\'s up', 'whats up'];
             $userMessageLower = strtolower($userMessage);
+            $isGreeting = false;
+            
+            // Check if message is a simple greeting
+            foreach ($greetingKeywords as $greeting) {
+                if ($userMessageLower === $greeting || strpos($userMessageLower, $greeting) === 0) {
+                    $isGreeting = true;
+                    break;
+                }
+            }
+            
+            // Handle greetings with personalized response
+            if ($isGreeting) {
+                $userName = auth()->check() ? auth()->user()->name : 'User';
+                $greetingResponse = "Hello {$userName}! 😊<br><br>What would you like to do or talk about today? I'm here to help you with:<br><br>• Finding products and deals<br>• Shopping assistance and recommendations<br>• Order tracking and support<br>• Questions about our services<br><br>How can I help make your shopping experience better?";
+                
+                return response()->json([
+                    'success' => true,
+                    'reply' => $greetingResponse,
+                    'timestamp' => now()->toDateTimeString()
+                ]);
+            }
+
+            //Check if user is asking about products
+            $productKeywords = ['product', 'have', 'available', 'sell', 'buy', 'price', 'cost', 'laptop', 'phone', 'shirt', 'shoe', 'item', 'what do you', 'do you have', 'show me', 'find', 'search', 'looking for', 'need', 'want', 'get', 'camera', 'mobile', 'watch', 'headphone', 'tablet', 'laptop', 'computer', 'keyboard', 'mouse', 'monitor', 'speaker', 'charger', 'cable', 'adapter'];
             $isProductQuery = false;
             
-            foreach ($productKeywords as $keyword) {
-                if (strpos($userMessageLower, $keyword) !== false) {
-                    $isProductQuery = true;
-                    break;
+            // Only check for product keywords if it's not a greeting
+            if (!$isGreeting) {
+                foreach ($productKeywords as $keyword) {
+                    if (strpos($userMessageLower, $keyword) !== false) {
+                        $isProductQuery = true;
+                        break;
+                    }
+                }
+                
+                // If not matched by keywords, check if message contains any meaningful words (potential product search)
+                if (!$isProductQuery) {
+                    $commonWords = ['what', 'do', 'you', 'have', 'any', 'show', 'me', 'tell', 'about', 'find', 'search', 'looking', 'for', 'i', 'can', 'could', 'would', 'please', 'the', 'a', 'an', 'is', 'are', 'in', 'on', 'at', 'to', 'from', 'by', 'with', 'or', 'and', 'products', 'product', 'this', 'that', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'be', 'been', 'being', 'has', 'had', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'can', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'hello', 'hi', 'hey', 'good', 'morning', 'afternoon', 'evening', 'greetings'];
+                    $words = str_word_count(strtolower($userMessage), 1);
+                    $meaningfulWords = array_diff($words, $commonWords);
+                    
+                    // If there are meaningful words (potential product names), treat as product query
+                    // But only if message has more than just greeting words
+                    if (!empty($meaningfulWords) && count($words) > 2) {
+                        $isProductQuery = true;
+                    }
                 }
             }
 
@@ -154,21 +194,23 @@ class ChatbotController extends Controller
             $testProduct = Product::select('id', 'name', 'slug')->first();
             
             
-            // If keyword is wildcard, get all products
+            // If keyword is wildcard, get latest products (10-15 products)
             if ($keyword === '%') {
                 $products = Product::select('id', 'name', 'description', 'price', 'slug')
-                    ->limit(5)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(15)
                     ->get();
                 
             } else {
-                // Fetch products matching keyword - be more strict with matching
+                // Fetch products matching keyword - search comprehensively
                 $products = Product::where(function($query) use ($keyword) {
                         $query->where('name', 'LIKE', "%{$keyword}%")
                               ->orWhere('description', 'LIKE', "%{$keyword}%")
                               ->orWhere('slug', 'LIKE', "%{$keyword}%");
                     })
                     ->select('id', 'name', 'description', 'price', 'slug')
-                    ->limit(5)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(15)
                     ->get();
                
                 
@@ -255,6 +297,15 @@ YOUR ROLE:
 - Help customers find products, understand features, and complete purchases
 - Provide information about orders, shipping, returns, and support
 - Be friendly, professional, and concise
+- Handle greetings warmly and offer assistance
+
+GREETING RESPONSES:
+When users say hello, hi, hey, or similar greetings, respond warmly by:
+1. Greeting them back (use their name if available)
+2. Add a friendly emoji (😊)
+3. Ask what they'd like to do or talk about today
+4. List key ways you can help (finding products, shopping assistance, order support, etc.)
+5. End with "How can I help make your shopping experience better?"
 
 CRITICAL CONSTRAINTS - FOLLOW THESE EXACTLY:
 - ONLY use products listed in the "REAL PRODUCTS FROM OUR DATABASE" section below
@@ -575,7 +626,7 @@ INFO;
         $userMessage = $lastMessage['content'] ?? '';
       
         // Check if asking about products
-        $productKeywords = ['product', 'have', 'available', 'sell', 'buy', 'price', 'cost', 'laptop', 'phone', 'shirt', 'shoe', 'item', 'what do you', 'do you have', 'show me', 'find', 'search', 'looking for'];
+        $productKeywords = ['product', 'have', 'available', 'sell', 'buy', 'price', 'cost', 'laptop', 'phone', 'shirt', 'shoe', 'item', 'what do you', 'do you have', 'show me', 'find', 'search', 'looking for', 'need', 'want', 'get', 'camera', 'mobile', 'watch', 'headphone', 'tablet', 'laptop', 'computer', 'keyboard', 'mouse', 'monitor', 'speaker', 'charger', 'cable', 'adapter'];
         $userMessageLower = strtolower($userMessage);
         $isProductQuery = false;
         
@@ -583,6 +634,18 @@ INFO;
             if (strpos($userMessageLower, $keyword) !== false) {
                 $isProductQuery = true;
                 break;
+            }
+        }
+        
+        // If not matched by keywords, check if message contains any meaningful words (potential product search)
+        if (!$isProductQuery) {
+            $commonWords = ['what', 'do', 'you', 'have', 'any', 'show', 'me', 'tell', 'about', 'find', 'search', 'looking', 'for', 'i', 'can', 'could', 'would', 'please', 'the', 'a', 'an', 'is', 'are', 'in', 'on', 'at', 'to', 'from', 'by', 'with', 'or', 'and', 'products', 'product', 'this', 'that', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'be', 'been', 'being', 'has', 'had', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall', 'can', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'shall'];
+            $words = str_word_count(strtolower($userMessage), 1);
+            $meaningfulWords = array_diff($words, $commonWords);
+            
+            // If there are meaningful words (potential product names), treat as product query
+            if (!empty($meaningfulWords)) {
+                $isProductQuery = true;
             }
         }
         
@@ -886,7 +949,8 @@ INFO;
                           ->orWhere('description', 'LIKE', "%{$keyword}%");
                 })
                 ->select('id', 'name', 'description', 'price', 'slug', 'category_id')
-                ->limit(10)
+                ->orderBy('created_at', 'desc')
+                ->limit(15)
                 ->get();
 
             if ($products->isEmpty()) {

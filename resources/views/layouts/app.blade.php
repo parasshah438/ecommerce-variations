@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'ECommerce')) - User Dashboard</title>
 
@@ -178,11 +178,30 @@
             box-sizing: border-box;
         }
 
+        html {
+            overflow-x: hidden;
+        }
+
+        body {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100vw;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: var(--main-bg);
             color: var(--text-primary);
             transition: background-color 0.3s ease, color 0.3s ease;
+            position: relative;
+        }
+
+        /* Prevent horizontal scrolling */
+        #app {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            position: relative;
         }
 
         /* Sidebar Styles */
@@ -314,6 +333,9 @@
             margin-left: 260px;
             min-height: 100vh;
             transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: calc(100% - 260px);
+            max-width: calc(100vw - 260px);
+            overflow-x: hidden;
         }
 
         /* Top Navigation */
@@ -329,6 +351,9 @@
             z-index: 999;
             box-shadow: var(--shadow);
             backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
         }
 
         .page-title {
@@ -430,6 +455,31 @@
         /* User Dropdown */
         .user-dropdown {
             position: relative;
+            z-index: 2000;
+        }
+
+        .user-dropdown .dropdown-menu {
+            z-index: 2001 !important;
+            min-width: 200px;
+            margin-top: 0.5rem;
+            transform: translateY(0);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color) !important;
+            box-shadow: var(--shadow-lg) !important;
+            border-radius: 12px !important;
+            padding: 0.5rem !important;
+            background: var(--card-bg) !important;
+            position: absolute !important;
+            right: 0 !important;
+            top: 100% !important;
+        }
+
+        .user-dropdown .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
 
         .user-btn {
@@ -442,11 +492,24 @@
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
+            z-index: 1105;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
         }
 
         .user-btn:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow);
+            background: var(--sidebar-hover);
+            color: var(--text-primary);
+        }
+
+        .user-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
         }
 
         .user-avatar {
@@ -460,6 +523,15 @@
             color: white;
             font-weight: 600;
             font-size: 0.875rem;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
         }
 
         .user-info {
@@ -483,6 +555,57 @@
         /* Content Area */
         .content-wrapper {
             padding: 2rem 1.5rem;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* Responsive utilities */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .img-responsive {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .text-truncate-mobile {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Form controls */
+        .form-control, .form-select {
+            max-width: 100%;
+        }
+
+        /* Cards and containers */
+        .card, .demo-card, .stat-card {
+            max-width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Sidebar Backdrop */
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-backdrop.active {
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Mobile Menu Toggle */
@@ -539,9 +662,11 @@
         }
 
         /* Responsive Design */
-        @media (max-width: 768px) {
+        @media (max-width: 991.98px) {
             .sidebar {
                 transform: translateX(-100%);
+                width: 280px;
+                max-width: 85vw;
             }
 
             .sidebar.active {
@@ -550,6 +675,8 @@
 
             .main-content {
                 margin-left: 0;
+                width: 100%;
+                max-width: 100vw;
             }
 
             .mobile-menu-toggle {
@@ -558,6 +685,10 @@
 
             .page-title {
                 font-size: 1.25rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 200px;
             }
 
             .user-info {
@@ -673,6 +804,21 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-lg);
+            border-radius: 12px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            z-index: 1110;
+            transform: translateY(-10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .dropdown-menu.show {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
         }
 
         .dropdown-item {
@@ -737,6 +883,9 @@
 <body>
     <div id="app">
         @include('partials.sidebar')
+        
+        <!-- Sidebar Backdrop for Mobile -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -755,13 +904,6 @@
                         <div class="theme-toggle-slider"></div>
                     </div>
 
-                    <!-- Cart Notification -->
-                    <a href="{{ route('cart.index') }}" class="notification-btn" style="text-decoration: none;">
-                        <i class="bi bi-cart3" style="font-size: 1.125rem; color: var(--text-primary);"></i>
-                        @if(session('cart') && count(session('cart')) > 0)
-                            <span class="notification-badge">{{ count(session('cart')) }}</span>
-                        @endif
-                    </a>
 
                     <!-- Notifications -->
                     <div class="notification-btn" data-bs-toggle="dropdown">
@@ -774,10 +916,10 @@
 
                     <!-- User Dropdown -->
                     <div class="user-dropdown dropdown">
-                        <div class="user-btn" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+                        <button class="user-btn dropdown-toggle" type="button" id="userDropdownMenu" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="user-avatar">
                                 @if(auth()->user()->avatar)
-                                    <img src="{{ auth()->user()->avatar }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                                    <img src="{{ auth()->user()->avatar }}" alt="Avatar">
                                 @else
                                     {{ strtoupper(substr(auth()->user()->name ?? auth()->user()->email, 0, 1)) }}
                                 @endif
@@ -787,10 +929,10 @@
                                 <span class="user-role">Customer</span>
                             </div>
                             <i class="bi bi-chevron-down" style="color: var(--text-secondary);"></i>
-                        </div>
+                        </button>
                         
-                        <ul class="dropdown-menu dropdown-menu-end" style="border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); border-radius: 12px; padding: 0.5rem;">
-                            <li><a class="dropdown-item" href="">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMenu">
+                            <li><a class="dropdown-item" href="{{ route('profile.manage') }}">
                                 <i class="bi bi-person me-2"></i>Profile Settings
                             </a></li>
                             <li><a class="dropdown-item" href="{{ route('orders.index') }}">
@@ -798,9 +940,9 @@
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form method="POST" action="{{ route('logout') }}" class="d-inline w-100">
+                                <form method="POST" action="{{ route('logout') }}" class="w-100">
                                     @csrf
-                                    <button type="submit" class="dropdown-item text-danger">
+                                    <button type="submit" class="dropdown-item text-danger w-100 text-start">
                                         <i class="bi bi-box-arrow-right me-2"></i>Logout
                                     </button>
                                 </form>
@@ -853,19 +995,55 @@
         // Mobile Sidebar Toggle
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            
             sidebar.classList.toggle('active');
+            backdrop.classList.toggle('active');
+            
+            // Prevent body scroll when sidebar is open on mobile
+            if (window.innerWidth <= 991.98) {
+                if (sidebar.classList.contains('active')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
         }
+
+        // Close sidebar when clicking backdrop
+        document.getElementById('sidebarBackdrop').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('active');
+            this.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            
+            if (window.innerWidth > 991.98) {
+                sidebar.classList.remove('active');
+                backdrop.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
 
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const toggle = document.querySelector('.mobile-menu-toggle');
+            const backdrop = document.getElementById('sidebarBackdrop');
             
-            if (window.innerWidth <= 768 && 
+            if (window.innerWidth <= 991.98 && 
                 !sidebar.contains(event.target) && 
                 !toggle.contains(event.target) &&
+                !backdrop.contains(event.target) &&
                 sidebar.classList.contains('active')) {
                 sidebar.classList.remove('active');
+                backdrop.classList.remove('active');
+                document.body.style.overflow = '';
             }
         });
 
@@ -887,6 +1065,8 @@
             "showMethod": "fadeIn",
             "hideMethod": "fadeOut"
         };
+
+        // Bootstrap dropdown is handled natively, no custom code needed
 
         // Active nav link highlighting
         document.querySelectorAll('.sidebar .nav-link').forEach(link => {
