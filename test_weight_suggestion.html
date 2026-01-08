@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Weight Suggestion</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Weight Suggestion Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">Category</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">Select a category</option>
+                                <option value="1">T-Shirt</option>
+                                <option value="2">Shirt</option>
+                                <option value="3">Jeans</option>
+                                <option value="4">Dress</option>
+                                <option value="5">Jacket</option>
+                                <option value="6">Shoes</option>
+                                <option value="7">Cap</option>
+                                <option value="8">Socks</option>
+                                <option value="9">Bag</option>
+                                <option value="10">Watch</option>
+                                <option value="11">Unknown Category</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="weight" class="form-label">Weight (grams)</label>
+                            <input type="number" class="form-control" id="weight" name="weight" 
+                                   value="200" step="0.01" min="1" required>
+                            <div class="form-text">
+                                <span id="weight-category">Select category first for weight suggestion</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Test Instructions:</strong>
+                            <ol>
+                                <li>Select different categories from the dropdown</li>
+                                <li>Watch the weight field and suggestion text update automatically</li>
+                                <li>Notice the visual feedback (green border flash)</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Weight suggestion based on category
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category_id');
+        const weightInput = document.getElementById('weight');
+        const weightCategory = document.getElementById('weight-category');
+        
+        // Weight suggestions by category name (case-insensitive)
+        const weightSuggestions = {
+            'tshirt': {weight: 200, category: 'Light', examples: 'T-shirts, Tops'},
+            't-shirt': {weight: 200, category: 'Light', examples: 'T-shirts, Tops'},
+            'shirt': {weight: 300, category: 'Medium', examples: 'Shirts, Blouses'},
+            'jeans': {weight: 600, category: 'Heavy', examples: 'Jeans, Heavy Pants'},
+            'pants': {weight: 500, category: 'Medium', examples: 'Pants, Trousers'},
+            'dress': {weight: 400, category: 'Medium', examples: 'Dresses, Gowns'},
+            'jacket': {weight: 800, category: 'Heavy', examples: 'Jackets, Coats'},
+            'blazer': {weight: 700, category: 'Heavy', examples: 'Blazers, Suits'},
+            'shoes': {weight: 500, category: 'Medium', examples: 'Shoes, Footwear'},
+            'sneakers': {weight: 400, category: 'Medium', examples: 'Sneakers, Sports Shoes'},
+            'boots': {weight: 700, category: 'Heavy', examples: 'Boots, Heavy Footwear'},
+            'cap': {weight: 100, category: 'Very Light', examples: 'Caps, Hats'},
+            'hat': {weight: 100, category: 'Very Light', examples: 'Hats, Caps'},
+            'socks': {weight: 50, category: 'Very Light', examples: 'Socks, Hosiery'},
+            'underwear': {weight: 80, category: 'Very Light', examples: 'Underwear, Innerwear'},
+            'scarf': {weight: 120, category: 'Very Light', examples: 'Scarves, Accessories'},
+            'belt': {weight: 200, category: 'Light', examples: 'Belts, Accessories'},
+            'bag': {weight: 400, category: 'Medium', examples: 'Bags, Purses'},
+            'backpack': {weight: 600, category: 'Heavy', examples: 'Backpacks, Large Bags'},
+            'watch': {weight: 150, category: 'Light', examples: 'Watches, Jewelry'},
+            'jewelry': {weight: 50, category: 'Very Light', examples: 'Jewelry, Accessories'}
+        };
+        
+        function updateWeightSuggestion() {
+            console.log('updateWeightSuggestion called');
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+            console.log('Selected option:', selectedOption);
+            
+            if (selectedOption && selectedOption.value) {
+                const categoryName = selectedOption.text.toLowerCase();
+                console.log('Category name:', categoryName);
+                
+                // Find matching weight suggestion
+                let suggestion = null;
+                for (const [key, value] of Object.entries(weightSuggestions)) {
+                    if (categoryName.includes(key)) {
+                        suggestion = value;
+                        console.log('Found suggestion:', suggestion);
+                        break;
+                    }
+                }
+                
+                if (suggestion) {
+                    // Update weight input if it's empty or default
+                    if (!weightInput.value || weightInput.value == '200') {
+                        weightInput.value = suggestion.weight;
+                        console.log('Updated weight to:', suggestion.weight);
+                    }
+                    
+                    // Update suggestion text
+                    weightCategory.innerHTML = `
+                        <strong>${suggestion.category} (${suggestion.weight}g)</strong> - ${suggestion.examples}
+                        <br><small class="text-success">✓ Weight auto-suggested for this category</small>
+                    `;
+                    
+                    // Add visual feedback
+                    weightInput.classList.add('border-success');
+                    setTimeout(() => {
+                        weightInput.classList.remove('border-success');
+                    }, 2000);
+                } else {
+                    console.log('No suggestion found for:', categoryName);
+                    weightCategory.innerHTML = `
+                        <strong>Default Weight (200g)</strong> - Please verify and adjust if needed
+                        <br><small class="text-warning">⚠ No specific suggestion for this category</small>
+                    `;
+                }
+            } else {
+                weightCategory.innerHTML = 'Select category first for weight suggestion';
+            }
+        }
+        
+        // Update weight suggestion when category changes
+        categorySelect.addEventListener('change', function() {
+            console.log('Category changed');
+            updateWeightSuggestion();
+        });
+        
+        // Update on page load if category is already selected
+        if (categorySelect.value) {
+            updateWeightSuggestion();
+        }
+        
+        // Weight validation
+        weightInput.addEventListener('input', function() {
+            const weight = parseFloat(this.value);
+            console.log('Weight changed to:', weight);
+            
+            if (weight < 10) {
+                weightCategory.innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-danger"></i> 
+                    <span class="text-danger">Weight seems too light. Please verify.</span>
+                `;
+            } else if (weight > 5000) {
+                weightCategory.innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-warning"></i> 
+                    <span class="text-warning">Heavy item detected. Shipping costs will be higher.</span>
+                `;
+            } else {
+                // Reset to category suggestion
+                updateWeightSuggestion();
+            }
+        });
+        
+        console.log('Weight suggestion system initialized');
+    });
+    </script>
+</body>
+</html>

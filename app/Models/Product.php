@@ -9,7 +9,17 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'active', 'reviews_count', 'average_rating'];
+    protected $fillable = ['name', 'slug', 'description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'weight', 'length', 'width', 'height', 'volumetric_weight', 'active', 'reviews_count', 'average_rating'];
+
+    protected $casts = [
+        'weight' => 'decimal:2',
+        'length' => 'decimal:2',
+        'width' => 'decimal:2',
+        'height' => 'decimal:2',
+        'volumetric_weight' => 'decimal:2',
+        'price' => 'decimal:2',
+        'mrp' => 'decimal:2',
+    ];
 
     public function images()
     {
@@ -185,4 +195,43 @@ class Product extends Model
                 ->first();
         }
     }
+
+    /**
+     * Calculate volumetric weight if dimensions are available
+     * Formula: (L × W × H) / 5000
+     */
+    public function calculateVolumetricWeight()
+    {
+        if ($this->length && $this->width && $this->height) {
+            return ($this->length * $this->width * $this->height) / 5000;
+        }
+        return null;
+    }
+
+    /**
+     * Get the final weight considering volumetric weight
+     * Returns the higher of actual weight or volumetric weight
+     */
+    public function getFinalWeight()
+    {
+        $actualWeight = $this->weight ?? 200; // Default 200g for clothing
+        $volumetricWeight = $this->calculateVolumetricWeight();
+        
+        return $volumetricWeight ? max($actualWeight, $volumetricWeight) : $actualWeight;
+    }
+
+    /**
+     * Get weight category for admin reference
+     */
+    public function getWeightCategory()
+    {
+        $weight = $this->getFinalWeight();
+        
+        if ($weight <= 150) return 'Very Light';
+        if ($weight <= 300) return 'Light';
+        if ($weight <= 600) return 'Medium';
+        if ($weight <= 1000) return 'Heavy';
+        return 'Very Heavy';
+    }
+
 }

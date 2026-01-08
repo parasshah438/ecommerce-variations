@@ -17,6 +17,7 @@ class ProductVariation extends Model
         'sku', 
         'price', 
         'min_qty', 
+        'weight',
         'attribute_value_ids'
     ];
 
@@ -24,6 +25,7 @@ class ProductVariation extends Model
         'attribute_value_ids' => 'array',
         'price' => 'decimal:2',
         'min_qty' => 'integer',
+        'weight' => 'decimal:2',
     ];
 
     /**
@@ -251,5 +253,56 @@ class ProductVariation extends Model
     public function scopePriceBetween($query, $min, $max)
     {
         return $query->whereBetween('price', [$min, $max]);
+    }
+    
+    /**
+     * Get the variation weight or fallback to product weight
+     */
+    public function getVariationWeight()
+    {
+        // Return variation weight if set, otherwise use product weight
+        return $this->weight ?? $this->product->getFinalWeight();
+    }
+    
+    /**
+     * Get the final weight for shipping calculations (alias for getVariationWeight)
+     */
+    public function getFinalWeight()
+    {
+        return $this->getVariationWeight();
+    }
+    
+    /**
+     * Get weight category based on weight
+     */
+    public function getWeightCategory()
+    {
+        $weight = $this->getFinalWeight();
+        
+        if ($weight <= 100) {
+            return 'Very Light';
+        } elseif ($weight <= 300) {
+            return 'Light';
+        } elseif ($weight <= 1000) {
+            return 'Medium';
+        } elseif ($weight <= 3000) {
+            return 'Heavy';
+        } elseif ($weight <= 10000) {
+            return 'Very Heavy';
+        } else {
+            return 'Extra Heavy';
+        }
+    }
+    
+    /**
+     * Get weight for display with unit
+     */
+    public function getWeightDisplay()
+    {
+        $weight = $this->getVariationWeight();
+        if ($weight >= 1000) {
+            return number_format($weight / 1000, 2) . ' kg';
+        }
+        return number_format($weight, 0) . ' g';
     }
 }

@@ -10,6 +10,10 @@ use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\WelcomeController;
+
+// Include shipping routes
+require __DIR__.'/shipping.php';
+
 // Debug Routes
 require __DIR__.'/debug-image-upload.php';
 require __DIR__.'/debug-simple-upload.php';

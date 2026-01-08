@@ -10,6 +10,18 @@ use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\TaxSettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Models\Category;
+
+// Debug route to check categories
+Route::get('/debug/categories', function () {
+    $categories = Category::select('id', 'name')->get();
+    
+    return response()->json([
+        'categories' => $categories,
+        'count' => $categories->count(),
+        'sample_names' => $categories->pluck('name')->take(10)->toArray()
+    ]);
+});
 
 /*
 |--------------------------------------------------------------------------

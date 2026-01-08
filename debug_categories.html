@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Category Names</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container my-5">
+        <div class="card">
+            <div class="card-header">
+                <h4>Category Debug Tool</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Instructions:</strong> Open browser console (F12) and check the actual category names being fetched from your database.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Your Categories:</label>
+                    <div id="categories-list" class="alert alert-info">
+                        Loading categories...
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="test-select" class="form-label">Test Category Selection:</label>
+                    <select class="form-select" id="test-select">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Debug Output:</label>
+                    <div id="debug-output" class="alert alert-secondary">
+                        Select a category to see debug information
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch categories from your Laravel app
+        fetch('/admin/api/categories')  // You might need to create this endpoint
+            .then(response => response.json())
+            .then(categories => {
+                console.log('Categories from database:', categories);
+                
+                const select = document.getElementById('test-select');
+                const list = document.getElementById('categories-list');
+                
+                // Clear loading text
+                select.innerHTML = '<option value="">Select a category</option>';
+                
+                // Show categories
+                let categoryHtml = '<ul>';
+                categories.forEach(cat => {
+                    categoryHtml += `<li><strong>${cat.id}:</strong> ${cat.name}</li>`;
+                    select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                });
+                categoryHtml += '</ul>';
+                list.innerHTML = categoryHtml;
+                
+                // Add change listener
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption.value) {
+                        const categoryName = selectedOption.text.toLowerCase();
+                        console.log('Selected category:', categoryName);
+                        
+                        // Test weight matching logic
+                        const weightSuggestions = {
+                            'tshirt': {weight: 200, category: 'Light'},
+                            't-shirt': {weight: 200, category: 'Light'},
+                            'shirt': {weight: 300, category: 'Medium'},
+                            'jeans': {weight: 600, category: 'Heavy'},
+                            'dress': {weight: 400, category: 'Medium'},
+                            'jacket': {weight: 800, category: 'Heavy'},
+                            'shoes': {weight: 500, category: 'Medium'},
+                            'cap': {weight: 100, category: 'Very Light'},
+                            'socks': {weight: 50, category: 'Very Light'},
+                            'bag': {weight: 400, category: 'Medium'}
+                        };
+                        
+                        let suggestion = null;
+                        let matchType = 'none';
+                        
+                        // Test exact matches
+                        for (const [key, value] of Object.entries(weightSuggestions)) {
+                            if (categoryName.includes(key)) {
+                                suggestion = value;
+                                matchType = `exact match with "${key}"`;
+                                break;
+                            }
+                        }
+                        
+                        // Test keyword matches
+                        if (!suggestion) {
+                            const clothingKeywords = {
+                                'clothing|apparel': {weight: 300, category: 'Medium'},
+                                'footwear|shoe': {weight: 500, category: 'Medium'},
+                                'accessory': {weight: 150, category: 'Light'},
+                                'men|male': {weight: 350, category: 'Medium'},
+                                'women|female': {weight: 300, category: 'Medium'}
+                            };
+                            
+                            for (const [keywords, value] of Object.entries(clothingKeywords)) {
+                                const keywordList = keywords.split('|');
+                                if (keywordList.some(keyword => categoryName.includes(keyword))) {
+                                    suggestion = value;
+                                    matchType = `keyword match with "${keywords}"`;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        const debugOutput = document.getElementById('debug-output');
+                        debugOutput.innerHTML = `
+                            <strong>Debug Information:</strong><br>
+                            <strong>Selected:</strong> "${selectedOption.text}"<br>
+                            <strong>Lowercase:</strong> "${categoryName}"<br>
+                            <strong>Match Type:</strong> ${matchType}<br>
+                            <strong>Suggestion:</strong> ${suggestion ? `${suggestion.weight}g (${suggestion.category})` : 'None'}
+                        `;
+                        
+                        console.log('Debug info:', {
+                            original: selectedOption.text,
+                            lowercase: categoryName,
+                            matchType: matchType,
+                            suggestion: suggestion
+                        });
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching categories:', error);
+                document.getElementById('categories-list').innerHTML = 
+                    '<span class="text-danger">Error loading categories. Check console for details.</span>';
+            });
+    </script>
+</body>
+</html>

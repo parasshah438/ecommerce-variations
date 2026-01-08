@@ -54,6 +54,10 @@ class ProductController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'price' => 'required|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
+            'weight' => 'required|numeric|min:1|max:50000',
+            'length' => 'nullable|numeric|min:0',
+            'width' => 'nullable|numeric|min:0',
+            'height' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
@@ -64,6 +68,7 @@ class ProductController extends Controller
             'variations.*.attributes.*' => 'required|exists:attribute_values,id',
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.sku' => 'nullable|string|max:100',
+            'variations.*.weight' => 'nullable|numeric|min:1|max:50000',
             'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
             'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
@@ -71,6 +76,12 @@ class ProductController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // Calculate volumetric weight if dimensions provided
+            $volumetricWeight = null;
+            if ($validated['length'] && $validated['width'] && $validated['height']) {
+                $volumetricWeight = ($validated['length'] * $validated['width'] * $validated['height']) / 5000;
+            }
 
             // Handle video upload
             $updateData = [
@@ -81,6 +92,11 @@ class ProductController extends Controller
                 'brand_id' => $validated['brand_id'],
                 'price' => $validated['price'],
                 'mrp' => $validated['mrp'] ?? $validated['price'],
+                'weight' => $validated['weight'],
+                'length' => $validated['length'],
+                'width' => $validated['width'],
+                'height' => $validated['height'],
+                'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true),
             ];
 
@@ -168,6 +184,7 @@ class ProductController extends Controller
                             $variation->update([
                                 'sku' => $sku,
                                 'price' => $variationData['price'] ?? $product->price,
+                                'weight' => $variationData['weight'] ?? $product->weight,
                                 'min_qty' => $variationData['min_qty'] ?? 1,
                                 'attribute_value_ids' => $variationData['attributes'],
                             ]);
@@ -187,6 +204,7 @@ class ProductController extends Controller
                             'product_id' => $product->id,
                             'sku' => $sku,
                             'price' => $variationData['price'] ?? $product->price,
+                            'weight' => $variationData['weight'] ?? $product->weight,
                             'min_qty' => $variationData['min_qty'] ?? 1,
                             'attribute_value_ids' => $variationData['attributes'],
                         ]);
@@ -347,6 +365,10 @@ class ProductController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'price' => 'required|numeric|min:0',
             'mrp' => 'nullable|numeric|min:0',
+            'weight' => 'required|numeric|min:1|max:50000',
+            'length' => 'nullable|numeric|min:0|max:1000',
+            'width' => 'nullable|numeric|min:0|max:1000',
+            'height' => 'nullable|numeric|min:0|max:1000',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
             
@@ -362,6 +384,7 @@ class ProductController extends Controller
             'variations.*.attributes.*' => 'required|exists:attribute_values,id',
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.sku' => 'nullable|string|max:100',
+            'variations.*.weight' => 'nullable|numeric|min:1|max:50000',
             'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
             
@@ -378,6 +401,12 @@ class ProductController extends Controller
                 $videoPath = $request->file('video')->store('products/videos', 'public');
             }
 
+            // Calculate volumetric weight if dimensions provided
+            $volumetricWeight = null;
+            if ($request->length && $request->width && $request->height) {
+                $volumetricWeight = ($request->length * $request->width * $request->height) / 5000;
+            }
+
             // Create the product
             $product = Product::create([
                 'name' => $validated['name'],
@@ -388,6 +417,11 @@ class ProductController extends Controller
                 'brand_id' => $validated['brand_id'],
                 'price' => $validated['price'],
                 'mrp' => $validated['mrp'] ?? $validated['price'],
+                'weight' => $validated['weight'],
+                'length' => $validated['length'],
+                'width' => $validated['width'],
+                'height' => $validated['height'],
+                'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true), // Handle boolean properly
             ]);
 
@@ -459,6 +493,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'sku' => $sku,
                         'price' => $variationData['price'] ?? $product->price,
+                        'weight' => $variationData['weight'] ?? $product->weight,
                         'min_qty' => $variationData['min_qty'] ?? 1,
                         'attribute_value_ids' => $variationData['attributes'],
                     ]);

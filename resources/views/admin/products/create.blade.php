@@ -67,7 +67,90 @@
                                    value="{{ old('mrp') }}" step="0.01" min="0"
                                    placeholder="1299.00">
                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Product Weight & Dimensions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Weight & Dimensions
+                        <small class="text-muted">(For Shipping Calculation)</small>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="weight" class="form-label">Weight (grams) *</label>
+                            <input type="number" class="form-control" id="weight" name="weight" 
+                                   value="{{ old('weight', '200') }}" step="0.01" min="1" required
+                                   placeholder="200">
+                            <div class="form-text" id="weight-suggestion">
+                                <i class="bi bi-lightbulb text-warning"></i> 
+                                <span id="weight-category">Select category first for weight suggestion</span>
+                            </div>
+                        </div>
                         
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Dimensions (cm)</label>
+                                <small class="text-muted">Optional - for bulky items</small>
+                            </div>
+                            <div class="row">
+                                <div class="col-4">
+                                    <input type="number" class="form-control" name="length" 
+                                           value="{{ old('length') }}" step="0.01" min="0"
+                                           placeholder="L">
+                                    <small class="text-muted">Length</small>
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" class="form-control" name="width" 
+                                           value="{{ old('width') }}" step="0.01" min="0"
+                                           placeholder="W">
+                                    <small class="text-muted">Width</small>
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" class="form-control" name="height" 
+                                           value="{{ old('height') }}" step="0.01" min="0"
+                                           placeholder="H">
+                                    <small class="text-muted">Height</small>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> 
+                                Used for volumetric weight calculation
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <i class="bi bi-truck me-2"></i>
+                                <strong>Weight Guidelines:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>T-shirts:</strong> 150-300g</li>
+                                    <li><strong>Shirts:</strong> 250-400g</li>
+                                    <li><strong>Jeans:</strong> 500-800g</li>
+                                    <li><strong>Dresses:</strong> 300-600g</li>
+                                    <li><strong>Jackets:</strong> 600-1200g</li>
+                                    <li><strong>Shoes:</strong> 400-800g</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Additional Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="stock_quantity" class="form-label">Stock Quantity</label>
                             <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
@@ -305,8 +388,9 @@
                                 <th width="15%">SKU</th>
                                 <th width="15%">Price (₹)</th>
                                 <th width="10%">Stock</th>
+                                <th width="10%">Weight (g)</th>
                                 <th width="10%">Min Qty</th>
-                                <th width="15%">Images</th>
+                                <th width="10%">Images</th>
                                 <th width="5%">Actions</th>
                             </tr>
                         </thead>
@@ -527,6 +611,13 @@ function createVariationRow(combination, index) {
         </td>
         <td>
             <input type="number" class="form-control form-control-sm" 
+                   name="variations[${index}][weight]" 
+                   value="${getVariationWeight()}" step="0.01" min="1" 
+                   placeholder="Auto"
+                   title="Weight in grams (leave empty to use product weight)">
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm" 
                    name="variations[${index}][min_qty]" 
                    value="1" min="1">
         </td>
@@ -625,6 +716,12 @@ function clearAllVariations() {
     document.getElementById('variationsTableBody').innerHTML = '';
     document.getElementById('step2').style.display = 'none';
     updateStats();
+}
+
+// Get variation weight based on size or fallback to product weight
+function getVariationWeight() {
+    const productWeight = document.getElementById('weight').value || 200;
+    return productWeight; // Could be enhanced to adjust based on size
 }
 
 function updateStats() {
@@ -823,5 +920,185 @@ function validateForm() {
     
     return true; // Form is valid
 }
+
+// Weight suggestion based on category
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('category_id');
+    const weightInput = document.getElementById('weight');
+    const weightCategory = document.getElementById('weight-category');
+    
+    // Weight suggestions by category name (case-insensitive)
+    const weightSuggestions = {
+        // Electronics Categories
+        'electronics': {weight: 500, category: 'Medium', examples: 'General Electronics'},
+        'smartphone': {weight: 180, category: 'Light', examples: 'Smartphones, Mobile Phones'},
+        'laptop': {weight: 2000, category: 'Very Heavy', examples: 'Laptops, Notebooks'},
+        'tablet': {weight: 400, category: 'Medium', examples: 'Tablets, iPads'},
+        'smart watch': {weight: 80, category: 'Very Light', examples: 'Smart Watches, Wearables'},
+        'watch': {weight: 150, category: 'Light', examples: 'Watches, Timepieces'},
+        'headphone': {weight: 300, category: 'Medium', examples: 'Headphones, Earphones'},
+        'camera': {weight: 600, category: 'Heavy', examples: 'Cameras, Photography'},
+        'gaming': {weight: 800, category: 'Heavy', examples: 'Gaming Consoles, Games'},
+        'smart home': {weight: 400, category: 'Medium', examples: 'Smart Home Devices'},
+        'audio': {weight: 500, category: 'Medium', examples: 'Audio Equipment'},
+        'video': {weight: 600, category: 'Heavy', examples: 'Video Equipment'},
+        
+        // Fashion Categories
+        'fashion': {weight: 300, category: 'Medium', examples: 'General Fashion'},
+        'men\'s clothing': {weight: 350, category: 'Medium', examples: 'Men\'s Apparel'},
+        'women\'s clothing': {weight: 280, category: 'Medium', examples: 'Women\'s Apparel'},
+        'kids\' clothing': {weight: 200, category: 'Light', examples: 'Children\'s Clothing'},
+        'shoe': {weight: 500, category: 'Medium', examples: 'Shoes, Footwear'},
+        'accessories': {weight: 150, category: 'Light', examples: 'Fashion Accessories'},
+        'bag': {weight: 400, category: 'Medium', examples: 'Bags, Purses'},
+        'wallet': {weight: 100, category: 'Very Light', examples: 'Wallets, Small Accessories'},
+        'jewelry': {weight: 50, category: 'Very Light', examples: 'Jewelry, Precious Items'},
+        
+        // Home & Kitchen Categories
+        'home': {weight: 1000, category: 'Heavy', examples: 'Home Items'},
+        'kitchen': {weight: 800, category: 'Heavy', examples: 'Kitchen Items'},
+        'furniture': {weight: 8000, category: 'Extra Heavy', examples: 'Furniture, Large Items'},
+        'home decor': {weight: 600, category: 'Heavy', examples: 'Decorative Items'},
+        'kitchen appliance': {weight: 2500, category: 'Very Heavy', examples: 'Kitchen Appliances'},
+        'cookware': {weight: 1200, category: 'Heavy', examples: 'Pots, Pans, Cookware'},
+        'bedding': {weight: 1500, category: 'Heavy', examples: 'Bed Sheets, Pillows'},
+        'bath': {weight: 800, category: 'Heavy', examples: 'Bath Items, Towels'},
+        'storage': {weight: 1000, category: 'Heavy', examples: 'Storage Solutions'},
+        'organization': {weight: 600, category: 'Heavy', examples: 'Organization Items'},
+        'cleaning': {weight: 800, category: 'Heavy', examples: 'Cleaning Supplies'},
+        
+        // Beauty & Personal Care Categories
+        'beauty': {weight: 200, category: 'Light', examples: 'Beauty Products'},
+        'personal care': {weight: 250, category: 'Light', examples: 'Personal Care Items'},
+        'makeup': {weight: 120, category: 'Very Light', examples: 'Makeup, Cosmetics'},
+        'skincare': {weight: 180, category: 'Light', examples: 'Skincare Products'},
+        'hair care': {weight: 300, category: 'Medium', examples: 'Hair Products, Shampoo'},
+        'fragrance': {weight: 200, category: 'Light', examples: 'Perfumes, Fragrances'},
+        'grooming': {weight: 150, category: 'Light', examples: 'Grooming Products'},
+        'nail care': {weight: 80, category: 'Very Light', examples: 'Nail Polish, Tools'},
+        'beauty tool': {weight: 200, category: 'Light', examples: 'Beauty Tools, Brushes'},
+        
+        // Sports & Fitness Categories
+        'sports': {weight: 600, category: 'Heavy', examples: 'Sports Equipment'},
+        'fitness': {weight: 800, category: 'Heavy', examples: 'Fitness Equipment'},
+        'exercise equipment': {weight: 5000, category: 'Extra Heavy', examples: 'Exercise Machines'},
+        'sports wear': {weight: 250, category: 'Light', examples: 'Sports Clothing'},
+        'outdoor gear': {weight: 1200, category: 'Heavy', examples: 'Outdoor Equipment'},
+        'team sports': {weight: 400, category: 'Medium', examples: 'Team Sports Equipment'},
+        'water sports': {weight: 800, category: 'Heavy', examples: 'Water Sports Gear'},
+        'winter sports': {weight: 1500, category: 'Heavy', examples: 'Winter Sports Equipment'},
+        'fitness accessories': {weight: 300, category: 'Medium', examples: 'Fitness Accessories'},
+        
+        // Books & Media Categories
+        'book': {weight: 350, category: 'Medium', examples: 'Books, Literature'},
+        'media': {weight: 200, category: 'Light', examples: 'Media Items'},
+        'fiction': {weight: 300, category: 'Medium', examples: 'Fiction Books'},
+        'non-fiction': {weight: 400, category: 'Medium', examples: 'Non-Fiction Books'},
+        'educational': {weight: 500, category: 'Medium', examples: 'Educational Books'},
+        'children\'s book': {weight: 200, category: 'Light', examples: 'Children\'s Books'},
+        'e-book': {weight: 0, category: 'Digital', examples: 'Digital Books (No Weight)'},
+        'audiobook': {weight: 100, category: 'Very Light', examples: 'Audio CDs, Digital'},
+        'movie': {weight: 150, category: 'Light', examples: 'DVDs, Blu-rays'},
+        'tv': {weight: 8000, category: 'Extra Heavy', examples: 'Television Sets'},
+        'music': {weight: 100, category: 'Very Light', examples: 'CDs, Music Items'}
+    };
+    
+    function updateWeightSuggestion() {
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            const categoryName = selectedOption.text.toLowerCase();
+            
+            // Find matching weight suggestion with more flexible matching
+            let suggestion = null;
+            
+            // First try exact matches, then partial matches
+            for (const [key, value] of Object.entries(weightSuggestions)) {
+                if (categoryName.includes(key) || key.includes(categoryName)) {
+                    suggestion = value;
+                    break;
+                }
+            }
+            
+            // If no match found, try common clothing keywords
+            if (!suggestion) {
+                const clothingKeywords = {
+                    'clothing|apparel|garment': {weight: 300, category: 'Medium', examples: 'General Clothing'},
+                    'footwear|shoe': {weight: 500, category: 'Medium', examples: 'Shoes, Footwear'},
+                    'accessory|accessories': {weight: 150, category: 'Light', examples: 'Accessories'},
+                    'top|upper': {weight: 250, category: 'Light', examples: 'Tops, Upper Wear'},
+                    'bottom|lower': {weight: 450, category: 'Medium', examples: 'Bottoms, Lower Wear'},
+                    'men|male': {weight: 350, category: 'Medium', examples: 'Men\'s Clothing'},
+                    'women|female|ladies': {weight: 300, category: 'Medium', examples: 'Women\'s Clothing'},
+                    'kids|children|child': {weight: 200, category: 'Light', examples: 'Kids Clothing'}
+                };
+                
+                for (const [keywords, value] of Object.entries(clothingKeywords)) {
+                    const keywordList = keywords.split('|');
+                    if (keywordList.some(keyword => categoryName.includes(keyword))) {
+                        suggestion = value;
+                        break;
+                    }
+                }
+            }
+            
+            if (suggestion) {
+                // Update weight input if it's empty or default
+                if (!weightInput.value || weightInput.value == '200') {
+                    weightInput.value = suggestion.weight;
+                }
+                
+                // Update suggestion text
+                weightCategory.innerHTML = `
+                    <strong>${suggestion.category} (${suggestion.weight}g)</strong> - ${suggestion.examples}
+                    <br><small class="text-success">✓ Weight auto-suggested for "${selectedOption.text}"</small>
+                `;
+                
+                // Add visual feedback
+                weightInput.classList.add('border-success');
+                setTimeout(() => {
+                    weightInput.classList.remove('border-success');
+                }, 2000);
+            } else {
+                // No suggestion found - show debug info
+                weightCategory.innerHTML = `
+                    <strong>Default Weight (200g)</strong> - Please verify and adjust if needed
+                    <br><small class="text-warning">⚠ No specific suggestion for "${selectedOption.text}"</small>
+                    <br><small class="text-muted">You can manually enter the appropriate weight</small>
+                `;
+            }
+        } else {
+            weightCategory.innerHTML = 'Select category first for weight suggestion';
+        }
+    }
+    
+    // Update weight suggestion when category changes
+    categorySelect.addEventListener('change', updateWeightSuggestion);
+    
+    // Update on page load if category is already selected
+    if (categorySelect.value) {
+        updateWeightSuggestion();
+    }
+    
+    // Weight validation
+    weightInput.addEventListener('input', function() {
+        const weight = parseFloat(this.value);
+        const helpText = this.parentElement.querySelector('.form-text');
+        
+        if (weight < 10) {
+            helpText.innerHTML = `
+                <i class="bi bi-exclamation-triangle text-danger"></i> 
+                <span class="text-danger">Weight seems too light. Please verify.</span>
+            `;
+        } else if (weight > 5000) {
+            helpText.innerHTML = `
+                <i class="bi bi-exclamation-triangle text-warning"></i> 
+                <span class="text-warning">Heavy item detected. Shipping costs will be higher.</span>
+            `;
+        } else {
+            // Reset to category suggestion
+            updateWeightSuggestion();
+        }
+    });
+});
 </script>
 @endpush

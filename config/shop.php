@@ -47,4 +47,54 @@ return [
         'minimum_order_value' => env('MINIMUM_ORDER_VALUE', 0),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Free Shipping Configuration
+    |--------------------------------------------------------------------------
+    */
+    'free_shipping_threshold' => env('SHOP_FREE_SHIPPING_THRESHOLD', 999),
+    'free_shipping_enabled' => env('SHOP_FREE_SHIPPING_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Product Weights (in grams)
+    |--------------------------------------------------------------------------
+    */
+    'default_weights' => [
+        'tshirt' => 200,
+        'shirt' => 300,
+        'jeans' => 600,
+        'dress' => 400,
+        'jacket' => 800,
+        'shoes' => 500,
+        'cap' => 100,
+        'socks' => 50,
+        'default' => 200,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Weight Categories for Admin
+    |--------------------------------------------------------------------------
+    */
+    'weight_categories' => [
+        'very_light' => ['max' => 150, 'label' => 'Very Light', 'examples' => 'Socks, Underwear, Scarves'],
+        'light' => ['max' => 300, 'label' => 'Light', 'examples' => 'T-shirts, Tops, Thin Shirts'],
+        'medium' => ['max' => 600, 'label' => 'Medium', 'examples' => 'Shirts, Dresses, Light Pants'],
+        'heavy' => ['max' => 1000, 'label' => 'Heavy', 'examples' => 'Jeans, Jackets, Heavy Dresses'],
+        'very_heavy' => ['max' => null, 'label' => 'Very Heavy', 'examples' => 'Coats, Boots, Heavy Jackets'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | COD Configuration
+    |--------------------------------------------------------------------------
+    */
+    'cod' => [
+        'enabled' => env('SHOP_COD_ENABLED', true),
+        'max_amount' => env('SHOP_COD_MAX_AMOUNT', 5000),
+        'charges' => env('SHOP_COD_CHARGES', 25),
+        'free_above' => env('SHOP_COD_FREE_ABOVE', 1999),
+    ],
+
 ];
