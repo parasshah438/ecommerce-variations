@@ -842,3 +842,8 @@ if (app()->environment('local', 'testing')) {
     require __DIR__.'/email-preview.php';
 }
 
+
+
+Route::get('post', [WelcomeController::class, 'post'])->name('post');
+Route::post('/job/generate-description', [WelcomeController::class, 'generateDescription'])
+    ->name('job.generate.description');
