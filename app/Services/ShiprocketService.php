@@ -26,9 +26,15 @@ class ShiprocketService
         $this->baseUrl = config('services.shiprocket.base_url', 'https://apiv2.shiprocket.in/v1/external');
         $this->email = config('services.shiprocket.email');
         $this->password = config('services.shiprocket.password');
+    }
 
+    /**
+     * Validate that credentials are configured
+     */
+    protected function validateCredentials(): void
+    {
         if (empty($this->email) || empty($this->password)) {
-            throw new Exception('Shiprocket credentials not configured');
+            throw new Exception('Shiprocket credentials not configured. Please set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in your .env file');
         }
     }
 
@@ -37,6 +43,8 @@ class ShiprocketService
      */
     public function generateToken(): array
     {
+        $this->validateCredentials();
+        
         try {
             $response = Http::timeout(30)
                 ->post($this->baseUrl . '/auth/login', [

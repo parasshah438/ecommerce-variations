@@ -161,36 +161,66 @@ STYLE GUIDELINES:
     ]);
 }
 
-private function getFallbackDescription($title, $category, $subCategory)
+private function getFallbackDescription($title, $category, $subCategory, $salary = 'Competitive', $location = 'Not Specified')
 {
-    return "
-    <h3>Job Overview</h3>
-    <p>We are seeking a dedicated <strong>{$title}</strong> to join our dynamic team in the <em>{$category}</em> department. This role focuses on <strong>{$subCategory}</strong> and offers excellent opportunities for professional growth.</p>
-    
-    <h3>Key Responsibilities</h3>
-    <ul>
-        <li><strong>Primary duties:</strong> Handle core responsibilities related to {$subCategory}</li>
-        <li><strong>Team collaboration:</strong> Work closely with cross-functional teams</li>
-        <li><strong>Quality assurance:</strong> Ensure high standards in all deliverables</li>
-        <li><strong>Continuous improvement:</strong> Identify and implement process improvements</li>
-    </ul>
-    
-    <h3>Required Qualifications</h3>
-    <ul>
-        <li>Relevant experience in <strong>{$category}</strong></li>
-        <li>Strong communication and interpersonal skills</li>
-        <li>Proven track record in <em>{$subCategory}</em></li>
-        <li>Ability to work independently and as part of a team</li>
-    </ul>
-    
-    <h3>What We Offer</h3>
-    <ul>
-        <li><span class='highlight'>Competitive salary package</span></li>
-        <li><strong>Career growth opportunities</strong></li>
-        <li><em>Flexible working arrangements</em></li>
-        <li>Comprehensive benefits package</li>
-    </ul>
-    ";
+    return '
+<h3>Job Details</h3>
+<p>
+<strong>Job Title:</strong> ' . htmlspecialchars($title) . '<br>
+<strong>Industry:</strong> ' . htmlspecialchars($category) . '<br>
+<strong>Job Type:</strong> Full-time (Work From Office)<br>
+<strong>Experience:</strong> 1–3 Years<br>
+<strong>Salary:</strong> <span class="highlight">' . htmlspecialchars($salary) . '</span><br>
+<strong>Location:</strong> ' . htmlspecialchars($location) . '
+</p>
+
+<h3>Job Description</h3>
+<p>
+We are looking for a <strong>skilled ' . htmlspecialchars($title) . '</strong> to join our growing software development team.
+The ideal candidate should be a <strong>full-stack developer</strong> with hands-on experience in
+<strong>' . htmlspecialchars($subCategory) . '</strong> and a passion for building <em>scalable and high-performance web applications</em>.
+</p>
+
+<h3>Key Responsibilities</h3>
+<ul>
+    <li>Develop, maintain, and enhance web applications using <strong>' . htmlspecialchars($subCategory) . '</strong></li>
+    <li>Work on both <strong>backend and frontend development</strong> (Full Stack)</li>
+    <li>Design, manage, and optimize databases such as <strong>MySQL</strong></li>
+    <li>Integrate <strong>APIs and third-party services</strong></li>
+    <li>Write clean, reusable, and efficient code following best practices</li>
+    <li>Troubleshoot, test, and maintain core product software</li>
+    <li>Collaborate with designers, project managers, and other developers</li>
+    <li>Ensure application <strong>performance, security, and scalability</strong></li>
+</ul>
+
+<h3>Required Skills</h3>
+<ul>
+    <li>Strong knowledge of <strong>' . htmlspecialchars($subCategory) . '</strong></li>
+    <li>Experience in <strong>Full Stack Development</strong></li>
+    <li>Proficiency in <strong>HTML, CSS, JavaScript, Bootstrap</strong></li>
+    <li>Good understanding of <strong>MySQL databases</strong></li>
+    <li>Knowledge of <strong>MVC architecture</strong></li>
+    <li>Basic understanding of <strong>REST APIs</strong></li>
+    <li>Familiarity with <strong>Git / version control systems</strong></li>
+    <li>Ability to work independently as well as in a team environment</li>
+</ul>
+
+<h3>Preferred Qualifications <em>(Good to Have)</em></h3>
+<ul>
+    <li>Experience with <strong>AJAX / jQuery</strong></li>
+    <li>Knowledge of <strong>API integrations</strong></li>
+    <li>Exposure to <strong>SaaS-based applications</strong></li>
+    <li>Strong <em>problem-solving and debugging skills</em></li>
+</ul>
+
+<h3>Why Join Us?</h3>
+<ul>
+    <li><strong>Growth-oriented</strong> and supportive work environment</li>
+    <li>Opportunity to work on <strong>live software projects</strong></li>
+    <li>Continuous <em>learning and career advancement</em></li>
+    <li>Stable and rewarding <strong>full-time role</strong></li>
+</ul>
+';
 }
 
 private function callGroqAPI($messages)

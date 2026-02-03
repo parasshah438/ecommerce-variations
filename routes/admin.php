@@ -88,12 +88,32 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     });
     
     // Order Management Routes
-    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirmOrder'])->name('orders.confirm');
-    Route::post('/orders/{order}/cancel', [AdminOrderController::class, 'cancelOrder'])->name('orders.cancel');
-    Route::post('/orders/{order}/return', [AdminOrderController::class, 'returnOrder'])->name('orders.return');
-    Route::post('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
+        
+        // Status management
+        Route::post('/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('update_status');
+        Route::post('/{order}/confirm', [AdminOrderController::class, 'confirmOrder'])->name('confirm');
+        Route::post('/{order}/cancel', [AdminOrderController::class, 'cancelOrder'])->name('cancel');
+        Route::post('/{order}/return', [AdminOrderController::class, 'returnOrder'])->name('return');
+        
+        // Payment management
+        Route::post('/{order}/mark-paid', [AdminOrderController::class, 'markAsPaid'])->name('mark_paid');
+        
+        // Bulk operations
+        Route::post('/bulk-status-update', [AdminOrderController::class, 'bulkStatusUpdate'])->name('bulk_status_update');
+        
+        // Export and reports
+        Route::get('/export', [AdminOrderController::class, 'export'])->name('export');
+        Route::get('/{order}/invoice', [AdminOrderController::class, 'downloadInvoice'])->name('invoice');
+        
+        // Email management
+        Route::post('/{order}/send-email', [AdminOrderController::class, 'sendOrderEmail'])->name('send_email');
+        
+        // AJAX endpoints
+        Route::get('/api/statistics', [AdminOrderController::class, 'getOrderStatistics'])->name('statistics');
+    });
     
     // Payment Management Routes
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');

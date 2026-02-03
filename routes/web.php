@@ -10,9 +10,16 @@ use App\Http\Controllers\Frontend\CouponController as FrontCoupon;
 use App\Http\Controllers\OrderController as OrderController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\ShiprocketWebhookController;
 
 // Include shipping routes
 require __DIR__.'/shipping.php';
+
+// Shiprocket Webhooks (must be before auth middleware)
+Route::prefix('webhooks/shiprocket')->name('webhooks.shiprocket.')->group(function () {
+    Route::post('/shipment-status', [ShiprocketWebhookController::class, 'handleShipmentStatus'])->name('shipment-status');
+    Route::post('/order-status', [ShiprocketWebhookController::class, 'handleOrderStatus'])->name('order-status');
+});
 
 // Debug Routes
 require __DIR__.'/debug-image-upload.php';

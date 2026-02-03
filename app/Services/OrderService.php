@@ -10,10 +10,14 @@ use Illuminate\Support\Facades\Log;
 class OrderService
 {
     protected $stockService;
+    protected $shiprocketProcessor;
 
-    public function __construct(StockService $stockService)
-    {
+    public function __construct(
+        StockService $stockService,
+        ShiprocketOrderProcessor $shiprocketProcessor
+    ) {
         $this->stockService = $stockService;
+        $this->shiprocketProcessor = $shiprocketProcessor;
     }
 
     /**
@@ -39,13 +43,85 @@ class OrderService
                 'payment_status' => Order::PAYMENT_PAID,
             ]);
 
+            // Process for shipping with Shiprocket
+            $shippingResult = $this->processOrderForShipping($order);
+
             DB::commit();
-            Log::info("Order confirmed and stock reserved - Order #{$order->id}");
-            return true;
+            
+            Log::info("Order confirmed and processed for shipping - Order #{$order->id}", [
+                'shipping_processed' => $shippingResult['success'],
+                'shiprocket_order_id' => $shippingResult['shiprocket_order_id'] ?? null
+            ]);
+            
+            return [
+                'success' => true,
+                'order_confirmed' => true,
+                'shipping_result' => $shippingResult
+            ];
+            
         } catch (\Exception $e) {
             DB::rollback();
             Log::error("Failed to confirm order #{$order->id}: " . $e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Process confirmed order for shipping
+     * This method handles the Shiprocket integration
+     */
+    protected function processOrderForShipping(Order $order): array
+    {
+        try {
+            // Only process for shipping if payment is completed
+            if ($order->payment_status !== Order::PAYMENT_PAID) {
+                return [
+                    'success' => false,
+                    'message' => 'Payment not completed, skipping shipping process'
+                ];
+            }
+
+            // Check if Shiprocket credentials are configured
+            if (!app('shiprocket.enabled')) {
+                Log::warning("Order #{$order->id} confirmed but Shiprocket not configured");
+                return [
+                    'success' => false,
+                    'message' => 'Shiprocket credentials not configured. Please configure SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in .env file'
+                ];
+            }
+
+            // Check if shipping is enabled in configuration
+            if (!config('services.shiprocket.auto_create_shipments', true)) {
+                return [
+                    'success' => false,
+                    'message' => 'Automatic shipment creation is disabled'
+                ];
+            }
+
+            // Process with Shiprocket
+            $result = $this->shiprocketProcessor->processConfirmedOrder($order);
+            
+            if ($result['success']) {
+                // Optionally auto-assign best courier
+                if (config('services.shiprocket.auto_assign_courier', false)) {
+                    $courierResult = $this->shiprocketProcessor->assignBestCourier($order);
+                    $result['courier_assignment'] = $courierResult;
+                }
+            }
+
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::error("Shipping processing failed for Order #{$order->id}", [
+                'error' => $e->getMessage()
+            ]);
+
+            // Don't fail the entire order confirmation if shipping fails
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Order confirmed but shipping setup failed. Manual processing required.'
+            ];
         }
     }
 

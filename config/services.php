@@ -84,4 +84,29 @@ return [
     'groq' => [
         'api_key' => env('GROQ_API_KEY'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shiprocket Service Configuration  
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Shiprocket shipping service integration
+    |
+    */
+
+    'shiprocket' => [
+        'base_url' => env('SHIPROCKET_BASE_URL', 'https://apiv2.shiprocket.in/v1/external'),
+        'email' => env('SHIPROCKET_EMAIL'),
+        'password' => env('SHIPROCKET_PASSWORD'),
+        'token_cache_duration' => env('SHIPROCKET_TOKEN_CACHE_DURATION', 3600),
+        'timeout' => env('SHIPROCKET_TIMEOUT', 30),
+        'log_requests' => env('SHIPROCKET_LOG_REQUESTS', true),
+        'webhook_secret' => env('SHIPROCKET_WEBHOOK_SECRET'),
+        'auto_create_shipments' => env('SHIPROCKET_AUTO_CREATE_SHIPMENTS', true),
+        'auto_assign_courier' => env('SHIPROCKET_AUTO_ASSIGN_COURIER', false),
+        'default_pickup_location' => env('SHIPROCKET_DEFAULT_PICKUP_LOCATION', 'Primary'),
+        'pickup_postcode' => env('SHIPROCKET_PICKUP_POSTCODE'),
+        'channel_id' => env('SHIPROCKET_CHANNEL_ID', ''),
+    ],
+
 ];

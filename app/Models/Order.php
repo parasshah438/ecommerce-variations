@@ -79,6 +79,16 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    public function activeShipment()
+    {
+        return $this->hasOne(Shipment::class)->where('status', '!=', 'cancelled');
+    }
+
     public function payments()
     {
         return $this->hasMany(Payment::class);

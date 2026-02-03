@@ -98,6 +98,8 @@ return [
     |--------------------------------------------------------------------------
     */
     
+    'auto_create_shipments' => env('SHIPROCKET_AUTO_CREATE_SHIPMENTS', true),
+    
     'auto_assign_courier' => env('SHIPROCKET_AUTO_ASSIGN_COURIER', false),
     
     'prefer_cheapest' => env('SHIPROCKET_PREFER_CHEAPEST', true),
@@ -105,5 +107,23 @@ return [
     'max_courier_rate' => env('SHIPROCKET_MAX_COURIER_RATE', null),
     
     'max_delivery_days' => env('SHIPROCKET_MAX_DELIVERY_DAYS', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pickup Settings
+    |--------------------------------------------------------------------------
+    */
+    
+    'default_pickup_location' => env('SHIPROCKET_DEFAULT_PICKUP_LOCATION', 'Primary'),
+    
+    'pickup_postcode' => env('SHIPROCKET_PICKUP_POSTCODE'),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Channel Settings
+    |--------------------------------------------------------------------------
+    */
+    
+    'channel_id' => env('SHIPROCKET_CHANNEL_ID', ''),
 
 ];

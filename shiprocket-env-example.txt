@@ -1,0 +1,40 @@
+# Shiprocket Configuration Example
+# Copy these settings to your .env file and update with your actual credentials
+
+# Shiprocket API Credentials
+SHIPROCKET_EMAIL=your_shiprocket_email@example.com
+SHIPROCKET_PASSWORD=your_shiprocket_password
+SHIPROCKET_BASE_URL=https://apiv2.shiprocket.in/v1/external
+
+# Shiprocket Settings
+SHIPROCKET_TOKEN_CACHE_DURATION=3600
+SHIPROCKET_TIMEOUT=30
+SHIPROCKET_LOG_REQUESTS=true
+SHIPROCKET_RATE_LIMIT=60
+
+# Shiprocket Business Rules
+SHIPROCKET_AUTO_CREATE_SHIPMENTS=true
+SHIPROCKET_AUTO_ASSIGN_COURIER=false
+SHIPROCKET_PREFER_CHEAPEST=true
+SHIPROCKET_MAX_COURIER_RATE=
+SHIPROCKET_MAX_DELIVERY_DAYS=
+
+# Shiprocket Defaults
+SHIPROCKET_DEFAULT_WEIGHT=0.5
+SHIPROCKET_DEFAULT_LENGTH=10
+SHIPROCKET_DEFAULT_BREADTH=10
+SHIPROCKET_DEFAULT_HEIGHT=10
+
+# Shiprocket Pickup Location
+SHIPROCKET_DEFAULT_PICKUP_LOCATION=Primary
+SHIPROCKET_PICKUP_POSTCODE=110001
+
+# Shiprocket Channel (if using channel-specific orders)
+SHIPROCKET_CHANNEL_ID=
+
+# Shiprocket Webhooks
+SHIPROCKET_WEBHOOK_SECRET=your_webhook_secret_key
+SHIPROCKET_WEBHOOK_URL=https://yourdomain.com/webhooks/shiprocket/shipment-status
+
+# Return Settings
+SHIPROCKET_RETURN_WINDOW_DAYS=7
