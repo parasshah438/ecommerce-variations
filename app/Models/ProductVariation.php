@@ -18,6 +18,9 @@ class ProductVariation extends Model
         'price', 
         'min_qty', 
         'weight',
+        'length',
+        'width',
+        'height',
         'attribute_value_ids'
     ];
 
@@ -26,6 +29,9 @@ class ProductVariation extends Model
         'price' => 'decimal:2',
         'min_qty' => 'integer',
         'weight' => 'decimal:2',
+        'length' => 'decimal:2',
+        'width' => 'decimal:2',
+        'height' => 'decimal:2'
     ];
 
     /**

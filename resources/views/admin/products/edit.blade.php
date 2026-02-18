@@ -361,6 +361,7 @@
                             <th width="10%">Stock</th>
                             <th width="10%">Weight (g)</th>
                             <th width="10%">Min Qty</th>
+                            <th width="15%">Dimensions</th>
                             <th width="15%">Images</th>
                             <th width="5%">Actions</th>
                         </tr>
@@ -413,6 +414,19 @@
                 <input type="number" class="form-control form-control-sm" 
                        name="variations[{{ $vIndex }}][min_qty]" 
                        value="{{ $variation->min_qty }}" min="1">
+            </td>
+            <td>
+            <div class="form-control form-control-sm">
+                <input type="number" class="form-control" placeholder="L" 
+                       name="variations[{{$vIndex}}][length]" 
+                       value="{{ $variation->length ?? $product->length ?? 1 }}" step="0.01">
+                <input type="number" class="form-control" placeholder="W" 
+                       name="variations[{{ $vIndex }}][width]" 
+                       value="{{ $variation->width ?? $product->width ?? 1 }}" step="0.01">
+                <input type="number" class="form-control" placeholder="H" 
+                       name="variations[{{ $vIndex }}][height]" 
+                       value="{{ $variation->height ?? $product->height ?? 1 }}" step="0.01">
+            </div>
             </td>
             <td>
                 <input type="file" class="form-control form-control-sm" 

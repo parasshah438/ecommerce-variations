@@ -72,6 +72,9 @@ class ProductController extends Controller
             'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
             'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
+            'variations.*.length' => 'nullable|numeric|min:1|max:50000',
+            'variations.*.width' => 'nullable|numeric|min:1|max:50000',
+            'variations.*.height' => 'nullable|numeric|min:1|max:50000',
         ]);
 
         try {
@@ -187,6 +190,11 @@ class ProductController extends Controller
                                 'weight' => $variationData['weight'] ?? $product->weight,
                                 'min_qty' => $variationData['min_qty'] ?? 1,
                                 'attribute_value_ids' => $variationData['attributes'],
+
+                                'length' => $variationData['length'] ?? $product->length,
+                                'width' => $variationData['width'] ?? $product->width,
+                                'height' => $variationData['height'] ?? $product->height,
+
                             ]);
                             // Update stock
                             $variation->stock()->updateOrCreate(
@@ -205,6 +213,9 @@ class ProductController extends Controller
                             'sku' => $sku,
                             'price' => $variationData['price'] ?? $product->price,
                             'weight' => $variationData['weight'] ?? $product->weight,
+                            'length' => $variationData['length'] ?? $product->length,
+                            'width' => $variationData['width'] ?? $product->width,
+                            'height' => $variationData['height'] ?? $product->height,
                             'min_qty' => $variationData['min_qty'] ?? 1,
                             'attribute_value_ids' => $variationData['attributes'],
                         ]);
@@ -387,6 +398,12 @@ class ProductController extends Controller
             'variations.*.weight' => 'nullable|numeric|min:1|max:50000',
             'variations.*.stock' => 'required|integer|min:0',
             'variations.*.min_qty' => 'nullable|integer|min:1',
+
+            // These are validated but not in your form!
+            'variations.*.length' => 'nullable|numeric|min:1|max:50000',
+            'variations.*.width' => 'nullable|numeric|min:1|max:50000',
+            'variations.*.height' => 'nullable|numeric|min:1|max:50000',
+
             
             // Variation images
             'variation_images.*.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
@@ -486,6 +503,7 @@ class ProductController extends Controller
             if (!empty($validated['variations'])) {
                 // Product has variations
                 foreach ($validated['variations'] as $variationIndex => $variationData) {
+                    //dd($variationData);
                     // Generate SKU if not provided
                     $sku = $variationData['sku'] ?? $this->generateSku($product, $variationData['attributes']);
                     
@@ -494,6 +512,9 @@ class ProductController extends Controller
                         'sku' => $sku,
                         'price' => $variationData['price'] ?? $product->price,
                         'weight' => $variationData['weight'] ?? $product->weight,
+                        'length' => $variationData['length'] ?? $product->length,
+                        'width' => $variationData['width'] ?? $product->width,
+                        'height' => $variationData['height'] ?? $product->height,
                         'min_qty' => $variationData['min_qty'] ?? 1,
                         'attribute_value_ids' => $variationData['attributes'],
                     ]);

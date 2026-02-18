@@ -376,29 +376,31 @@
                     </div>
                 </div>
                 
-                <!-- Variations Table -->
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered" id="variationsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="5%">
-                                    <input type="checkbox" id="selectAll" onchange="toggleAllRows()">
-                                </th>
-                                <th width="25%">Variation</th>
-                                <th width="15%">SKU</th>
-                                <th width="15%">Price (₹)</th>
-                                <th width="10%">Stock</th>
-                                <th width="10%">Weight (g)</th>
-                                <th width="10%">Min Qty</th>
-                                <th width="10%">Images</th>
-                                <th width="5%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="variationsTableBody">
-                            <!-- Generated variations will appear here -->
-                        </tbody>
-                    </table>
-                </div>
+                <!-- Variations Table with Expandable Details -->
+<div class="table-responsive">
+    <table class="table table-sm table-bordered" id="variationsTable">
+        <thead class="table-light">
+            <tr>
+                <th width="5%">
+                    <input type="checkbox" id="selectAll" onchange="toggleAllRows()">
+                </th>
+                <th width="20%">Variation</th>
+                <th width="12%">SKU</th>
+                <th width="12%">Price (₹)</th>
+                <th width="8%">Stock</th>
+                <th width="8%">Weight (g)</th>
+                <th width="8%">Min Qty</th>
+                <th width="15%">Dimensions</th>
+                <th width="8%">Images</th>
+                <th width="4%">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="variationsTableBody">
+            <!-- Generated variations will appear here -->
+        </tbody>
+    </table>
+</div>
+
             </div>
         </div>
     </div>
@@ -561,6 +563,97 @@ function renderVariationsTable(combinations) {
 
 // Create a variation row
 function createVariationRow(combination, index) {
+    const row = document.createElement('tr');
+    
+    // Get attribute names
+    const attributeNames = [];
+    for (const attrId in combination) {
+        const valueId = combination[attrId];
+        const valueElement = document.getElementById(`val_${valueId}`);
+        const attrElement = document.getElementById(`attr_${attrId}`);
+        
+        if (valueElement && attrElement) {
+            const attrName = attrElement.getAttribute('data-attribute-name');
+            const valueName = valueElement.nextElementSibling.textContent.trim();
+            attributeNames.push(`${attrName}: ${valueName}`);
+        }
+    }
+    
+    const displayName = attributeNames.join(' | ');
+   
+
+    const basePrice = parseFloat(document.getElementById('price')?.value) || 0;
+    const baseWeight = parseFloat(document.getElementById('weight')?.value) || 200;
+    const baseLength = document.getElementById('length')?.value || 3;
+    const baseWidth = document.getElementById('width')?.value || 3;
+    const baseHeight = document.getElementById('height')?.value || 3;
+
+    
+    row.innerHTML = `
+        <td>
+            <input type="checkbox" class="variation-checkbox" onchange="updateBulkActions()">
+        </td>
+        <td>
+            <strong>${displayName}</strong>
+            ${Object.values(combination).map(valueId => 
+                `<input type="hidden" name="variations[${index}][attributes][]" value="${valueId}">`
+            ).join('')}
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm sku-input" 
+                   name="variations[${index}][sku]" 
+                   placeholder="Auto">
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm price-input" 
+                   name="variations[${index}][price]" 
+                   value="${basePrice}" step="0.01" min="0">
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm stock-input" 
+                   name="variations[${index}][stock]" 
+                   value="0" min="0" required>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm" 
+                   name="variations[${index}][weight]" 
+                   value="${baseWeight}" step="0.01" min="1">
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm" 
+                   name="variations[${index}][min_qty]" 
+                   value="1" min="1">
+        </td>
+        <td>
+            <div class="input-group input-group-sm">
+                <input type="number" class="form-control" placeholder="L" 
+                       name="variations[${index}][length]" value="${baseLength}" step="0.01">
+                <input type="number" class="form-control" placeholder="W" 
+                       name="variations[${index}][width]" value="${baseWidth}" step="0.01">
+                <input type="number" class="form-control" placeholder="H" 
+                       name="variations[${index}][height]" value="${baseHeight}" step="0.01">
+            </div>
+        </td>
+        <td>
+            <input type="file" class="form-control form-control-sm" 
+                   name="variation_images[${index}][]" 
+                   multiple accept="image/*"
+                   onchange="previewVariationImages(this, ${index})">
+            <div id="preview_${index}" class="mt-1"></div>
+        </td>
+        <td>
+            <button type="button" class="btn btn-outline-danger btn-sm" 
+                    onclick="removeVariation(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    return row;
+}
+
+
+function createVariationRow_bk(combination, index) {
     const row = document.createElement('tr');
     
     // Get attribute names for display
