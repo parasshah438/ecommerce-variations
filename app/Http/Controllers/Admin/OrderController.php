@@ -18,7 +18,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'address', 'items.productVariation.product']);
+        $query = Order::with(['user', 'address', 'items.productVariation.product', 'activeShipment']);
 
         // Status filter
         if ($request->filled('status')) {
@@ -206,6 +206,78 @@ class OrderController extends Controller
             }
             
             return redirect()->back()->with('error', 'Failed to update order status: ' . $e->getMessage());
+        }
+    }
+
+    public function cancelItems(\Illuminate\Http\Request $request, Order $order)
+    {
+        $request->validate([
+            'item_ids'   => 'required|array|min:1',
+            'item_ids.*' => 'integer|exists:order_items,id',
+            'reason'     => 'required|string|max:500',
+        ]);
+
+        try {
+            $result = $this->orderService->cancelOrderItems(
+                $order,
+                $request->item_ids,
+                $request->reason
+            );
+
+            return response()->json([
+                'success'       => true,
+                'message'       => $result['message'],
+                'all_cancelled' => $result['all_cancelled'],
+                'refund_amount' => $result['refund_amount'],
+                'refund_result' => $result['refund_result'] ?? null,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function createShipment(Order $order)
+    {
+        try {
+            if (!in_array($order->status, [Order::STATUS_CONFIRMED, Order::STATUS_PROCESSING])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Shipment can only be created for confirmed or processing orders.'
+                ], 422);
+            }
+
+            if ($order->activeShipment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A shipment already exists for this order.'
+                ], 422);
+            }
+
+            $shiprocketProcessor = app(\App\Services\ShiprocketOrderProcessor::class);
+            $result = $shiprocketProcessor->processConfirmedOrder($order);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Shipment created successfully in Shiprocket.',
+                    'shiprocket_order_id' => $result['shiprocket_order_id'] ?? null,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to create shipment.'
+            ], 422);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 422);
         }
     }
 

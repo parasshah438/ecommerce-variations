@@ -28,8 +28,8 @@ class ShiprocketServiceProvider extends ServiceProvider
 
         // Make services conditional based on configuration
         $this->app->bind('shiprocket.enabled', function () {
-            return !empty(config('services.shiprocket.email')) && 
-                   !empty(config('services.shiprocket.password'));
+            return !empty(config('shiprocket.email')) && 
+                   !empty(config('shiprocket.password'));
         });
     }
 

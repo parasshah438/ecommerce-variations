@@ -47,14 +47,27 @@ class ShiprocketCourierService extends ShiprocketService
         string $pickupPostcode,
         string $deliveryPostcode,
         float $weight = 0.5,
-        int $cod = 0
+        int $cod = 0,
+        int $isReturn = 0,
+        ?int $length = null,
+        ?int $breadth = null,
+        ?int $height = null,
+        ?int $declaredValue = null
     ): array {
-        return $this->checkServiceability([
-            'pickup_postcode' => $pickupPostcode,
+        $params = [
+            'pickup_postcode'   => $pickupPostcode,
             'delivery_postcode' => $deliveryPostcode,
-            'weight' => $weight,
-            'cod' => $cod,
-        ]);
+            'weight'            => $weight,
+            'cod'               => $cod,
+            'is_return'         => $isReturn,   // required by Shiprocket API
+        ];
+
+        if ($length !== null)       $params['length']        = $length;
+        if ($breadth !== null)      $params['breadth']       = $breadth;
+        if ($height !== null)       $params['height']        = $height;
+        if ($declaredValue !== null) $params['declared_value'] = $declaredValue;
+
+        return $this->checkServiceability($params);
     }
 
     /**
@@ -187,14 +200,23 @@ class ShiprocketCourierService extends ShiprocketService
         string $deliveryPostcode,
         float $weight = 0.5,
         int $cod = 0,
-        array $preferences = []
+        array $preferences = [],
+        ?int $length = null,
+        ?int $breadth = null,
+        ?int $height = null,
+        ?int $declaredValue = null
     ): ?array {
         try {
             $serviceability = $this->checkServiceabilityForLocation(
                 $pickupPostcode,
                 $deliveryPostcode,
                 $weight,
-                $cod
+                $cod,
+                0,             // is_return = 0 (forward shipment)
+                $length,
+                $breadth,
+                $height,
+                $declaredValue
             );
 
             if (!isset($serviceability['data']['available_courier_companies'])) {

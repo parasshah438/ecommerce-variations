@@ -117,7 +117,7 @@ class LocationIntelligenceService
                 ->where(function($q) use ($query) {
                     $q->where('area', 'LIKE', "%{$query}%")
                       ->orWhere('city', 'LIKE', "%{$query}%")
-                      ->orWhere('pincode', 'LIKE', "%{$query}%")
+                      ->orWhere('zip', 'LIKE', "%{$query}%")
                       ->orWhere('address_line', 'LIKE', "%{$query}%");
                 })
                 ->limit(3)
@@ -128,7 +128,7 @@ class LocationIntelligenceService
                     'type' => 'saved_address',
                     'display_name' => $address->area . ', ' . $address->city,
                     'full_address' => $address->address_line,
-                    'pincode' => $address->pincode,
+                    'pincode' => $address->zip,
                     'priority' => 100,
                     'icon' => $address->type === 'office' ? 'building' : 'home'
                 ];
@@ -160,7 +160,7 @@ class LocationIntelligenceService
      */
     private function getLocationKey($address)
     {
-        return $address->city . '_' . $address->pincode;
+        return $address->city . '_' . $address->zip;
     }
     
     /**

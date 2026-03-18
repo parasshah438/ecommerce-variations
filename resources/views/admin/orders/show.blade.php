@@ -229,25 +229,46 @@
     <!-- Order Items -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <h5 class="card-title mb-4">
-                <i class="fas fa-shopping-cart text-primary me-2"></i>Order Items ({{ $order->items->count() }} items)
-            </h5>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shopping-cart text-primary me-2"></i>Order Items ({{ $order->items->count() }} items)
+                </h5>
+                @if(in_array($order->status, ['pending','confirmed','processing']))
+                    <button class="btn btn-sm btn-outline-danger" id="cancelItemsBtn"
+                            onclick="openCancelItemsModal()" disabled>
+                        <i class="fas fa-times me-1"></i>Cancel Selected Items
+                    </button>
+                @endif
+            </div>
             
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
+                            @if(in_array($order->status, ['pending','confirmed','processing']))
+                                <th style="width:40px">
+                                    <input type="checkbox" id="selectAllItems" title="Select all active items">
+                                </th>
+                            @endif
                             <th>Product</th>
                             <th>Variations</th>
                             <th>Price</th>
                             <th>Quantity</th>
                             <th>Total</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($order->items as $item)
-                            <tr>
+                            <tr class="{{ $item->isCancelled() ? 'table-secondary text-muted' : '' }}">
+                                @if(in_array($order->status, ['pending','confirmed','processing']))
+                                    <td>
+                                        @if(!$item->isCancelled())
+                                            <input type="checkbox" class="item-checkbox" value="{{ $item->id }}">
+                                        @endif
+                                    </td>
+                                @endif
                                 <td>
                                     <div class="d-flex align-items-center">
                                         @if($item->productVariation && $item->productVariation->product && $item->productVariation->product->images->isNotEmpty())
@@ -281,6 +302,16 @@
                                 </td>
                                 <td>
                                     <strong>₹{{ number_format($item->price * $item->quantity, 2) }}</strong>
+                                </td>
+                                <td>
+                                    @if($item->isCancelled())
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        @if($item->refund_amount)
+                                            <br><small class="text-muted">Refund: ₹{{ number_format($item->refund_amount, 2) }}</small>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-success">Active</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @if($item->productVariation && $item->productVariation->product)
@@ -354,6 +385,38 @@
 @include('admin.orders.modals.status-modal')
 @include('admin.orders.modals.cancel-modal')
 @include('admin.orders.modals.return-modal')
+
+<!-- Partial Item Cancel Modal -->
+<div class="modal fade" id="cancelItemsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger"><i class="fas fa-times-circle me-2"></i>Cancel Selected Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Selected items will be cancelled.</strong><br>
+                    Stock will be restored. A partial Razorpay refund will be issued automatically.
+                    Shiprocket shipment will be cancelled and recreated with remaining items.
+                </div>
+                <div id="cancelItemsSummary" class="mb-3"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Cancellation Reason <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="cancelItemsReason" rows="3"
+                              placeholder="Enter reason for cancellation..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelItemsBtn"
+                        onclick="submitCancelItems()">
+                    <i class="fas fa-times me-2"></i>Cancel Selected Items
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -441,6 +504,91 @@
 
 @push('scripts')
 <script>
+// ─── Partial Item Cancellation ────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    const cancelBtn  = document.getElementById('cancelItemsBtn');
+    const selectAll  = document.getElementById('selectAllItems');
+
+    function updateCancelBtn() {
+        const anyChecked = document.querySelectorAll('.item-checkbox:checked').length > 0;
+        if (cancelBtn) cancelBtn.disabled = !anyChecked;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCancelBtn));
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(cb => { cb.checked = this.checked; });
+            updateCancelBtn();
+        });
+    }
+});
+
+function openCancelItemsModal() {
+    const selected = document.querySelectorAll('.item-checkbox:checked');
+    if (selected.length === 0) return;
+
+    // Build summary
+    let html = '<ul class="list-group">';
+    selected.forEach(cb => {
+        const row = cb.closest('tr');
+        const name = row.querySelector('h6') ? row.querySelector('h6').textContent.trim() : 'Item #' + cb.value;
+        const total = row.querySelectorAll('td')[5] ? row.querySelectorAll('td')[5].textContent.trim() : '';
+        html += `<li class="list-group-item d-flex justify-content-between">
+                    <span>${name}</span>
+                    <strong>${total}</strong>
+                 </li>`;
+    });
+    html += '</ul>';
+    document.getElementById('cancelItemsSummary').innerHTML = html;
+    document.getElementById('cancelItemsReason').value = '';
+
+    new bootstrap.Modal(document.getElementById('cancelItemsModal')).show();
+}
+
+function submitCancelItems() {
+    const reason = document.getElementById('cancelItemsReason').value.trim();
+    if (!reason) {
+        alert('Please enter a cancellation reason.');
+        return;
+    }
+
+    const itemIds = Array.from(document.querySelectorAll('.item-checkbox:checked'))
+                         .map(cb => parseInt(cb.value));
+
+    const btn = document.getElementById('confirmCancelItemsBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+    fetch(`/admin/orders/{{ $order->id }}/cancel-items`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ item_ids: itemIds, reason: reason }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('cancelItemsModal')).hide();
+        if (data.success) {
+            alert('✓ ' + data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(() => alert('An error occurred. Please try again.'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-times me-2"></i>Cancel Selected Items';
+    });
+}
+
+// ─── Existing functions ───────────────────────────────────────────────────────
 function printOrder() {
     window.print();
 }

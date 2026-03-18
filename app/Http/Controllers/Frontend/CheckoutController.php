@@ -38,8 +38,11 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty. Add some items before checkout.');
         }
 
-        // Get cart summary with coupon information
-        $cartSummary = $this->cartService->cartSummary($user->cart);
+        // Get cart summary — use default address pincode if available for accurate shipping
+        $defaultAddress = $user->addresses()->where('is_default', true)->first()
+                       ?? $user->addresses()->latest()->first();
+        $pincode = $defaultAddress->zip ?? $defaultAddress->postal_code ?? null;
+        $cartSummary = $this->cartService->cartSummary($user->cart, $pincode);
 
         return view('checkout.index', compact('cartSummary'));
     }
@@ -128,8 +131,9 @@ class CheckoutController extends Controller
                 \Log::info('New address created', ['address_id' => $address->id]);
             }
 
-            // Get cart summary with coupon information
-            $cartSummary = $this->cartService->cartSummary($cart);
+            // Get cart summary with coupon information — use the submitted pincode for accurate shipping
+            $pincode = $address->zip ?? $address->postal_code ?? $request->input('zip');
+            $cartSummary = $this->cartService->cartSummary($cart, $pincode);
 
             // Create order in PENDING status (stock not yet reserved)
             $order = Order::create([
@@ -317,8 +321,9 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            // Get cart summary with coupon information
-            $cartSummary = $this->cartService->cartSummary($cart);
+            // Get cart summary with coupon information — use the submitted pincode for accurate shipping
+            $pincode = $address->zip ?? $address->postal_code ?? $request->input('zip');
+            $cartSummary = $this->cartService->cartSummary($cart, $pincode);
 
             // Create order with pending payment status
             $order = Order::create([
@@ -455,10 +460,9 @@ class CheckoutController extends Controller
             // Fetch payment details from Razorpay
             $paymentDetails = $razorpayService->fetchPayment($request->razorpay_payment_id);
 
-            // Update order with payment details
+            // Save payment details only — status transition handled by OrderService::confirmOrder()
             $order->update([
                 'payment_status' => Order::PAYMENT_PAID,
-                'status' => Order::STATUS_CONFIRMED,
                 'razorpay_payment_id' => $request->razorpay_payment_id,
                 'razorpay_signature' => $request->razorpay_signature,
                 'payment_data' => $paymentDetails
@@ -504,10 +508,18 @@ class CheckoutController extends Controller
                 $cart->delete();
             }
 
-            // Here you can add stock deduction logic if needed
-            // Or trigger order confirmation process
-
             DB::commit();
+
+            // Confirm order after payment transaction is committed:
+            // validates stock, reserves stock, updates status to confirmed, triggers Shiprocket
+            $orderService = app(\App\Services\OrderService::class);
+            try {
+                $orderService->confirmOrder($order->fresh());
+                \Log::info('Order confirmed after Razorpay payment', ['order_id' => $order->id]);
+            } catch (\Exception $e) {
+                // Payment is saved. Order stays pending so admin can confirm manually.
+                \Log::error('Order confirmation failed after payment for Order #' . $order->id . ': ' . $e->getMessage());
+            }
 
             \Log::info('Payment verified and order confirmed', [
                 'order_id' => $order->id,

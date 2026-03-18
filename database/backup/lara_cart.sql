@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jan 08, 2026 at 12:12 PM
+-- Generation Time: Mar 18, 2026 at 11:01 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.1.20
 
@@ -124,8 +124,8 @@ CREATE TABLE IF NOT EXISTS `cache` (
 --
 
 INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
-('laravel_cache_ip_location_f528764d624db129b32c21fbca0cb8d6', 'a:9:{s:7:\"country\";s:5:\"India\";s:12:\"country_code\";s:2:\"IN\";s:5:\"state\";s:11:\"Maharashtra\";s:4:\"city\";s:6:\"Mumbai\";s:4:\"area\";s:7:\"Andheri\";s:7:\"pincode\";s:6:\"400058\";s:8:\"latitude\";d:19.1136;s:9:\"longitude\";d:72.8697;s:17:\"formatted_address\";s:35:\"Andheri, Mumbai, Maharashtra, India\";}', 1766555796),
-('laravel_cache_location_details_23.0916_72.5352', 'a:11:{s:7:\"country\";s:5:\"India\";s:12:\"country_code\";s:2:\"in\";s:5:\"state\";s:7:\"Gujarat\";s:4:\"city\";s:0:\"\";s:4:\"area\";s:12:\"Chanakyapuri\";s:7:\"pincode\";s:6:\"380081\";s:8:\"latitude\";d:23.0920264;s:9:\"longitude\";d:72.5354228;s:17:\"formatted_address\";s:66:\"Chanakyapuri, Ghatlodiya Taluka, Ahmedabad, Gujarat, 380081, India\";s:4:\"road\";s:0:\"\";s:12:\"house_number\";s:0:\"\";}', 1766554081);
+('laravel_cache_jak@gmail.com|127.0.0.1:timer', 'i:1773740652;', 1773740652),
+('laravel_cache_jak@gmail.com|127.0.0.1', 'i:1;', 1773740652);
 
 -- --------------------------------------------------------
 
@@ -159,21 +159,14 @@ CREATE TABLE IF NOT EXISTS `carts` (
   KEY `carts_user_id_foreign` (`user_id`),
   KEY `carts_session_id_index` (`session_id`),
   KEY `carts_applied_coupon_id_foreign` (`applied_coupon_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `carts`
 --
 
 INSERT INTO `carts` (`id`, `user_id`, `session_id`, `applied_coupon_id`, `created_at`, `updated_at`) VALUES
-(5, NULL, '5faa66d3-e491-47c0-b146-509811d1245b', NULL, '2025-10-30 11:21:37', '2025-10-30 11:21:37'),
-(2, 1, NULL, NULL, '2025-09-22 05:44:41', '2025-09-22 05:44:41'),
-(8, NULL, 'e94fca30-9600-46a4-9a30-32b53a881c48', NULL, '2025-12-03 07:45:18', '2025-12-03 07:45:18'),
-(9, NULL, '99a30e54-2ffc-408d-9e5b-ba11e225117b', NULL, '2025-12-03 07:57:44', '2025-12-03 07:57:44'),
-(12, NULL, '15c1c322-551a-4f25-965f-c974cfdd98b3', NULL, '2025-12-03 08:06:09', '2025-12-03 08:06:09'),
-(11, 4, NULL, NULL, '2025-12-03 07:59:47', '2025-12-03 07:59:47'),
-(13, NULL, '2421f8ef-812a-4e51-891d-17cb1482d08a', NULL, '2025-12-03 08:21:22', '2025-12-03 08:21:22'),
-(14, NULL, 'fc46e7e2-064d-4035-b643-d176fefce20e', NULL, '2025-12-03 08:41:16', '2025-12-03 08:41:16');
+(1, 1, NULL, NULL, '2026-02-27 08:24:27', '2026-02-27 08:24:27');
 
 -- --------------------------------------------------------
 
@@ -195,14 +188,14 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
   PRIMARY KEY (`id`),
   KEY `cart_items_cart_id_foreign` (`cart_id`),
   KEY `cart_items_product_id_foreign` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `cart_items`
 --
 
 INSERT INTO `cart_items` (`id`, `cart_id`, `product_id`, `quantity`, `saved_for_later`, `price_at_time`, `options`, `created_at`, `updated_at`) VALUES
-(17, 2, 58, 1, 0, 3999.00, '[]', '2025-11-19 10:00:56', '2025-11-19 10:00:56');
+(3, 1, 73, 1, 0, 14999.00, '[]', '2026-03-17 09:43:40', '2026-03-17 09:43:40');
 
 -- --------------------------------------------------------
 
@@ -370,6 +363,49 @@ INSERT INTO `categories` (`id`, `name`, `slug`, `parent_id`, `status`, `icon`, `
 (132, 'Helmets', 'bike-helmets', 131, 1, 'fas fa-hard-hat', NULL, 0, NULL, 'Helmets', 'Shop Helmets online', 'helmets', '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
 (133, 'Bike Parts', 'bike-parts', 131, 1, 'fas fa-cog', NULL, 0, NULL, 'Bike Parts', 'Shop Bike Parts online', 'bike parts', '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
 (134, 'Bike Care', 'bike-care', 131, 1, 'fas fa-tools', NULL, 0, NULL, 'Bike Care', 'Shop Bike Care online', 'bike care', '2025-10-28 11:20:44', '2025-10-28 11:20:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_messages`
+--
+
+DROP TABLE IF EXISTS `chat_messages`;
+CREATE TABLE IF NOT EXISTS `chat_messages` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `chat_session_id` bigint UNSIGNED NOT NULL,
+  `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sender_type` enum('user','bot') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `metadata` json DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `chat_messages_chat_session_id_created_at_index` (`chat_session_id`,`created_at`),
+  KEY `chat_messages_sender_type_is_read_index` (`sender_type`,`is_read`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_sessions`
+--
+
+DROP TABLE IF EXISTS `chat_sessions`;
+CREATE TABLE IF NOT EXISTS `chat_sessions` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint UNSIGNED NOT NULL,
+  `session_type` enum('intelligent_chat','product_consultation','shopping_assistant','general') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'general',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `started_at` timestamp NOT NULL,
+  `ended_at` timestamp NULL DEFAULT NULL,
+  `metadata` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `chat_sessions_user_id_is_active_index` (`user_id`,`is_active`),
+  KEY `chat_sessions_session_type_created_at_index` (`session_type`,`created_at`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -4972,11 +5008,11 @@ CREATE TABLE IF NOT EXISTS `coupons` (
 --
 
 INSERT INTO `coupons` (`id`, `code`, `title`, `description`, `terms`, `type`, `discount`, `max_discount`, `usage_limit`, `used_count`, `category`, `banner_color`, `min_cart_value`, `starts_at`, `expires_at`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'WELCOME20', 'Welcome Offer', 'Get 20% off on your first order', 'Valid for new users only. Cannot be combined with other offers.', 'percent', 20.00, 500.00, 1000, 245, 'first_order', '#e74c3c', 999.00, '2025-09-22 05:19:39', '2025-10-22 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
-(2, 'SAVE100', 'Flat ₹100 Off', 'Save ₹100 on orders above ₹500', 'Valid on all products. Free shipping included.', 'fixed', 100.00, NULL, NULL, 1205, 'general', '#3498db', 500.00, '2025-09-22 05:19:39', '2025-10-07 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
-(3, 'MEGA50', 'Mega Sale Special', 'Flat 50% off on electronics', 'Valid on electronics category only. Limited period offer.', 'percent', 50.00, 2000.00, 500, 387, 'festival', '#f39c12', 1500.00, '2025-09-22 05:19:39', '2025-09-29 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
-(4, 'FREESHIP', 'Free Shipping', 'Get free shipping on any order', 'Valid on all orders. No minimum purchase required.', 'fixed', 49.00, NULL, NULL, 5672, 'general', '#27ae60', NULL, '2025-09-22 05:19:39', '2025-12-21 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
-(5, 'LOYALTY15', 'Loyalty Reward', '15% off for valued customers', 'Valid for customers with 5+ orders. Premium members only.', 'percent', 15.00, 750.00, 200, 89, 'loyalty', '#9b59b6', 750.00, '2025-09-22 05:19:39', '2025-11-21 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39');
+(1, 'WELCOME20', 'Welcome Offer', 'Get 20% off on your first order', 'Valid for new users only. Cannot be combined with other offers.', 'percent', 20.00, 500.00, 1000, 245, 'first_order', '#e74c3c', 999.00, '2025-09-22 05:19:39', '2026-10-31 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
+(2, 'SAVE100', 'Flat ₹100 Off', 'Save ₹100 on orders above ₹500', 'Valid on all products. Free shipping included.', 'fixed', 100.00, NULL, NULL, 1205, 'general', '#3498db', 500.00, '2025-09-22 05:19:39', '2026-10-31 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
+(3, 'MEGA50', 'Mega Sale Special', 'Flat 50% off on electronics', 'Valid on electronics category only. Limited period offer.', 'percent', 50.00, 2000.00, 500, 387, 'festival', '#f39c12', 1500.00, '2025-09-22 05:19:39', '2026-10-31 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
+(4, 'FREESHIP', 'Free Shipping', 'Get free shipping on any order', 'Valid on all orders. No minimum purchase required.', 'fixed', 49.00, NULL, NULL, 5672, 'general', '#27ae60', NULL, '2025-09-22 05:19:39', '2026-10-31 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39'),
+(5, 'LOYALTY15', 'Loyalty Reward', '15% off for valued customers', 'Valid for customers with 5+ orders. Premium members only.', 'percent', 15.00, 750.00, 200, 89, 'loyalty', '#9b59b6', 750.00, '2025-09-22 05:19:39', '2026-10-31 05:19:39', 1, '2025-09-22 05:19:39', '2025-09-22 05:19:39');
 
 -- --------------------------------------------------------
 
@@ -5054,7 +5090,15 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   `created_at` int UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   KEY `jobs_queue_index` (`queue`)
-) ENGINE=MyISAM AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `jobs`
+--
+
+INSERT INTO `jobs` (`id`, `queue`, `payload`, `attempts`, `reserved_at`, `available_at`, `created_at`) VALUES
+(34, 'default', '{\"uuid\":\"17fc3b7e-118f-4218-b784-13ad56678e0c\",\"displayName\":\"App\\\\Mail\\\\OrderConfirmation\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Mail\\\\SendQueuedMailable\",\"command\":\"O:34:\\\"Illuminate\\\\Mail\\\\SendQueuedMailable\\\":17:{s:8:\\\"mailable\\\";O:26:\\\"App\\\\Mail\\\\OrderConfirmation\\\":3:{s:5:\\\"order\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:16:\\\"App\\\\Models\\\\Order\\\";s:2:\\\"id\\\";i:17;s:9:\\\"relations\\\";a:5:{i:0;s:7:\\\"address\\\";i:1;s:12:\\\"address.city\\\";i:2;s:13:\\\"address.state\\\";i:3;s:15:\\\"address.country\\\";i:4;s:4:\\\"user\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"to\\\";a:1:{i:0;a:2:{s:4:\\\"name\\\";N;s:7:\\\"address\\\";s:19:\\\"ming438@yopmail.com\\\";}}s:6:\\\"mailer\\\";s:4:\\\"smtp\\\";}s:5:\\\"tries\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"maxExceptions\\\";N;s:17:\\\"shouldBeEncrypted\\\";b:0;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;s:3:\\\"job\\\";N;}\"},\"createdAt\":1772166017,\"delay\":null}', 0, NULL, 1772166017, 1772166017),
+(35, 'default', '{\"uuid\":\"9b5b086a-c2c0-495e-a895-1cf16afbf548\",\"displayName\":\"App\\\\Mail\\\\OrderConfirmation\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Mail\\\\SendQueuedMailable\",\"command\":\"O:34:\\\"Illuminate\\\\Mail\\\\SendQueuedMailable\\\":17:{s:8:\\\"mailable\\\";O:26:\\\"App\\\\Mail\\\\OrderConfirmation\\\":3:{s:5:\\\"order\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:16:\\\"App\\\\Models\\\\Order\\\";s:2:\\\"id\\\";i:1;s:9:\\\"relations\\\";a:5:{i:0;s:7:\\\"address\\\";i:1;s:12:\\\"address.city\\\";i:2;s:13:\\\"address.state\\\";i:3;s:15:\\\"address.country\\\";i:4;s:4:\\\"user\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"to\\\";a:1:{i:0;a:2:{s:4:\\\"name\\\";N;s:7:\\\"address\\\";s:19:\\\"ming438@yopmail.com\\\";}}s:6:\\\"mailer\\\";s:4:\\\"smtp\\\";}s:5:\\\"tries\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"maxExceptions\\\";N;s:17:\\\"shouldBeEncrypted\\\";b:0;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;s:3:\\\"job\\\";N;}\"},\"createdAt\":1772185966,\"delay\":null}', 0, NULL, 1772185966, 1772185966);
 
 -- --------------------------------------------------------
 
@@ -5089,7 +5133,7 @@ CREATE TABLE IF NOT EXISTS `migrations` (
   `migration` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=121 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=125 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `migrations`
@@ -5174,7 +5218,11 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (117, '2025_12_09_000017_create_sale_banners_table', 25),
 (118, '2025_12_09_000018_create_banner_interactions_table', 25),
 (119, '2025_12_09_000019_create_sale_orders_table', 25),
-(120, '2025_12_09_000020_create_user_sale_preferences_table', 25);
+(120, '2025_12_09_000020_create_user_sale_preferences_table', 25),
+(121, '2024_01_01_000000_create_chat_sessions_table', 26),
+(122, '2024_01_01_000001_create_chat_messages_table', 26),
+(123, '2026_02_27_000001_add_item_status_to_order_items_table', 27),
+(124, '2026_02_27_000002_add_is_return_to_products_table', 27);
 
 -- --------------------------------------------------------
 
@@ -5267,29 +5315,14 @@ CREATE TABLE IF NOT EXISTS `orders` (
   KEY `orders_shipping_carrier_id_foreign` (`shipping_carrier_id`),
   KEY `orders_shipping_method_id_foreign` (`shipping_method_id`),
   KEY `orders_stripe_payment_intent_id_index` (`stripe_payment_intent_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `address_id`, `order_number`, `total`, `discount`, `grand_total`, `coupon_code`, `coupon_title`, `coupon_discount`, `status`, `payment_method`, `payment_status`, `razorpay_order_id`, `razorpay_payment_id`, `stripe_payment_intent_id`, `razorpay_signature`, `delivery_date`, `estimated_delivery_date`, `shipping_method`, `shipping_carrier_id`, `shipping_method_id`, `time_slot`, `shipping_cost`, `package_weight`, `package_dimensions`, `requires_signature`, `delivery_instructions`, `delivery_notes`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 1, 2, 'ORD6901AC9A637F7', 3499.00, 0.00, 3524.00, NULL, NULL, 0.00, 'delivered', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-10-30', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, '{\"shipment_creation_error\": {\"error\": \"SQLSTATE[HY000]: General error: 1364 Field \'event_time\' doesn\'t have a default value (Connection: mysql, SQL: insert into `shipping_tracking_events` (`shipment_id`, `status`, `description`, `location`, `metadata`, `updated_at`, `created_at`) values (1, pending, Order confirmed and ready for pickup, Warehouse, {\\\"event_type\\\":\\\"order_confirmed\\\",\\\"automated\\\":true,\\\"source\\\":\\\"SimpleProcessShipmentJob\\\"}, 2025-11-10 13:57:13, 2025-11-10 13:57:13))\", \"failed_at\": \"2025-11-10T08:27:13.373787Z\", \"job_attempts\": 1}, \"test_shipment_processing\": {\"job_attempt\": 1, \"processed_at\": \"2025-11-07T11:30:02.887810Z\"}}', '2025-10-29 05:56:42', '2025-11-10 08:46:39'),
-(2, 1, 2, 'ORD6901EA144CFAB', 9498.00, 0.00, 9523.00, NULL, NULL, 0.00, 'pending', 'razorpay', 'pending', 'order_RZFl9AZTa4PPF9', NULL, NULL, NULL, '2025-10-30', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, '\"{\\\"razorpay_order_data\\\":{\\\"amount\\\":952300,\\\"amount_due\\\":952300,\\\"amount_paid\\\":0,\\\"attempts\\\":0,\\\"created_at\\\":1761733142,\\\"currency\\\":\\\"INR\\\",\\\"entity\\\":\\\"order\\\",\\\"id\\\":\\\"order_RZFl9AZTa4PPF9\\\",\\\"notes\\\":{\\\"order_id\\\":2,\\\"user_email\\\":\\\"jak@example.com\\\",\\\"user_id\\\":1,\\\"user_phone\\\":\\\"7845124578\\\"},\\\"offer_id\\\":null,\\\"receipt\\\":\\\"ORD6901EA144CFAB\\\",\\\"status\\\":\\\"created\\\"},\\\"payment_initiated_at\\\":\\\"2025-10-29T10:19:03.145502Z\\\"}\"', '2025-10-29 10:19:00', '2025-10-29 10:19:03'),
-(3, 1, 2, 'ORD6901EE1F67495', 9498.00, 0.00, 9523.00, NULL, NULL, 0.00, 'pending', 'razorpay', 'pending', 'order_RZG3MKv4p5PAfp', NULL, NULL, NULL, '2025-10-30', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, 'khdfsdfsfd', NULL, '\"{\\\"razorpay_order_data\\\":{\\\"amount\\\":952300,\\\"amount_due\\\":952300,\\\"amount_paid\\\":0,\\\"attempts\\\":0,\\\"created_at\\\":1761734177,\\\"currency\\\":\\\"INR\\\",\\\"entity\\\":\\\"order\\\",\\\"id\\\":\\\"order_RZG3MKv4p5PAfp\\\",\\\"notes\\\":{\\\"order_id\\\":3,\\\"user_email\\\":\\\"jak@example.com\\\",\\\"user_id\\\":1,\\\"user_phone\\\":\\\"7845124578\\\"},\\\"offer_id\\\":null,\\\"receipt\\\":\\\"ORD6901EE1F67495\\\",\\\"status\\\":\\\"created\\\"},\\\"payment_initiated_at\\\":\\\"2025-10-29T10:36:17.584747Z\\\"}\"', '2025-10-29 10:36:15', '2025-10-29 10:36:17'),
-(4, 1, 2, 'ORD6901EEFEECED0', 9498.00, 0.00, 9523.00, NULL, NULL, 0.00, 'pending', 'razorpay', 'pending', 'order_RZG7GheZzNNT6u', NULL, NULL, NULL, '2025-10-30', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, 'sdfdfsf', NULL, '\"{\\\"razorpay_order_data\\\":{\\\"amount\\\":952300,\\\"amount_due\\\":952300,\\\"amount_paid\\\":0,\\\"attempts\\\":0,\\\"created_at\\\":1761734399,\\\"currency\\\":\\\"INR\\\",\\\"entity\\\":\\\"order\\\",\\\"id\\\":\\\"order_RZG7GheZzNNT6u\\\",\\\"notes\\\":{\\\"order_id\\\":4,\\\"user_email\\\":\\\"jak@example.com\\\",\\\"user_id\\\":1,\\\"user_phone\\\":\\\"7845124578\\\"},\\\"offer_id\\\":null,\\\"receipt\\\":\\\"ORD6901EEFEECED0\\\",\\\"status\\\":\\\"created\\\"},\\\"payment_initiated_at\\\":\\\"2025-10-29T10:39:59.147960Z\\\"}\"', '2025-10-29 10:39:58', '2025-10-29 10:39:59'),
-(5, 1, 2, 'ORD6901EF63AB0A6', 9498.00, 0.00, 9523.00, NULL, NULL, 0.00, 'confirmed', 'razorpay', 'paid', 'order_RZG92cFd8F8Qti', 'pay_RZG9JRZXJktetj', NULL, 'ed56d162e75c3b06f9377520246ec7b74bccda22c6587dc0bad830b42776f0ea', '2025-10-30', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, '\"{\\\"razorpay_payment_data\\\":{\\\"id\\\":\\\"pay_RZG9JRZXJktetj\\\",\\\"entity\\\":\\\"payment\\\",\\\"amount\\\":952300,\\\"currency\\\":\\\"INR\\\",\\\"status\\\":\\\"captured\\\",\\\"order_id\\\":\\\"order_RZG92cFd8F8Qti\\\",\\\"invoice_id\\\":null,\\\"international\\\":false,\\\"method\\\":\\\"card\\\",\\\"amount_refunded\\\":0,\\\"refund_status\\\":null,\\\"captured\\\":true,\\\"description\\\":\\\"Payment for Order #ORD6901EF63AB0A6\\\",\\\"card_id\\\":\\\"card_RZG9JdfcabAr6l\\\",\\\"card\\\":{\\\"id\\\":\\\"card_RZG9JdfcabAr6l\\\",\\\"entity\\\":\\\"card\\\",\\\"name\\\":\\\"\\\",\\\"last4\\\":\\\"8228\\\",\\\"network\\\":\\\"MasterCard\\\",\\\"type\\\":\\\"credit\\\",\\\"issuer\\\":\\\"HDFC\\\",\\\"international\\\":false,\\\"emi\\\":true,\\\"sub_type\\\":\\\"business\\\",\\\"token_iin\\\":null},\\\"bank\\\":null,\\\"wallet\\\":null,\\\"vpa\\\":null,\\\"email\\\":\\\"jak@example.com\\\",\\\"contact\\\":\\\"+917845124578\\\",\\\"notes\\\":{\\\"order_id\\\":5,\\\"user_id\\\":1,\\\"user_email\\\":\\\"jak@example.com\\\",\\\"user_phone\\\":\\\"7845124578\\\"},\\\"fee\\\":33711,\\\"tax\\\":5142,\\\"error_code\\\":null,\\\"error_description\\\":null,\\\"error_source\\\":null,\\\"error_step\\\":null,\\\"error_reason\\\":null,\\\"acquirer_data\\\":{\\\"auth_code\\\":\\\"138727\\\"},\\\"created_at\\\":1761734516},\\\"payment_completed_at\\\":\\\"2025-10-29T10:42:15.165792Z\\\",\\\"payment_method_details\\\":\\\"card\\\"}\"', '2025-10-29 10:41:39', '2025-10-29 10:42:15'),
-(6, 1, 2, 'ORD690DB9F657D30', 999.00, 0.00, 1024.00, NULL, NULL, 0.00, 'delivered', 'cod', 'unpaid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, NULL, '2025-11-07 09:20:54', '2025-11-10 08:24:51'),
-(7, 1, 2, 'ORD690DC1CC642D6', 5999.00, 0.00, 6099.00, NULL, NULL, 0.00, 'confirmed', 'cod', 'unpaid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'express', NULL, NULL, '09:00-12:00', 100.00, NULL, NULL, 0, NULL, NULL, '{\"shipment_creation_error\": {\"error\": \"foreach() argument must be of type array|object, null given\", \"failed_at\": \"2025-11-10T08:25:27.787131Z\", \"job_attempts\": 1}}', '2025-11-07 09:54:20', '2025-11-10 08:25:27'),
-(8, 1, 2, 'ORD690DC36D88C11', 5999.00, 0.00, 6049.00, NULL, NULL, 0.00, 'processing', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'morning', NULL, NULL, '06:00-09:00', 50.00, NULL, NULL, 0, NULL, NULL, NULL, '2025-11-07 10:01:17', '2025-11-07 10:15:24'),
-(9, 1, 2, 'ORD690DD3B38FBCB', 899.00, 0.00, 999.00, NULL, NULL, 0.00, 'confirmed', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'express', NULL, NULL, '09:00-12:00', 100.00, NULL, NULL, 0, NULL, NULL, '{\"cod_confirmation\": {\"notes\": null, \"confirmed_at\": \"2025-11-07T11:19:33.771788Z\", \"confirmed_by\": 1}}', '2025-11-07 11:10:43', '2025-11-07 11:19:33'),
-(10, 1, 2, 'ORD690DDB58E460D', 4999.00, 0.00, 5074.00, NULL, NULL, 0.00, 'delivered', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'midnight', NULL, NULL, '21:00-23:59', 75.00, NULL, NULL, 0, NULL, NULL, '{\"refund_status\": {\"amount\": null, \"method\": \"upi_transfer\", \"status\": \"completed\", \"updated_at\": \"2025-11-11T12:39:38.236135Z\", \"updated_by\": 1, \"admin_notes\": \"Refund marked as completed by admin\", \"upi_details\": {\"upi_id\": \"925862983@upi\", \"holder_name\": \"test\"}, \"completed_at\": \"2025-11-11T12:39:38.240475Z\", \"submitted_at\": \"2025-11-11T12:10:05.728129Z\", \"transaction_id\": \"925862983@upi\", \"expected_timeline\": \"Instant to 24 hours\"}, \"return_request\": {\"reason\": \"Product defective - testing return functionality\", \"status\": \"completed\", \"requested_at\": \"2025-11-07 18:21:05\", \"requested_by\": 1, \"status_history\": [{\"notes\": null, \"status\": \"approved\", \"updated_at\": \"2025-11-11 15:58:07\", \"updated_by\": 1}, {\"notes\": null, \"status\": \"picked_up\", \"updated_at\": \"2025-11-11 16:00:23\", \"updated_by\": 1}, {\"notes\": null, \"status\": \"completed\", \"updated_at\": \"2025-11-11 16:01:14\", \"updated_by\": 1}], \"admin_updated_at\": \"2025-11-11 16:01:14\", \"admin_updated_by\": 1}, \"cod_confirmation\": {\"notes\": \"confirm\", \"confirmed_at\": \"2025-11-07T11:46:21.959388Z\", \"confirmed_by\": 1}, \"exchange_request\": {\"reason\": \"Wrong size ordered\", \"status\": \"pending\", \"requested_at\": \"2025-11-07 18:21:05\", \"requested_by\": 1, \"exchange_reason\": \"Need larger size\"}, \"minimal_shipment_processing\": {\"job_type\": \"minimal_localhost_test\", \"processed_at\": \"2025-11-07T11:51:16.593024Z\"}}', '2025-11-07 11:43:20', '2025-11-11 12:39:38'),
-(11, 1, 2, 'ORD690DDE446C577', 1299.00, 0.00, 1349.00, NULL, NULL, 0.00, 'delivered', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-11-08', NULL, 'morning', NULL, NULL, '06:00-09:00', 50.00, NULL, NULL, 0, NULL, NULL, '{\"return_request\": {\"items\": [\"27\"], \"reason\": \"defective\", \"status\": \"approved\", \"details\": \"damage\", \"requested_at\": \"2025-11-10 18:17:44\", \"requested_by\": 1, \"status_history\": [{\"notes\": null, \"status\": \"approved\", \"updated_at\": \"2025-11-11 15:58:04\", \"updated_by\": 1}], \"admin_updated_at\": \"2025-11-11 15:58:04\", \"admin_updated_by\": 1}, \"cod_confirmation\": {\"notes\": \"confirm\", \"confirmed_at\": \"2025-11-07T11:56:53.614125Z\", \"confirmed_by\": 1}, \"minimal_shipment_processing\": {\"job_type\": \"minimal_localhost_test\", \"processed_at\": \"2025-11-07T11:56:56.453076Z\"}}', '2025-11-07 11:55:48', '2025-11-11 10:28:04'),
-(12, 1, 2, 'ORD6911A65CCBE44', 499.00, 0.00, 549.00, NULL, NULL, 0.00, 'delivered', 'cod', 'paid', NULL, NULL, NULL, NULL, '2025-11-11', NULL, 'morning', NULL, NULL, '06:00-09:00', 50.00, NULL, NULL, 0, NULL, NULL, '{\"cod_confirmation\": {\"confirmed_at\": \"2025-11-10T08:55:35.027565Z\", \"confirmed_by\": 1}, \"minimal_shipment_processing\": {\"job_type\": \"minimal_localhost_test\", \"processed_at\": \"2025-11-10T08:55:36.733402Z\"}}', '2025-11-10 08:46:20', '2025-11-10 08:57:21'),
-(13, 1, 2, 'ORD6911AE340CF5D', 3999.00, 0.00, 4099.00, NULL, NULL, 0.00, 'cancelled', 'cod', 'pending', NULL, NULL, NULL, NULL, '2025-11-11', NULL, 'express', NULL, NULL, '09:00-12:00', 100.00, NULL, NULL, 0, NULL, NULL, '{\"cancellation\": {\"reason\": \"test\", \"cancelled_at\": \"2025-11-10T09:23:03.232803Z\", \"cancelled_by\": 1}}', '2025-11-10 09:19:48', '2025-11-10 09:23:03'),
-(14, 1, 2, 'ORD6911DA43B0932', 899.00, 0.00, 999.00, NULL, NULL, 0.00, 'cancelled', 'cod', 'pending', NULL, NULL, NULL, NULL, '2025-11-11', NULL, 'express', NULL, NULL, '09:00-12:00', 100.00, NULL, NULL, 0, NULL, NULL, NULL, '2025-11-10 12:27:47', '2025-11-10 12:39:05'),
-(15, 1, 2, 'ORD691D97B93F4A2', 3999.00, 0.00, 4024.00, NULL, NULL, 0.00, 'pending', 'stripe', 'pending', NULL, NULL, NULL, NULL, '2025-11-20', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, NULL, '2025-11-19 10:11:05', '2025-11-19 10:11:05'),
-(16, 1, 2, 'ORD691DA2AC2995E', 3999.00, 0.00, 4024.00, NULL, NULL, 0.00, 'pending', 'stripe', 'pending', NULL, NULL, NULL, NULL, '2025-11-20', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, NULL, '2025-11-19 10:57:48', '2025-11-19 10:57:48');
+(1, 1, 2, 'ORD69A1696B4A1F7', 1798.00, 0.00, 1823.00, NULL, NULL, 0.00, 'cancelled', 'cod', 'pending', NULL, NULL, NULL, NULL, '2026-03-01', NULL, 'standard', NULL, NULL, '12:00-17:00', 25.00, NULL, NULL, 0, NULL, NULL, NULL, '2026-02-27 09:52:43', '2026-02-27 10:10:09');
 
 -- --------------------------------------------------------
 
@@ -5306,50 +5339,23 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   `price` decimal(12,2) NOT NULL,
   `quantity` int NOT NULL,
   `total` decimal(12,2) NOT NULL,
+  `item_status` enum('pending','confirmed','shipped','delivered','cancelled','return_requested','returned') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `cancellation_reason` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cancelled_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `order_items_order_id_foreign` (`order_id`),
   KEY `order_items_product_id_foreign` (`product_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `order_items`
 --
 
-INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `product_name`, `price`, `quantity`, `total`, `created_at`, `updated_at`) VALUES
-(1, 1, 89, 'Smart Heater', 24999.00, 3, 74997.00, '2025-10-06 11:25:11', '2025-10-06 11:25:11'),
-(2, 1, 83, 'Smart Refrigerator', 59999.00, 3, 179997.00, '2025-10-06 11:25:11', '2025-10-06 11:25:11'),
-(3, 1, 73, '3D Printer', 14999.00, 1, 14999.00, '2025-10-06 11:25:11', '2025-10-06 11:25:11'),
-(4, 2, 1, 'Red T-Shirt', 499.00, 2, 499.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(5, 2, 2, 'Blue Jeans', 1199.00, 3, 3597.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(6, 2, 3, 'Sneakers', 2199.00, 2, 2199.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(7, 3, 1, 'Red T-Shirt', 499.00, 3, 499.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(8, 3, 2, 'Blue Jeans', 1199.00, 2, 1199.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(9, 4, 1, 'Red T-Shirt', 499.00, 3, 1497.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(10, 5, 1, 'Red T-Shirt', 499.00, 2, 499.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(11, 6, 1, 'Red T-Shirt', 499.00, 3, 499.00, '2025-10-06 11:47:18', '2025-10-06 11:47:18'),
-(12, 7, 100, 'Smart Plant Monitor', 1499.00, 1, 1499.00, '2025-10-28 11:02:54', '2025-10-28 11:02:54'),
-(13, 1, 10, 'Sports Watch', 3499.00, 1, 3499.00, '2025-10-29 05:56:42', '2025-10-29 05:56:42'),
-(14, 2, 10, 'Sports Watch', 3499.00, 1, 3499.00, '2025-10-29 10:19:00', '2025-10-29 10:19:00'),
-(15, 2, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-10-29 10:19:00', '2025-10-29 10:19:00'),
-(16, 3, 10, 'Sports Watch', 3499.00, 1, 3499.00, '2025-10-29 10:36:15', '2025-10-29 10:36:15'),
-(17, 3, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-10-29 10:36:15', '2025-10-29 10:36:15'),
-(18, 4, 10, 'Sports Watch', 3499.00, 1, 3499.00, '2025-10-29 10:39:58', '2025-10-29 10:39:58'),
-(19, 4, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-10-29 10:39:58', '2025-10-29 10:39:58'),
-(20, 5, 10, 'Sports Watch', 3499.00, 1, 3499.00, '2025-10-29 10:41:39', '2025-10-29 10:41:39'),
-(21, 5, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-10-29 10:41:39', '2025-10-29 10:41:39'),
-(22, 6, 27, 'Basketball', 999.00, 1, 999.00, '2025-11-07 09:20:54', '2025-11-07 09:20:54'),
-(23, 7, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-11-07 09:54:20', '2025-11-07 09:54:20'),
-(24, 8, 9, 'Winter Coat', 5999.00, 1, 5999.00, '2025-11-07 10:01:17', '2025-11-07 10:01:17'),
-(25, 9, 24, 'Golf Polo', 899.00, 1, 899.00, '2025-11-07 11:10:43', '2025-11-07 11:10:43'),
-(26, 10, 60, 'VR Headset', 4999.00, 1, 4999.00, '2025-11-07 11:43:20', '2025-11-07 11:43:20'),
-(27, 11, 11, 'Sunglasses', 1299.00, 1, 1299.00, '2025-11-07 11:55:48', '2025-11-07 11:55:48'),
-(28, 12, 13, 'Baseball Cap', 499.00, 1, 499.00, '2025-11-10 08:46:20', '2025-11-10 08:46:20'),
-(29, 13, 58, 'Action Camera', 3999.00, 1, 3999.00, '2025-11-10 09:19:48', '2025-11-10 09:19:48'),
-(30, 14, 12, 'Backpack', 899.00, 1, 899.00, '2025-11-10 12:27:47', '2025-11-10 12:27:47'),
-(31, 15, 58, 'Action Camera', 3999.00, 1, 3999.00, '2025-11-19 10:11:05', '2025-11-19 10:11:05'),
-(32, 16, 58, 'Action Camera', 3999.00, 1, 3999.00, '2025-11-19 10:57:48', '2025-11-19 10:57:48');
+INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `product_name`, `price`, `quantity`, `total`, `item_status`, `cancellation_reason`, `cancelled_at`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 'Red T-Shirt', 499.00, 1, 499.00, 'cancelled', 'Cancelled by customer', '2026-02-27 10:09:44', '2026-02-27 09:52:43', '2026-02-27 10:09:44'),
+(2, 1, 30, 'Badminton Racket', 1299.00, 1, 1299.00, 'cancelled', 'Cancelled by customer', '2026-02-27 10:10:09', '2026-02-27 09:52:43', '2026-02-27 10:10:09');
 
 -- --------------------------------------------------------
 
@@ -5505,7 +5511,7 @@ CREATE TABLE IF NOT EXISTS `payments` (
   KEY `payments_status_payment_status_index` (`status`,`payment_status`),
   KEY `payments_user_id_created_at_index` (`user_id`,`created_at`),
   KEY `payments_paid_at_index` (`paid_at`)
-) ENGINE=MyISAM AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `payments`
@@ -5524,7 +5530,9 @@ INSERT INTO `payments` (`id`, `order_id`, `user_id`, `payment_id`, `gateway`, `g
 (10, 11, 1, 'PAY_HXMQO2XHRFE4LWQZ', 'cod', NULL, NULL, NULL, 'pending', 1349.00, 'INR', 'cod', 'cash_on_delivery', 'paid', NULL, NULL, '{\"cod_confirmation\": {\"confirmed_at\": \"2025-11-07T11:56:53.623200Z\", \"confirmed_by\": 1}}', NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2025-11-07 11:55:48', '2025-11-07 11:56:53'),
 (11, 12, 1, 'PAY_M9J14SINIXHAEAXI', 'cod', NULL, NULL, NULL, 'pending', 549.00, 'INR', 'cod', 'cash_on_delivery', 'paid', NULL, NULL, '{\"cod_confirmation\": {\"confirmed_at\": \"2025-11-10T08:55:35.075286Z\", \"confirmed_by\": 1}}', NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2025-11-10 08:46:20', '2025-11-10 08:55:35'),
 (12, 13, 1, 'PAY_H8O1KJW1NSJOZBGR', 'cod', NULL, NULL, NULL, 'pending', 4099.00, 'INR', 'cod', 'cash_on_delivery', 'pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2025-11-10 09:19:48', '2025-11-10 09:19:48'),
-(13, 14, 1, 'PAY_O3B8OH4CEOF2ZHA6', 'cod', NULL, NULL, NULL, 'pending', 999.00, 'INR', 'cod', 'cash_on_delivery', 'pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2025-11-10 12:27:47', '2025-11-10 12:27:47');
+(13, 14, 1, 'PAY_O3B8OH4CEOF2ZHA6', 'cod', NULL, NULL, NULL, 'pending', 999.00, 'INR', 'cod', 'cash_on_delivery', 'pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2025-11-10 12:27:47', '2025-11-10 12:27:47'),
+(14, 17, 1, 'PAY_ICAH5SHIJCHSLJBR', 'cod', NULL, NULL, NULL, 'pending', 19922.00, 'INR', 'cod', 'cash_on_delivery', 'pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2026-02-27 04:20:14', '2026-02-27 04:20:14'),
+(15, 1, 1, 'PAY_YXAAFDKHLD7ZDN7A', 'cod', NULL, NULL, NULL, 'pending', 1823.00, 'INR', 'cod', 'cash_on_delivery', 'pending', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0', '{\"city\": \"Ahmedabad\", \"name\": \"jak\", \"email\": \"ming438@yopmail.com\", \"phone\": \"7845124578\", \"state\": \"Gujarat\", \"country\": \"India\", \"postal_code\": \"382481\", \"address_line_1\": \"test\", \"address_line_2\": \"Bhagvat\"}', '2026-02-27 09:52:43', '2026-02-27 09:52:43');
 
 -- --------------------------------------------------------
 
@@ -23016,6 +23024,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   `review_count` int NOT NULL DEFAULT '0',
   `image` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '1',
+  `is_return` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Whether this product supports cancellation and return',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -23030,107 +23039,107 @@ CREATE TABLE IF NOT EXISTS `products` (
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `name`, `slug`, `description`, `category_id`, `price`, `average_rating`, `review_count`, `image`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'Red T-Shirt', 'red-t-shirt', 'A bright red t-shirt made from 100% cotton.', 1, 499.00, NULL, 0, 'https://placehold.co/400?text=Red+TeeShirt', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(2, 'Blue Jeans', 'blue-jeans', 'Classic blue jeans with a modern fit.', 2, 1199.00, NULL, 0, 'https://placehold.co/400?text=Blue+Jeans', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(3, 'Sneakers', 'sneakers', 'Comfortable sneakers for everyday wear.', 3, 2199.00, NULL, 0, 'https://placehold.co/400?text=Sneakers', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(4, 'Leather Jacket', 'leather-jacket', 'Stylish leather jacket for a trendy look.', 4, 4999.00, NULL, 0, 'https://placehold.co/400?text=Leather+Jacket', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(5, 'Wool Sweater', 'wool-sweater', 'Warm wool sweater for chilly days.', 5, 1599.00, NULL, 0, 'https://placehold.co/400?text=Wool+Sweater', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(6, 'Running Shoes', 'running-shoes', 'Lightweight running shoes for a comfortable stride.', 3, 2499.00, NULL, 0, 'https://placehold.co/400?text=Running+Shoes', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(7, 'Casual Shirt', 'casual-shirt', 'Comfortable casual shirt for everyday wear.', 2, 899.00, NULL, 0, 'https://placehold.co/400?text=Casual+Shirt', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(8, 'Formal Pants', 'formal-pants', 'Elegant formal pants for a polished look.', 4, 1299.00, NULL, 0, 'https://placehold.co/400?text=Formal+Pants', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(9, 'Winter Coat', 'winter-coat', 'Warm winter coat to keep you cozy.', 4, 5999.00, NULL, 0, 'https://placehold.co/400?text=Winter+Coat', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(10, 'Sports Watch', 'sports-watch', 'Durable sports watch for active lifestyles.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Sports+Watch', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(11, 'Sunglasses', 'sunglasses', 'Stylish sunglasses for sunny days.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Sunglasses', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(12, 'Backpack', 'backpack', 'Spacious backpack for everyday use.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Backpack', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(13, 'Baseball Cap', 'baseball-cap', 'Classic baseball cap for a casual look.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Baseball+Cap', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(14, 'Flip Flops', 'flip-flops', 'Comfortable flip flops for warm weather.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Flip+Flops', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(15, 'Hiking Boots', 'hiking-boots', 'Sturdy hiking boots for outdoor adventures.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Boots', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(16, 'Graphic Hoodie', 'graphic-hoodie', 'Stylish graphic hoodie for a trendy look.', 4, 1799.00, NULL, 0, 'https://placehold.co/400?text=Graphic+Hoodie', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(17, 'Denim Jacket', 'denim-jacket', 'Classic denim jacket for a timeless look.', 4, 2499.00, NULL, 0, 'https://placehold.co/400?text=Denim+Jacket', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(18, 'Cargo Shorts', 'cargo-shorts', 'Comfortable cargo shorts for warm weather.', 4, 899.00, NULL, 0, 'https://placehold.co/400?text=Cargo+Shorts', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(19, 'Wristband', 'wristband', 'Stylish wristband for a sporty look.', 5, 199.00, NULL, 0, 'https://placehold.co/400?text=Wristband', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(20, 'Beanie', 'beanie', 'Warm beanie for cold weather.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Beanie', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(21, 'Running Shorts', 'running-shorts', 'Lightweight running shorts for comfort.', 5, 699.00, NULL, 0, 'https://placehold.co/400?text=Running+Shorts', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(22, 'Yoga Pants', 'yoga-pants', 'Flexible yoga pants for ultimate comfort.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Yoga+Pants', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(23, 'Cycling Jersey', 'cycling-jersey', 'High-performance cycling jersey for avid cyclists.', 5, 1599.00, NULL, 0, 'https://placehold.co/400?text=Cycling+Jersey', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(24, 'Golf Polo', 'golf-polo', 'Classic golf polo for a polished look.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Golf+Polo', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(25, 'Swim Trunks', 'swim-trunks', 'Stylish swim trunks for a day at the beach.', 5, 699.00, NULL, 0, 'https://placehold.co/400?text=Swim+Trunks', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(26, 'Tennis Racket', 'tennis-racket', 'High-quality tennis racket for competitive play.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Tennis+Racket', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(27, 'Basketball', 'basketball', 'Official size basketball for all ages.', 5, 999.00, NULL, 0, 'https://placehold.co/400?text=Basketball', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(28, 'Soccer Ball', 'soccer-ball', 'High-quality soccer ball for practice and play.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Soccer+Ball', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(29, 'Volleyball', 'volleyball', 'Durable volleyball for indoor and outdoor play.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=Volleyball', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(30, 'Badminton Racket', 'badminton-racket', 'Lightweight badminton racket for quick volleys.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Badminton+Racket', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(31, 'Table Tennis Paddle', 'table-tennis-paddle', 'High-quality table tennis paddle for competitive play.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Table+Tennis+Paddle', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(32, 'Golf Balls', 'golf-balls', 'High-quality golf balls for accurate shots.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Golf+Balls', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(33, 'Fishing Rod', 'fishing-rod', 'Durable fishing rod for all anglers.', 4, 1999.00, NULL, 0, 'https://placehold.co/400?text=Fishing+Rod', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(34, 'Camping Tent', 'camping-tent', 'Spacious camping tent for outdoor adventures.', 4, 4999.00, NULL, 0, 'https://placehold.co/400?text=Camping+Tent', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(35, 'Hiking Backpack', 'hiking-backpack', 'Durable hiking backpack for all your gear.', 4, 1999.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Backpack', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(36, 'Portable Grill', 'portable-grill', 'Compact portable grill for outdoor cooking.', 4, 3499.00, NULL, 0, 'https://placehold.co/400?text=Portable+Grill', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(37, 'Camping Chair', 'camping-chair', 'Comfortable camping chair for outdoor relaxation.', 4, 799.00, NULL, 0, 'https://placehold.co/400?text=Camping+Chair', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(38, 'Outdoor Blanket', 'outdoor-blanket', 'Cozy outdoor blanket for picnics and camping.', 4, 499.00, NULL, 0, 'https://placehold.co/400?text=Outdoor+Blanket', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(39, 'Fishing Tackle Box', 'fishing-tackle-box', 'Durable fishing tackle box for all your gear.', 4, 899.00, NULL, 0, 'https://placehold.co/400?text=Fishing+Tackle+Box', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(40, 'Hiking Poles', 'hiking-poles', 'Lightweight and durable hiking poles for stability.', 4, 1299.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Poles', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(41, 'Portable Power Bank', 'portable-power-bank', 'High-capacity portable power bank for charging devices on the go.', 5, 599.00, NULL, 0, 'https://placehold.co/400?text=Portable+Power+Bank', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(42, 'Travel Pillow', 'travel-pillow', 'Comfortable travel pillow for long journeys.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Travel+Pillow', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(43, 'Water Bottle', 'water-bottle', 'Durable water bottle for hydration on the go.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Water+Bottle', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(44, 'Insulated Cooler', 'insulated-cooler', 'High-performance cooler for keeping food and drinks cold.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Insulated+Cooler', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(45, 'Multi-tool', 'multi-tool', 'Versatile multi-tool for all your outdoor needs.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Multi-tool', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(46, 'First Aid Kit', 'first-aid-kit', 'Essential first aid kit for outdoor emergencies.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=First+Aid+Kit', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(47, 'Portable Speaker', 'portable-speaker', 'Compact portable speaker for outdoor use.', 5, 1499.00, NULL, 0, 'https://placehold.co/400?text=Portable+Speaker', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(48, 'Bluetooth Headphones', 'bluetooth-headphones', 'Wireless Bluetooth headphones with noise cancellation.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Bluetooth+Headphones', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(49, 'Smartphone Case', 'smartphone-case', 'Durable smartphone case for protection on the go.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Smartphone+Case', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(50, 'Laptop Sleeve', 'laptop-sleeve', 'Protective laptop sleeve for on-the-go professionals.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Laptop+Sleeve', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(51, 'Wireless Charger', 'wireless-charger', 'Fast wireless charger for compatible devices.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Wireless+Charger', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(52, 'USB Flash Drive', 'usb-flash-drive', 'Compact USB flash drive for data storage.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=USB+Flash+Drive', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(53, 'External Hard Drive', 'external-hard-drive', 'High-capacity external hard drive for data storage.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=External+Hard+Drive', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(54, 'Smartwatch', 'smartwatch', 'Feature-rich smartwatch for fitness and connectivity.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smartwatch', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(55, 'Fitness Tracker', 'fitness-tracker', 'Advanced fitness tracker for health monitoring.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Fitness+Tracker', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(56, 'E-Reader', 'e-reader', 'Portable e-reader for book lovers.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=E-Reader', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(57, 'Digital Camera', 'digital-camera', 'High-resolution digital camera for photography enthusiasts.', 5, 5999.00, NULL, 0, 'https://placehold.co/400?text=Digital+Camera', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(58, 'Action Camera', 'action-camera', 'Compact action camera for adventure seekers.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Action+Camera', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(59, 'Drone', 'drone', 'High-performance drone for aerial photography.', 5, 7999.00, NULL, 0, 'https://placehold.co/400?text=Drone', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(60, 'VR Headset', 'vr-headset', 'Immersive VR headset for gaming and entertainment.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=VR+Headset', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(61, 'Gaming Console', 'gaming-console', 'Next-gen gaming console for immersive gameplay.', 5, 29999.00, NULL, 0, 'https://placehold.co/400?text=Gaming+Console', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(62, 'Wireless Mouse', 'wireless-mouse', 'Ergonomic wireless mouse for comfortable navigation.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=Wireless+Mouse', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(63, 'Mechanical Keyboard', 'mechanical-keyboard', 'High-quality mechanical keyboard for typing enthusiasts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Mechanical+Keyboard', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(64, 'Monitor Stand', 'monitor-stand', 'Ergonomic monitor stand for better viewing angles.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Monitor+Stand', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(65, 'Desk Organizer', 'desk-organizer', 'Stylish desk organizer for a clutter-free workspace.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Desk+Organizer', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(66, 'Cable Management Sleeve', 'cable-management-sleeve', 'Flexible cable management sleeve for a tidy setup.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Cable+Management+Sleeve', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(67, 'Laptop Stand', 'laptop-stand', 'Adjustable laptop stand for better ergonomics.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Laptop+Stand', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(68, 'Portable Monitor', 'portable-monitor', 'Compact portable monitor for on-the-go productivity.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=Portable+Monitor', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(69, 'Webcam', 'webcam', 'High-definition webcam for video conferencing.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Webcam', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(70, 'Microphone', 'microphone', 'Professional microphone for clear audio recording.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Microphone', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(71, 'Graphics Tablet', 'graphics-tablet', 'High-precision graphics tablet for digital artists.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Graphics+Tablet', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(72, 'Drawing Pen', 'drawing-pen', 'Precision drawing pen for artists and designers.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Drawing+Pen', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(73, '3D Printer', '3d-printer', 'High-resolution 3D printer for creative projects.', 5, 14999.00, NULL, 0, 'https://placehold.co/400?text=3D+Printer', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(74, 'Smart Home Hub', 'smart-home-hub', 'Central hub for smart home devices.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Home+Hub', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(75, 'Smart Light Bulb', 'smart-light-bulb', 'Energy-efficient smart light bulb with adjustable brightness.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Smart+Light+Bulb', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(76, 'Smart Thermostat', 'smart-thermostat', 'Smart thermostat for efficient temperature control.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Thermostat', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(77, 'Smart Lock', 'smart-lock', 'Smart lock for keyless home entry.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Lock', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(78, 'Smart Security Camera', 'smart-security-camera', 'Smart security camera with motion detection.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Security+Camera', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(79, 'Smart Smoke Detector', 'smart-smoke-detector', 'Smart smoke detector with mobile alerts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Smoke+Detector', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(80, 'Smart Plug', 'smart-plug', 'Smart plug for remote control of devices.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Plug', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(81, 'Smart Air Purifier', 'smart-air-purifier', 'Smart air purifier with HEPA filtration.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Purifier', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(82, 'Smart Coffee Maker', 'smart-coffee-maker', 'Smart coffee maker with app control.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Coffee+Maker', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(83, 'Smart Refrigerator', 'smart-refrigerator', 'Smart refrigerator with touch screen.', 5, 59999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Refrigerator', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(84, 'Smart Washing Machine', 'smart-washing-machine', 'Smart washing machine with AI-powered cycles.', 5, 39999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Washing+Machine', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(85, 'Smart Oven', 'smart-oven', 'Smart oven with voice control.', 5, 49999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Oven', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(86, 'Smart Dishwasher', 'smart-dishwasher', 'Smart dishwasher with energy-efficient cycles.', 5, 44999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Dishwasher', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(87, 'Smart Vacuum Cleaner', 'smart-vacuum-cleaner', 'Smart vacuum cleaner with automatic dirt detection.', 5, 29999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Vacuum+Cleaner', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(88, 'Smart Air Conditioner', 'smart-air-conditioner', 'Smart air conditioner with energy-saving features.', 5, 59999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Conditioner', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(89, 'Smart Heater', 'smart-heater', 'Smart heater with adjustable temperature settings.', 5, 24999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Heater', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(90, 'Smart Humidifier', 'smart-humidifier', 'Smart humidifier with adjustable mist levels.', 5, 19999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Humidifier', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(91, 'Smart Dehumidifier', 'smart-dehumidifier', 'Smart dehumidifier with energy-efficient operation.', 5, 24999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Dehumidifier', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(92, 'Smart Air Quality Monitor', 'smart-air-quality-monitor', 'Smart air quality monitor with real-time feedback.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Quality+Monitor', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(93, 'Smart Water Leak Detector', 'smart-water-leak-detector', 'Smart water leak detector with mobile alerts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Water+Leak+Detector', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(94, 'Smart Garage Door Opener', 'smart-garage-door-opener', 'Smart garage door opener with remote access.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Garage+Door+Opener', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(95, 'Smart Irrigation System', 'smart-irrigation-system', 'Smart irrigation system with weather-based scheduling.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Irrigation+System', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(96, 'Smart Pet Feeder', 'smart-pet-feeder', 'Smart pet feeder with automatic portion control.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Feeder', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(97, 'Smart Pet Camera', 'smart-pet-camera', 'Smart pet camera with live streaming and two-way audio.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Camera', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(98, 'Smart Pet Door', 'smart-pet-door', 'Smart pet door with automatic locking and unlocking.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Door', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(99, 'Smart Pet Tracker', 'smart-pet-tracker', 'Smart pet tracker with GPS and activity monitoring.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Tracker', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
-(100, 'Smart Plant Monitor', 'smart-plant-monitor', 'Smart plant monitor with soil moisture sensing.', 5, 1499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Plant+Monitor', 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44');
+INSERT INTO `products` (`id`, `name`, `slug`, `description`, `category_id`, `price`, `average_rating`, `review_count`, `image`, `status`, `is_return`, `created_at`, `updated_at`) VALUES
+(1, 'Red T-Shirt', 'red-t-shirt', 'A bright red t-shirt made from 100% cotton.', 1, 499.00, NULL, 0, 'https://placehold.co/400?text=Red+TeeShirt', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(2, 'Blue Jeans', 'blue-jeans', 'Classic blue jeans with a modern fit.', 2, 1199.00, NULL, 0, 'https://placehold.co/400?text=Blue+Jeans', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(3, 'Sneakers', 'sneakers', 'Comfortable sneakers for everyday wear.', 3, 2199.00, NULL, 0, 'https://placehold.co/400?text=Sneakers', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(4, 'Leather Jacket', 'leather-jacket', 'Stylish leather jacket for a trendy look.', 4, 4999.00, NULL, 0, 'https://placehold.co/400?text=Leather+Jacket', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(5, 'Wool Sweater', 'wool-sweater', 'Warm wool sweater for chilly days.', 5, 1599.00, NULL, 0, 'https://placehold.co/400?text=Wool+Sweater', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(6, 'Running Shoes', 'running-shoes', 'Lightweight running shoes for a comfortable stride.', 3, 2499.00, NULL, 0, 'https://placehold.co/400?text=Running+Shoes', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(7, 'Casual Shirt', 'casual-shirt', 'Comfortable casual shirt for everyday wear.', 2, 899.00, NULL, 0, 'https://placehold.co/400?text=Casual+Shirt', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(8, 'Formal Pants', 'formal-pants', 'Elegant formal pants for a polished look.', 4, 1299.00, NULL, 0, 'https://placehold.co/400?text=Formal+Pants', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(9, 'Winter Coat', 'winter-coat', 'Warm winter coat to keep you cozy.', 4, 5999.00, NULL, 0, 'https://placehold.co/400?text=Winter+Coat', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(10, 'Sports Watch', 'sports-watch', 'Durable sports watch for active lifestyles.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Sports+Watch', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(11, 'Sunglasses', 'sunglasses', 'Stylish sunglasses for sunny days.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Sunglasses', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(12, 'Backpack', 'backpack', 'Spacious backpack for everyday use.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Backpack', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(13, 'Baseball Cap', 'baseball-cap', 'Classic baseball cap for a casual look.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Baseball+Cap', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(14, 'Flip Flops', 'flip-flops', 'Comfortable flip flops for warm weather.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Flip+Flops', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(15, 'Hiking Boots', 'hiking-boots', 'Sturdy hiking boots for outdoor adventures.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Boots', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(16, 'Graphic Hoodie', 'graphic-hoodie', 'Stylish graphic hoodie for a trendy look.', 4, 1799.00, NULL, 0, 'https://placehold.co/400?text=Graphic+Hoodie', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(17, 'Denim Jacket', 'denim-jacket', 'Classic denim jacket for a timeless look.', 4, 2499.00, NULL, 0, 'https://placehold.co/400?text=Denim+Jacket', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(18, 'Cargo Shorts', 'cargo-shorts', 'Comfortable cargo shorts for warm weather.', 4, 899.00, NULL, 0, 'https://placehold.co/400?text=Cargo+Shorts', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(19, 'Wristband', 'wristband', 'Stylish wristband for a sporty look.', 5, 199.00, NULL, 0, 'https://placehold.co/400?text=Wristband', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(20, 'Beanie', 'beanie', 'Warm beanie for cold weather.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Beanie', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(21, 'Running Shorts', 'running-shorts', 'Lightweight running shorts for comfort.', 5, 699.00, NULL, 0, 'https://placehold.co/400?text=Running+Shorts', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(22, 'Yoga Pants', 'yoga-pants', 'Flexible yoga pants for ultimate comfort.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Yoga+Pants', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(23, 'Cycling Jersey', 'cycling-jersey', 'High-performance cycling jersey for avid cyclists.', 5, 1599.00, NULL, 0, 'https://placehold.co/400?text=Cycling+Jersey', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(24, 'Golf Polo', 'golf-polo', 'Classic golf polo for a polished look.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Golf+Polo', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(25, 'Swim Trunks', 'swim-trunks', 'Stylish swim trunks for a day at the beach.', 5, 699.00, NULL, 0, 'https://placehold.co/400?text=Swim+Trunks', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(26, 'Tennis Racket', 'tennis-racket', 'High-quality tennis racket for competitive play.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Tennis+Racket', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(27, 'Basketball', 'basketball', 'Official size basketball for all ages.', 5, 999.00, NULL, 0, 'https://placehold.co/400?text=Basketball', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(28, 'Soccer Ball', 'soccer-ball', 'High-quality soccer ball for practice and play.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Soccer+Ball', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(29, 'Volleyball', 'volleyball', 'Durable volleyball for indoor and outdoor play.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=Volleyball', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(30, 'Badminton Racket', 'badminton-racket', 'Lightweight badminton racket for quick volleys.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Badminton+Racket', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(31, 'Table Tennis Paddle', 'table-tennis-paddle', 'High-quality table tennis paddle for competitive play.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Table+Tennis+Paddle', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(32, 'Golf Balls', 'golf-balls', 'High-quality golf balls for accurate shots.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Golf+Balls', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(33, 'Fishing Rod', 'fishing-rod', 'Durable fishing rod for all anglers.', 4, 1999.00, NULL, 0, 'https://placehold.co/400?text=Fishing+Rod', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(34, 'Camping Tent', 'camping-tent', 'Spacious camping tent for outdoor adventures.', 4, 4999.00, NULL, 0, 'https://placehold.co/400?text=Camping+Tent', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(35, 'Hiking Backpack', 'hiking-backpack', 'Durable hiking backpack for all your gear.', 4, 1999.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Backpack', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(36, 'Portable Grill', 'portable-grill', 'Compact portable grill for outdoor cooking.', 4, 3499.00, NULL, 0, 'https://placehold.co/400?text=Portable+Grill', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(37, 'Camping Chair', 'camping-chair', 'Comfortable camping chair for outdoor relaxation.', 4, 799.00, NULL, 0, 'https://placehold.co/400?text=Camping+Chair', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(38, 'Outdoor Blanket', 'outdoor-blanket', 'Cozy outdoor blanket for picnics and camping.', 4, 499.00, NULL, 0, 'https://placehold.co/400?text=Outdoor+Blanket', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(39, 'Fishing Tackle Box', 'fishing-tackle-box', 'Durable fishing tackle box for all your gear.', 4, 899.00, NULL, 0, 'https://placehold.co/400?text=Fishing+Tackle+Box', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(40, 'Hiking Poles', 'hiking-poles', 'Lightweight and durable hiking poles for stability.', 4, 1299.00, NULL, 0, 'https://placehold.co/400?text=Hiking+Poles', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(41, 'Portable Power Bank', 'portable-power-bank', 'High-capacity portable power bank for charging devices on the go.', 5, 599.00, NULL, 0, 'https://placehold.co/400?text=Portable+Power+Bank', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(42, 'Travel Pillow', 'travel-pillow', 'Comfortable travel pillow for long journeys.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Travel+Pillow', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(43, 'Water Bottle', 'water-bottle', 'Durable water bottle for hydration on the go.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Water+Bottle', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(44, 'Insulated Cooler', 'insulated-cooler', 'High-performance cooler for keeping food and drinks cold.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Insulated+Cooler', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(45, 'Multi-tool', 'multi-tool', 'Versatile multi-tool for all your outdoor needs.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Multi-tool', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(46, 'First Aid Kit', 'first-aid-kit', 'Essential first aid kit for outdoor emergencies.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=First+Aid+Kit', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(47, 'Portable Speaker', 'portable-speaker', 'Compact portable speaker for outdoor use.', 5, 1499.00, NULL, 0, 'https://placehold.co/400?text=Portable+Speaker', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(48, 'Bluetooth Headphones', 'bluetooth-headphones', 'Wireless Bluetooth headphones with noise cancellation.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Bluetooth+Headphones', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(49, 'Smartphone Case', 'smartphone-case', 'Durable smartphone case for protection on the go.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Smartphone+Case', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(50, 'Laptop Sleeve', 'laptop-sleeve', 'Protective laptop sleeve for on-the-go professionals.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Laptop+Sleeve', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(51, 'Wireless Charger', 'wireless-charger', 'Fast wireless charger for compatible devices.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Wireless+Charger', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(52, 'USB Flash Drive', 'usb-flash-drive', 'Compact USB flash drive for data storage.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=USB+Flash+Drive', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(53, 'External Hard Drive', 'external-hard-drive', 'High-capacity external hard drive for data storage.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=External+Hard+Drive', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(54, 'Smartwatch', 'smartwatch', 'Feature-rich smartwatch for fitness and connectivity.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smartwatch', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(55, 'Fitness Tracker', 'fitness-tracker', 'Advanced fitness tracker for health monitoring.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Fitness+Tracker', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(56, 'E-Reader', 'e-reader', 'Portable e-reader for book lovers.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=E-Reader', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(57, 'Digital Camera', 'digital-camera', 'High-resolution digital camera for photography enthusiasts.', 5, 5999.00, NULL, 0, 'https://placehold.co/400?text=Digital+Camera', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(58, 'Action Camera', 'action-camera', 'Compact action camera for adventure seekers.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Action+Camera', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(59, 'Drone', 'drone', 'High-performance drone for aerial photography.', 5, 7999.00, NULL, 0, 'https://placehold.co/400?text=Drone', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(60, 'VR Headset', 'vr-headset', 'Immersive VR headset for gaming and entertainment.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=VR+Headset', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(61, 'Gaming Console', 'gaming-console', 'Next-gen gaming console for immersive gameplay.', 5, 29999.00, NULL, 0, 'https://placehold.co/400?text=Gaming+Console', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(62, 'Wireless Mouse', 'wireless-mouse', 'Ergonomic wireless mouse for comfortable navigation.', 5, 799.00, NULL, 0, 'https://placehold.co/400?text=Wireless+Mouse', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(63, 'Mechanical Keyboard', 'mechanical-keyboard', 'High-quality mechanical keyboard for typing enthusiasts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Mechanical+Keyboard', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(64, 'Monitor Stand', 'monitor-stand', 'Ergonomic monitor stand for better viewing angles.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Monitor+Stand', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(65, 'Desk Organizer', 'desk-organizer', 'Stylish desk organizer for a clutter-free workspace.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Desk+Organizer', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(66, 'Cable Management Sleeve', 'cable-management-sleeve', 'Flexible cable management sleeve for a tidy setup.', 5, 299.00, NULL, 0, 'https://placehold.co/400?text=Cable+Management+Sleeve', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(67, 'Laptop Stand', 'laptop-stand', 'Adjustable laptop stand for better ergonomics.', 5, 899.00, NULL, 0, 'https://placehold.co/400?text=Laptop+Stand', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(68, 'Portable Monitor', 'portable-monitor', 'Compact portable monitor for on-the-go productivity.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=Portable+Monitor', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(69, 'Webcam', 'webcam', 'High-definition webcam for video conferencing.', 5, 1299.00, NULL, 0, 'https://placehold.co/400?text=Webcam', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(70, 'Microphone', 'microphone', 'Professional microphone for clear audio recording.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Microphone', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(71, 'Graphics Tablet', 'graphics-tablet', 'High-precision graphics tablet for digital artists.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Graphics+Tablet', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(72, 'Drawing Pen', 'drawing-pen', 'Precision drawing pen for artists and designers.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Drawing+Pen', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(73, '3D Printer', '3d-printer', 'High-resolution 3D printer for creative projects.', 5, 14999.00, NULL, 0, 'https://placehold.co/400?text=3D+Printer', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(74, 'Smart Home Hub', 'smart-home-hub', 'Central hub for smart home devices.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Home+Hub', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(75, 'Smart Light Bulb', 'smart-light-bulb', 'Energy-efficient smart light bulb with adjustable brightness.', 5, 399.00, NULL, 0, 'https://placehold.co/400?text=Smart+Light+Bulb', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(76, 'Smart Thermostat', 'smart-thermostat', 'Smart thermostat for efficient temperature control.', 5, 4999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Thermostat', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(77, 'Smart Lock', 'smart-lock', 'Smart lock for keyless home entry.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Lock', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(78, 'Smart Security Camera', 'smart-security-camera', 'Smart security camera with motion detection.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Security+Camera', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(79, 'Smart Smoke Detector', 'smart-smoke-detector', 'Smart smoke detector with mobile alerts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Smoke+Detector', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(80, 'Smart Plug', 'smart-plug', 'Smart plug for remote control of devices.', 5, 499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Plug', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(81, 'Smart Air Purifier', 'smart-air-purifier', 'Smart air purifier with HEPA filtration.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Purifier', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(82, 'Smart Coffee Maker', 'smart-coffee-maker', 'Smart coffee maker with app control.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Coffee+Maker', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(83, 'Smart Refrigerator', 'smart-refrigerator', 'Smart refrigerator with touch screen.', 5, 59999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Refrigerator', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(84, 'Smart Washing Machine', 'smart-washing-machine', 'Smart washing machine with AI-powered cycles.', 5, 39999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Washing+Machine', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(85, 'Smart Oven', 'smart-oven', 'Smart oven with voice control.', 5, 49999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Oven', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(86, 'Smart Dishwasher', 'smart-dishwasher', 'Smart dishwasher with energy-efficient cycles.', 5, 44999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Dishwasher', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(87, 'Smart Vacuum Cleaner', 'smart-vacuum-cleaner', 'Smart vacuum cleaner with automatic dirt detection.', 5, 29999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Vacuum+Cleaner', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(88, 'Smart Air Conditioner', 'smart-air-conditioner', 'Smart air conditioner with energy-saving features.', 5, 59999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Conditioner', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(89, 'Smart Heater', 'smart-heater', 'Smart heater with adjustable temperature settings.', 5, 24999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Heater', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(90, 'Smart Humidifier', 'smart-humidifier', 'Smart humidifier with adjustable mist levels.', 5, 19999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Humidifier', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(91, 'Smart Dehumidifier', 'smart-dehumidifier', 'Smart dehumidifier with energy-efficient operation.', 5, 24999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Dehumidifier', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(92, 'Smart Air Quality Monitor', 'smart-air-quality-monitor', 'Smart air quality monitor with real-time feedback.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Air+Quality+Monitor', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(93, 'Smart Water Leak Detector', 'smart-water-leak-detector', 'Smart water leak detector with mobile alerts.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Water+Leak+Detector', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(94, 'Smart Garage Door Opener', 'smart-garage-door-opener', 'Smart garage door opener with remote access.', 5, 2999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Garage+Door+Opener', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(95, 'Smart Irrigation System', 'smart-irrigation-system', 'Smart irrigation system with weather-based scheduling.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Irrigation+System', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(96, 'Smart Pet Feeder', 'smart-pet-feeder', 'Smart pet feeder with automatic portion control.', 5, 2499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Feeder', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(97, 'Smart Pet Camera', 'smart-pet-camera', 'Smart pet camera with live streaming and two-way audio.', 5, 3499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Camera', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(98, 'Smart Pet Door', 'smart-pet-door', 'Smart pet door with automatic locking and unlocking.', 5, 3999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Door', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(99, 'Smart Pet Tracker', 'smart-pet-tracker', 'Smart pet tracker with GPS and activity monitoring.', 5, 1999.00, NULL, 0, 'https://placehold.co/400?text=Smart+Pet+Tracker', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44'),
+(100, 'Smart Plant Monitor', 'smart-plant-monitor', 'Smart plant monitor with soil moisture sensing.', 5, 1499.00, NULL, 0, 'https://placehold.co/400?text=Smart+Plant+Monitor', 1, 1, '2025-10-28 11:20:44', '2025-10-28 11:20:44');
 
 -- --------------------------------------------------------
 
@@ -23660,18 +23669,9 @@ CREATE TABLE IF NOT EXISTS `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('w03X3SzciEL2DQskL8W2G4iP2zXZCBsE01yBBDCd', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSkYweENqTU1rYXFxY252NGZaSndCbkkzWHkzakZ2WlVqaThaRHpoVyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzk6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC90cmVuZGluZy1wcm9kdWN0cyI7czo1OiJyb3V0ZSI7czoxNjoicHJvZHVjdC50cmVuZGluZyI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1767789785),
-('Ce5PmKVyQxridme1da69X5LCWNkJBnGfA3Fq858H', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiZ1REQTZvNnIzVHptam9FTWxXaVU5c29oOThKU3BwVlBPMm0wQ0JtViI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzU6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbi9yZXR1cm5zIjtzOjU6InJvdXRlIjtzOjE5OiJhZG1pbi5yZXR1cm5zLmluZGV4Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTt9', 1762779717),
-('Uyc9KmdBXXXA7m700Ln7TRjaKBMd28U3KUmj7K2k', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiTmV4aFpLUmR0SjNwQnRMaGRCSTVpYmE4a0tzTFJ0MmZMUWtUQ1Y3diI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzU6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbi9yZXR1cm5zIjtzOjU6InJvdXRlIjtzOjE5OiJhZG1pbi5yZXR1cm5zLmluZGV4Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTt9', 1762865489),
-('Rddwje4XhhwVwsjWOU1Cy4hXS5vvVrlPVhvvH2dD', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.105.1 Chrome/138.0.7204.251 Electron/37.6.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiYmx0bExnSno0dXJ0YmY0bzFxODlYcUpuSGdNT1ZyZXk2akFBSFZZUiI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czoxMDM6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9vcmRlci8xMD9pZD0zOTNhMWQ5MC04MDYzLTQ1MWUtYTkwYS0yMjlkMDUzNjg0NzEmdnNjb2RlQnJvd3NlclJlcUlkPTE3NjI4NjU0MzUzNzIiO31zOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czoxMDM6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9vcmRlci8xMD9pZD0zOTNhMWQ5MC04MDYzLTQ1MWUtYTkwYS0yMjlkMDUzNjg0NzEmdnNjb2RlQnJvd3NlclJlcUlkPTE3NjI4NjU0MzUzNzIiO3M6NToicm91dGUiO3M6MTM6Im9yZGVyLmRldGFpbHMiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1762865437),
-('bYqfrXfHmkbB2eAwQxrrL25GxfYlEadMZBfAeuIc', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.105.1 Chrome/138.0.7204.251 Electron/37.6.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiZVdRTHVQS3NMSUgwWWlPR25ldFh0dlFtN2dXeEVqZnlGOGdPT3VTWiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1762865441),
-('tDBpcxo8Zmyh4291AOOkcyzksGjOqhzQ3jetuUgD', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiZjl1UEZiSmExSFJjSG5HY0tPVmxqUWhZbEphVmVMZmtuZTNrNE1wMCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzA6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9jaGVja291dCI7czo1OiJyb3V0ZSI7czo4OiJjaGVja291dCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjE7fQ==', 1763549869),
-('CDeyoXCsIeH3fTGDrVyCUreTdTyDvZKxJzqVeCQd', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiemVEb25idzJDemRWdm03TWV1dGNReFlFZGFXcUgyVVNmY1lSbWtIQiI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czoxNToiY2FydF9zZXNzaW9uX2lkIjtPOjM1OiJSYW1zZXlcVXVpZFxMYXp5XExhenlVdWlkRnJvbVN0cmluZyI6MTp7czo2OiJzdHJpbmciO3M6MzY6ImZjNDZlN2UyLTA2NGQtNDAzNS1iNjQzLWQxNzZmZWZjZTIwZSI7fXM6OToiX3ByZXZpb3VzIjthOjI6e3M6MzoidXJsIjtzOjIxOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAiO3M6NToicm91dGUiO3M6MTE6ImZyb250LmluZGV4Ijt9fQ==', 1764751277),
-('FclIRCMv3pADoorJgECs9CZF2qHCXjhQpgTsMCU9', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoia2VWa2VKQ2hGN3FDSG1kQnhwekRSZU4weUpEUndkZ083SEkyekRqQiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Njg6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbi9zYWxlcy9ldmVudHMvYmxhY2stZnJpZGF5LWFsZS0xNzY1MzQwNDEwIjtzOjU6InJvdXRlIjtzOjIzOiJhZG1pbi5zYWxlcy5ldmVudHMuc2hvdyI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjE7fQ==', 1765344871),
-('C3t9HXDunC1Q5nTg8g8rw7xetY6wNNctBEHY5BGC', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiM1JybGgzU0ZBYWppanltYTZHWk5EWEx1ZHlhVEcyOXNHdktjQzFqMyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDI6Imh0dHA6Ly8xMjcuMC4wLjE6MTExMS9sb2NhdGlvbi1pbnRlZ3JhdGlvbiI7czo1OiJyb3V0ZSI7czoyMDoibG9jYXRpb24uaW50ZWdyYXRpb24iO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1766552167),
-('PhkW0UOcIytOhxd3aks3oLzrOnjiFFP8q9fAJ98g', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiSUt1ZlEwbERSdWFJZDBiR2xpbUNRUmNJUkhuNThFR2U3bFR1ck1lUSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDI6Imh0dHA6Ly8xMjcuMC4wLjE6MTExMS9hcGkvbG9jYXRpb24tZnJvbS1pcCI7czo1OiJyb3V0ZSI7czoyMDoiYXBpLmxvY2F0aW9uLmZyb20uaXAiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1766552267),
-('jLwUSojN1G7jbI7ZVgUDWI26Iep1zHsYU15qMg5U', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiTmd4dHNFM0o4ZmlkYTNWenV6WW1tbGF6aWJUbWhORE1ySTBsNG80NyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDI6Imh0dHA6Ly8xMjcuMC4wLjE6MTExMS9sb2NhdGlvbi1pbnRlZ3JhdGlvbiI7czo1OiJyb3V0ZSI7czoyMDoibG9jYXRpb24uaW50ZWdyYXRpb24iO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1766552281),
-('UwhhBcG8G7QW6Z3P3OMrmRaw8zDW0qIwWVCABtha', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiRHVET1FsMGFKMVpoaFJOUzM3OGRnU0JsZVdaTHhrSTBUMWpOdnB5TyI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzY6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9vcmRlci8xMy90cmFjayI7czo1OiJyb3V0ZSI7czoxMToib3JkZXIudHJhY2siO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aToxO30=', 1762766628);
+('aEG8tMJXiY43dOhaT8fLcuMilIwhMO13ccru1eDO', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiSTNLb09SQ1VWRXg1ZGN4eU5kZ25rVU5POWRnQm5mQk94YXp3V3JxViI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzY6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZGRyZXNzL2NyZWF0ZSI7czo1OiJyb3V0ZSI7czoxNDoiYWRkcmVzcy5jcmVhdGUiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aToxO30=', 1773740670),
+('dJBhEjnBPbQQVJuq7YVIYN3O1LgQIEcazjgyUi5L', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWXQ0WjVnV0tvTlF1WGFtOXVPWlFQR1czeHNJT0pjRTZscU1IYXd5ciI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1773740587),
+('xwo53BAf1lYHZ4ZFUIZE8MIrxssG57X87UEgQ3Vp', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiRFVuTmQ3M2hXQ1REcWVueG45OG40b1ZnZ3RGVHh4U1NKcHFjcjVieiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1773740587);
 
 -- --------------------------------------------------------
 
@@ -29501,7 +29501,7 @@ CREATE TABLE IF NOT EXISTS `wishlists` (
   PRIMARY KEY (`id`),
   KEY `wishlists_user_id_foreign` (`user_id`),
   KEY `wishlists_product_id_foreign` (`product_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 

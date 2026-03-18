@@ -187,6 +187,7 @@
                             <th>Payment</th>
                             <th>Items</th>
                             <th>Total</th>
+                            <th>Shipping</th>
                             <th>Date</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -235,6 +236,26 @@
                                 <strong>₹{{ number_format($order->total, 2) }}</strong>
                             </td>
                             <td>
+                                @if($order->activeShipment)
+                                    @php $s = $order->activeShipment; @endphp
+                                    <div style="font-size:0.78rem; line-height:1.5;">
+                                        @if($s->awb_code)
+                                            <div><span class="text-muted">AWB:</span> <strong>{{ $s->awb_code }}</strong></div>
+                                        @elseif($s->tracking_number)
+                                            <div><span class="text-muted">Track:</span> <strong>{{ $s->tracking_number }}</strong></div>
+                                        @endif
+                                        @if($s->carrier)
+                                            <div><span class="text-muted">Carrier:</span> {{ $s->carrier }}</div>
+                                        @endif
+                                        <span class="badge bg-secondary mt-1" style="font-size:0.7rem;">{{ ucwords(str_replace('_',' ',$s->status)) }}</span>
+                                    </div>
+                                @elseif(in_array($order->status, [App\Models\Order::STATUS_CONFIRMED, App\Models\Order::STATUS_PROCESSING]))
+                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;">Not created</span>
+                                @else
+                                    <span class="text-muted" style="font-size:0.78rem;">—</span>
+                                @endif
+                            </td>
+                            <td>
                                 <div>
                                     {{ $order->created_at->format('M d, Y') }}
                                     <br>
@@ -265,6 +286,13 @@
                                                 </a>
                                             </li>
                                         @endif
+                                        @if(in_array($order->status, [App\Models\Order::STATUS_CONFIRMED, App\Models\Order::STATUS_PROCESSING]) && !$order->activeShipment)
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="#" onclick="createShipment({{ $order->id }})">
+                                                    <i class="fas fa-truck me-2"></i>Create Shipment
+                                                </a>
+                                            </li>
+                                        @endif
                                         @if($order->canBeCancelled())
                                             <li>
                                                 <a class="dropdown-item text-danger" href="#" onclick="quickCancelOrder({{ $order->id }})">
@@ -291,7 +319,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="fas fa-shopping-cart fa-3x mb-3"></i>
                                     <h5>No Orders Found</h5>
@@ -447,6 +475,36 @@ function filterOrders() {
         // Navigate to the filtered URL
         const newUrl = window.location.pathname + '?' + urlParams.toString();
         window.location.href = newUrl;
+    }
+}
+
+function createShipment(orderId) {
+    if (confirm('Create shipment in Shiprocket for this order?')) {
+        const loadingToast = showToast('Creating shipment in Shiprocket...', 'info');
+
+        fetch(`/admin/orders/${orderId}/create-shipment`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('An error occurred while creating the shipment.', 'error');
+        })
+        .finally(() => {
+            if (loadingToast) loadingToast.hide();
+        });
     }
 }
 

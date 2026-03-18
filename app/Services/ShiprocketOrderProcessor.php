@@ -26,6 +26,11 @@ class ShiprocketOrderProcessor
         $this->shippingCalculator = $shippingCalculator;
     }
 
+    public function getShiprocketManager(): ShiprocketManager
+    {
+        return $this->shiprocketManager;
+    }
+
     /**
      * Process confirmed order for shipping
      * This is the main entry point called from OrderService
@@ -119,9 +124,9 @@ class ShiprocketOrderProcessor
         $totalWeight = $this->calculateOrderWeight($order);
         $dimensions = $this->calculateOrderDimensions($order);
 
-        // Prepare order items
+        // Prepare order items — only active (non-cancelled) items
         $orderItems = [];
-        foreach ($order->items as $item) {
+        foreach ($order->items->where('status', \App\Models\OrderItem::STATUS_ACTIVE) as $item) {
             $product = $item->productVariation->product;
             $orderItems[] = [
                 'name' => $product->name,
@@ -142,21 +147,23 @@ class ShiprocketOrderProcessor
             'comment' => "Order #{$order->id} - Ecommerce shipment",
             'billing_customer_name' => $user->name,
             'billing_last_name' => '', // Split if needed
-            'billing_address' => $address->address_line_1,
-            'billing_address_2' => $address->address_line_2 ?? '',
+            'billing_address' => $address->address_line,
+            'billing_address_2' => '',
             'billing_city' => $address->city,
-            'billing_pincode' => $address->postal_code,
+            'billing_pincode' => $address->zip,
             'billing_state' => $address->state,
             'billing_country' => $address->country ?? 'India',
             'billing_email' => $user->email,
             'billing_phone' => $user->phone ?? $address->phone ?? '',
+            'billing_isd_code' => '91',
+            'billing_alternate_phone' => $address->alternate_phone ?? '',
             'shipping_is_billing' => true,
             'shipping_customer_name' => $address->name ?? $user->name,
             'shipping_last_name' => '',
-            'shipping_address' => $address->address_line_1,
-            'shipping_address_2' => $address->address_line_2 ?? '',
+            'shipping_address' => $address->address_line,
+            'shipping_address_2' => '',
             'shipping_city' => $address->city,
-            'shipping_pincode' => $address->postal_code,
+            'shipping_pincode' => $address->zip,
             'shipping_country' => $address->country ?? 'India',
             'shipping_state' => $address->state,
             'shipping_email' => $user->email,
@@ -172,6 +179,8 @@ class ShiprocketOrderProcessor
             'breadth' => $dimensions['breadth'],
             'height' => $dimensions['height'],
             'weight' => $totalWeight,
+            'invoice_number' => (string) $order->id,
+            'order_type' => 'ESSENTIALS',
         ];
     }
 
@@ -222,14 +231,19 @@ class ShiprocketOrderProcessor
                 return [];
             }
 
-            $courierData = [
-                'pickup_postcode' => config('shiprocket.pickup_postcode'),
-                'delivery_postcode' => $order->address->postal_code,
-                'weight' => $this->calculateOrderWeight($order),
-                'cod' => $order->payment_method === 'cod' ? 1 : 0
-            ];
+            $dimensions = $this->calculateOrderDimensions($order);
 
-            return $this->shiprocketManager->couriers()->getRecommendedCouriers($courierData);
+            return $this->shiprocketManager->couriers()->getRecommendedCourier(
+                config('shiprocket.pickup_postcode'),
+                $order->address->zip,
+                $this->calculateOrderWeight($order),
+                $order->payment_method === 'cod' ? 1 : 0,
+                [],                                      // preferences
+                (int) $dimensions['length'],
+                (int) $dimensions['breadth'],
+                (int) $dimensions['height'],
+                (int) $order->subtotal                   // declared_value = order subtotal
+            ) ?? [];
         } catch (Exception $e) {
             Log::warning("Failed to get courier recommendations", [
                 'order_id' => $order->id,
@@ -258,9 +272,9 @@ class ShiprocketOrderProcessor
     {
         $totalWeight = 0;
         
-        foreach ($order->items as $item) {
+        foreach ($order->items->where('status', \App\Models\OrderItem::STATUS_ACTIVE) as $item) {
             $product = $item->productVariation->product;
-            $weight = $product->weight ?? $this->getDefaultWeight($product);
+            $weight  = $product->weight ?? $this->getDefaultWeight($product);
             $totalWeight += ($weight * $item->quantity);
         }
 
@@ -280,17 +294,37 @@ class ShiprocketOrderProcessor
     }
 
     /**
-     * Calculate package dimensions
+     * Calculate package dimensions from actual product/variation data.
+     *
+     * Priority: variation dimensions → product dimensions → default fallback.
+     * Box sizing: max length, max breadth (width) across all items,
+     * height = sum of (item height × qty) for stacked items.
      */
     protected function calculateOrderDimensions(Order $order): array
     {
-        // Simple calculation - can be enhanced based on product dimensions
-        $itemCount = $order->items->sum('quantity');
-        
+        $maxLength  = 0;
+        $maxBreadth = 0;
+        $totalHeight = 0;
+
+        foreach ($order->items->where('status', \App\Models\OrderItem::STATUS_ACTIVE) as $item) {
+            $variation = $item->productVariation;
+            $product   = $variation->product;
+
+            // Resolve each dimension: variation first, then product, then default
+            $length  = (float) ($variation->length  ?: $product->length  ?: 15);
+            $breadth = (float) ($variation->width   ?: $product->width   ?: 10);
+            $height  = (float) ($variation->height  ?: $product->height  ?: 5);
+
+            $maxLength   = max($maxLength, $length);
+            $maxBreadth  = max($maxBreadth, $breadth);
+            $totalHeight += $height * $item->quantity;
+        }
+
+        // Ensure minimums in case all dimensions were zero/null
         return [
-            'length' => max(15, min($itemCount * 5, 50)),
-            'breadth' => max(10, min($itemCount * 3, 40)), 
-            'height' => max(5, min($itemCount * 2, 30))
+            'length'  => max($maxLength, 15),
+            'breadth' => max($maxBreadth, 10),
+            'height'  => max($totalHeight, 5),
         ];
     }
 
@@ -323,33 +357,39 @@ class ShiprocketOrderProcessor
                 throw new Exception("No active Shiprocket shipment found");
             }
 
-            // Get courier recommendations
-            $courierData = [
-                'pickup_postcode' => config('shiprocket.pickup_postcode'),
-                'delivery_postcode' => $order->address->postal_code,
-                'weight' => $this->calculateOrderWeight($order),
-                'cod' => $order->payment_method === 'cod' ? 1 : 0
-            ];
-
-            $couriers = $this->shiprocketManager->couriers()->getRecommendedCouriers($courierData);
+            // Get recommended courier — pass full dimensions and declared value
+            $dimensions  = $this->calculateOrderDimensions($order);
+            $bestCourier = $this->shiprocketManager->couriers()->getRecommendedCourier(
+                config('shiprocket.pickup_postcode'),
+                $order->address->zip,
+                $this->calculateOrderWeight($order),
+                $order->payment_method === 'cod' ? 1 : 0,
+                [],                                      // preferences
+                (int) $dimensions['length'],
+                (int) $dimensions['breadth'],
+                (int) $dimensions['height'],
+                (int) $order->subtotal                   // declared_value = order subtotal
+            );
             
-            if (empty($couriers) || !isset($couriers[0])) {
+            if (!$bestCourier || !isset($bestCourier['courier_company_id'])) {
                 throw new Exception("No suitable couriers found");
             }
 
-            // Assign best courier (first in recommendations)
-            $bestCourier = $couriers[0];
-            
-            $assignmentResult = $this->shiprocketManager->couriers()->assignCourier([
-                'shipment_id' => $shipment->shiprocket_shipment_id,
-                'courier_id' => $bestCourier['id']
-            ]);
+            // Generate AWB — this assigns the courier and creates the tracking number
+            $assignmentResult = $this->shiprocketManager->couriers()->generateAwb(
+                (int) $shipment->shiprocket_shipment_id,
+                (int) $bestCourier['courier_company_id']
+            );
 
-            // Update local shipment
+            // Update local shipment with AWB and carrier
             $shipment->update([
                 'status' => 'courier_assigned',
-                'carrier' => $bestCourier['courier_name'],
-                'estimated_delivery' => now()->addDays($bestCourier['etd'] ?? 7)
+                'carrier' => $bestCourier['courier_name'] ?? null,
+                'awb_code' => $assignmentResult['awb_code'] ?? null,
+                'tracking_number' => $assignmentResult['awb_code'] ?? null,
+                'estimated_delivery' => isset($bestCourier['estimated_delivery_days'])
+                    ? now()->addDays((int) $bestCourier['estimated_delivery_days'])
+                    : now()->addDays(7)
             ]);
 
             return [

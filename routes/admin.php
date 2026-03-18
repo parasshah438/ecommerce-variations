@@ -101,6 +101,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         // Payment management
         Route::post('/{order}/mark-paid', [AdminOrderController::class, 'markAsPaid'])->name('mark_paid');
         
+        // Shipping
+        Route::post('/{order}/create-shipment', [AdminOrderController::class, 'createShipment'])->name('create_shipment');
+
+        // Partial item cancellation
+        Route::post('/{order}/cancel-items', [AdminOrderController::class, 'cancelItems'])->name('cancel_items');
+
         // Bulk operations
         Route::post('/bulk-status-update', [AdminOrderController::class, 'bulkStatusUpdate'])->name('bulk_status_update');
         

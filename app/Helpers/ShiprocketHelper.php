@@ -112,12 +112,12 @@ class ShiprocketHelper
         $prefix = $type === 'billing' ? 'billing' : 'shipping';
         
         return [
-            "{$prefix}_customer_name" => $address->first_name ?? $address->name,
-            "{$prefix}_last_name" => $address->last_name ?? '',
-            "{$prefix}_address" => $address->address ?? $address->address_1,
-            "{$prefix}_address_2" => $address->address_2 ?? '',
+            "{$prefix}_customer_name" => $address->name,
+            "{$prefix}_last_name" => '',
+            "{$prefix}_address" => $address->address_line,
+            "{$prefix}_address_2" => '',
             "{$prefix}_city" => $address->city,
-            "{$prefix}_pincode" => $address->pincode ?? $address->postal_code,
+            "{$prefix}_pincode" => $address->zip,
             "{$prefix}_state" => $address->state,
             "{$prefix}_country" => $address->country ?? 'India',
             "{$prefix}_email" => $address->email,
