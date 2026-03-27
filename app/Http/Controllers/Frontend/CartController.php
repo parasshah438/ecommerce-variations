@@ -11,6 +11,7 @@ use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CartController extends Controller
@@ -28,11 +29,11 @@ class CartController extends Controller
         $guestUuid = $request->cookie('guest_cart_uuid');
         
         // Debug logging to identify the issue
-        \Log::info("Cart index - User: " . ($user ? $user->id : 'null') . ", Guest UUID: " . ($guestUuid ?: 'null'));
+        Log::info("Cart index - User: " . ($user ? $user->id : 'null') . ", Guest UUID: " . ($guestUuid ?: 'null'));
         
         // Get cart items
         $cart = $this->cartService->getOrCreateCart($user, $guestUuid);
-        $cartItems = $cart->items()->with(['productVariation.product.images', 'productVariation.stock'])->get();
+        $cartItems = $cart->items()->with(['productVariation.images', 'productVariation.product.images', 'productVariation.stock'])->get();
         
         // Get save for later items
         $saveForLaterUuid = $request->cookie('guest_save_later_uuid') ?: Str::uuid();
@@ -47,19 +48,19 @@ class CartController extends Controller
         
         // Get clean save for later items (no duplicates should exist after cleanup)
         $saveForLaterItems = SaveForLater::forUserOrGuest($user, $saveForLaterUuid)
-            ->with(['productVariation.product.images', 'productVariation.stock'])
+            ->with(['productVariation.images', 'productVariation.product.images', 'productVariation.stock'])
             ->whereHas('productVariation') // Only items with valid product variations
             ->orderBy('created_at', 'desc')
             ->get();
             
         // Log for debugging
         $currentUserId = $user ? $user->id : 'guest';
-        \Log::info("Save for later debug - Current user: $currentUserId, Before cleanup: $beforeCleanup, After cleanup: " . $saveForLaterItems->count());
+        Log::info("Save for later debug - Current user: $currentUserId, Before cleanup: $beforeCleanup, After cleanup: " . $saveForLaterItems->count());
         
         // Double check for duplicates in the collection (shouldn't be any after cleanup)
         $uniqueCheck = $saveForLaterItems->unique('product_variation_id');
         if ($saveForLaterItems->count() !== $uniqueCheck->count()) {
-            \Log::warning("Found duplicates in collection after cleanup! Total: " . $saveForLaterItems->count() . ", Unique: " . $uniqueCheck->count());
+            Log::warning("Found duplicates in collection after cleanup! Total: " . $saveForLaterItems->count() . ", Unique: " . $uniqueCheck->count());
             // Use the unique collection to prevent duplicate rendering
             $saveForLaterItems = $uniqueCheck->values();
         }
@@ -276,7 +277,7 @@ class CartController extends Controller
                 $existingSaved->update([
                     'quantity' => $existingSaved->quantity + $cartItem->quantity
                 ]);
-                $savedItem = $existingSaved->fresh(['productVariation.product.images']);
+                $savedItem = $existingSaved->fresh(['productVariation.images', 'productVariation.product.images']);
             } else {
                 // Create new save for later item
                 $savedItem = SaveForLater::create([
@@ -286,7 +287,7 @@ class CartController extends Controller
                     'quantity' => $cartItem->quantity,
                     'price' => $cartItem->price,
                 ]);
-                $savedItem->load(['productVariation.product.images']);
+                $savedItem->load(['productVariation.images', 'productVariation.product.images']);
             }
 
             $productName = $cartItem->productVariation->product->name ?? 'Product';
@@ -300,14 +301,14 @@ class CartController extends Controller
             DB::commit();
 
             // Prepare saved item data for frontend
+            $savedImage = $savedItem->productVariation->images->first() ?? $savedItem->productVariation->product->images->first();
+
             $savedItemData = [
                 'id' => $savedItem->id,
                 'product_name' => $savedItem->productVariation->product->name ?? '',
                 'sku' => $savedItem->productVariation->sku ?? '',
                 'price' => '₹' . number_format($savedItem->price, 2) . ' × ' . $savedItem->quantity,
-                'image_url' => $savedItem->productVariation->product->images->first() 
-                    ? $savedItem->productVariation->product->images->first()->getOptimizedImageUrl() 
-                    : null,
+                'image_url' => $savedImage ? $savedImage->getOptimizedImageUrl() : null,
                 'alt_text' => $savedItem->productVariation->product->name ?? '',
                 'quantity' => $savedItem->quantity
             ];
@@ -367,7 +368,7 @@ class CartController extends Controller
             // Get the newly added cart item for frontend
             $cartItem = CartItem::where('cart_id', $cart->id)
                 ->where('product_variation_id', $saveItem->product_variation_id)
-                ->with(['productVariation.product.images', 'productVariation.stock'])
+                ->with(['productVariation.images', 'productVariation.product.images', 'productVariation.stock'])
                 ->first();
 
             $productName = $saveItem->productVariation->product->name ?? 'Product';
@@ -383,15 +384,15 @@ class CartController extends Controller
             // Prepare cart item data for frontend
             $cartItemData = null;
             if ($cartItem) {
+                $cartImage = $cartItem->productVariation->images->first() ?? $cartItem->productVariation->product->images->first();
+
                 $cartItemData = [
                     'id' => $cartItem->id,
                     'product_name' => $cartItem->productVariation->product->name ?? '',
                     'sku' => $cartItem->productVariation->sku ?? '',
                     'price' => '₹' . number_format($cartItem->price, 2),
                     'quantity' => $cartItem->quantity,
-                    'image_url' => $cartItem->productVariation->product->images->first() 
-                        ? $cartItem->productVariation->product->images->first()->getOptimizedImageUrl() 
-                        : null,
+                    'image_url' => $cartImage ? $cartImage->getOptimizedImageUrl() : null,
                     'alt_text' => $cartItem->productVariation->product->name ?? '',
                     'stock' => optional($cartItem->productVariation->stock)->quantity ?? 0
                 ];
@@ -620,7 +621,7 @@ class CartController extends Controller
                 
         } catch (\Exception $e) {
             // Log error but don't break the main functionality
-            \Log::error('Save for later cleanup failed: ' . $e->getMessage());
+            Log::error('Save for later cleanup failed: ' . $e->getMessage());
         }
     }
 }

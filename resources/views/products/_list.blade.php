@@ -2,45 +2,26 @@
     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
         <div class="card product-card h-100 shadow-sm border-0">
             <div class="product-image-container position-relative">
-                @php 
-                    // Try to get image from first variation, then fallback to product images
-                    $firstVariation = $product->variations->first();
-                    $variationImage = $firstVariation ? $firstVariation->images->first() : null;
-                    $productImage = $product->images->first();
-                    $selectedImage = $variationImage ?? $productImage;
-                    
-                    // Use optimized image URLs with fallback
+                @php
+                    $selectedImage = $product->variations->first()?->images->first() ?? $product->images->first();
                     $img = null;
                     $webpImg = null;
-                    $thumbnailImg = null;
-                    
                     if ($selectedImage) {
                         if (str_starts_with($selectedImage->path, 'http')) {
-                            $img = $selectedImage->path; // External URL
+                            $img = $selectedImage->path;
                         } else {
                             $img = $selectedImage->getOptimizedImageUrl();
                             $webpImg = $selectedImage->getWebPUrl();
-                            $thumbnailImg = $selectedImage->getThumbnailUrl();
                         }
                     }
                 @endphp
                 @if($img)
-                    @if($webpImg && $thumbnailImg)
                     <picture>
-                        <source srcset="{{ $webpImg }}" type="image/webp">
-                        <img src="{{ $img }}" 
-                             class="card-img-top product-image" 
+                        @if($webpImg)<source srcset="{{ $webpImg }}" type="image/webp">@endif
+                        <img src="{{ $img }}" class="card-img-top product-image"
                              style="height:250px;object-fit:fill;background-color:#f8f9fa;"
-                             alt="{{ $product->name }}"
-                             loading="lazy">
+                             alt="{{ $product->name }}" loading="lazy">
                     </picture>
-                    @else
-                    <img src="{{ $img }}" 
-                         class="card-img-top product-image" 
-                         style="height:250px;object-fit:fill;background-color:#f8f9fa;"
-                         alt="{{ $product->name }}"
-                         loading="lazy">
-                    @endif
                 @else
                     <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:250px;">
                         <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>

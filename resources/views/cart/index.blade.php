@@ -21,7 +21,7 @@
         <div class="col-lg-8 col-md-12 mb-4">
             <!-- Save For Later Section -->
             @if($saveForLaterItems->count() > 0)
-            <div class="card shadow-sm mb-4" id="save-for-later-section">
+            <div class="card shadow-sm mb-4" id="save-for-later-section" data-server-save-count="{{ $saveForLaterItems->count() }}">
                 <div class="card-header bg-warning bg-opacity-10 border-warning">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0" id="save-for-later-header">
@@ -275,9 +275,10 @@
                                                             data-cart-item-id="{{ $item->id }}">
                                                         <i class="bi bi-bookmark-heart me-1"></i>Save for Later
                                                     </button>
-                                                    <button class="btn btn-outline-danger btn-sm remove-item-btn" 
+                                                    <button class="btn btn-light border btn-sm remove-item-btn d-inline-flex align-items-center gap-1 text-danger fw-semibold px-3" 
                                                             data-cart-item-id="{{ $item->id }}">
-                                                        <i class="bi bi-trash me-1"></i>Remove
+                                                        <i class="bi bi-trash3"></i>
+                                                        <span>Remove</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -426,29 +427,75 @@
 
 <!-- Confirmation Modals -->
 <!-- Remove Item Modal -->
-<div class="modal fade" id="removeItemModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Remove Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="removeItemModal" tabindex="-1" aria-labelledby="removeItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);">
+                <div>
+                    <p class="text-white-50 small text-uppercase mb-1">Cart item action</p>
+                    <h5 class="modal-title mb-0" id="removeItemModalLabel">
+                        <i class="bi bi-box-seam me-2"></i>Choose what to do next
+                    </h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p>What would you like to do with this item?</p>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-warning" id="move-to-wishlist-btn">
-                        <i class="bi bi-heart me-2"></i>Move to Wishlist
-                    </button>
-                    <button class="btn btn-outline-warning" id="save-for-later-modal-btn">
-                        <i class="bi bi-bookmark-heart me-2"></i>Save for Later
-                    </button>
-                    <button class="btn btn-outline-danger" id="remove-completely-btn">
-                        <i class="bi bi-trash me-2"></i>Remove Completely
-                    </button>
+            <div class="modal-body p-4 p-md-4">
+                <div class="mb-4">
+                    <div class="d-flex align-items-start gap-3 p-3 rounded-4 border bg-light-subtle">
+                        <div class="bg-white rounded-circle shadow-sm d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 52px; height: 52px;">
+                            <i class="bi bi-info-circle text-primary fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1 fw-semibold">This item is still available</h6>
+                            <p class="text-muted mb-0 small">You can remove it permanently, save it for later, or move it to your wishlist for future purchase.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-outline-warning w-100 h-100 text-start p-3 rounded-4 border-2" id="move-to-wishlist-btn">
+                            <div class="d-flex flex-column h-100">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="bg-warning bg-opacity-25 text-warning rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 42px; height: 42px;">
+                                        <i class="bi bi-heart fs-5"></i>
+                                    </span>
+                                    <span class="fw-bold text-dark">Move to Wishlist</span>
+                                </div>
+                                <small class="text-muted">Keep this product saved in your account and shop for it later.</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-outline-primary w-100 h-100 text-start p-3 rounded-4 border-2" id="save-for-later-modal-btn">
+                            <div class="d-flex flex-column h-100">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 42px; height: 42px;">
+                                        <i class="bi bi-bookmark-heart fs-5"></i>
+                                    </span>
+                                    <span class="fw-bold text-dark">Save for Later</span>
+                                </div>
+                                <small class="text-muted">Remove it from cart now but keep it ready in the saved section.</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-outline-danger w-100 h-100 text-start p-3 rounded-4 border-2" id="remove-completely-btn">
+                            <div class="d-flex flex-column h-100">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 42px; height: 42px;">
+                                        <i class="bi bi-trash3 fs-5"></i>
+                                    </span>
+                                    <span class="fw-bold text-dark">Remove Completely</span>
+                                </div>
+                                <small class="text-muted">Delete this item from the cart immediately.</small>
+                            </div>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>
@@ -493,7 +540,7 @@ $(document).ready(function() {
     // Quantity controls
     $(document).on('click', '.qty-plus', function() {
         const cartItemId = $(this).data('cart-item-id');
-        const $input = $(`.qty-input[data-cart-item-id="${cartItemId}"]`);
+        const $input = $('.qty-input[data-cart-item-id="' + cartItemId + '"]');
         const current = parseInt($input.val());
         const max = parseInt($input.attr('max'));
         const $button = $(this);
@@ -510,7 +557,7 @@ $(document).ready(function() {
     
     $(document).on('click', '.qty-minus', function() {
         const cartItemId = $(this).data('cart-item-id');
-        const $input = $(`.qty-input[data-cart-item-id="${cartItemId}"]`);
+        const $input = $('.qty-input[data-cart-item-id="' + cartItemId + '"]');
         const current = parseInt($input.val());
         const $button = $(this);
         
@@ -660,7 +707,7 @@ $(document).ready(function() {
     };
     
     // AJAX Functions
-    function updateCartQuantity(cartItemId, quantity, $button = null, originalHtml = null) {
+    function updateCartQuantity(cartItemId, quantity, $button, originalHtml) {
         $.ajax({
             url: '{{ route("cart.update") }}',
             method: 'POST',
@@ -704,7 +751,7 @@ $(document).ready(function() {
         });
     }
     
-    function saveForLater(cartItemId, $button = null, originalHtml = null) {
+    function saveForLater(cartItemId, $button, originalHtml) {
         if (isProcessing) {
             if ($button) {
                 $button.prop('disabled', false).html(originalHtml);
@@ -725,40 +772,10 @@ $(document).ready(function() {
                 isProcessing = false;
                 
                 if (response.success) {
-                    const $cartItem = $(`[data-cart-item-id="${cartItemId}"]`);
-                    
-                    // Get item details before removing from cart
-                    const itemData = extractItemDataFromCartItem($cartItem);
-                    
-                    $cartItem.fadeOut(400, function() {
-                        $(this).remove();
-                        
-                        // Update cart summary first
-                        if (response.summary) {
-                            updateCartSummary(response.summary);
-                        }
-                         
-                        // Add item to save for later section
-                        if (response.saved_item) {
-                            addItemToSaveForLater(response.saved_item);
-                        } else if (itemData) {
-                            addItemToSaveForLater(itemData);
-                        }
-                        
-                        // Update cart count only (save for later count is updated in addItemToSaveForLater)
-                        const cartCount = $('.cart-item').length;
-                        if (cartCount > 0) {
-                            const itemText = cartCount === 1 ? 'item' : 'items';
-                            $('#cart-header-badge').text(cartCount + ' ' + itemText).show();
-                        } else {
-                            $('#cart-header-badge').hide();
-                        }
-                        
-                        // Check empty cart
-                        checkEmptyCart();
-                        
-                        toastr.success(response.message || 'Item saved for later');
-                    });
+                    toastr.success(response.message || 'Item saved for later');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 300);
                 } else {
                     // Re-enable button on error
                     if ($button) {
@@ -788,7 +805,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    $(`[data-cart-item-id="${cartItemId}"]`).fadeOut(400, function() {
+                    $('[data-cart-item-id="' + cartItemId + '"]').fadeOut(400, function() {
                         $(this).remove();
                         
                         // Update summary
@@ -815,7 +832,10 @@ $(document).ready(function() {
         });
     }
     
-    function removeItem(cartItemId, showToast = true) {
+    function removeItem(cartItemId, showToast) {
+        if (typeof showToast === 'undefined') {
+            showToast = true;
+        }
         $.ajax({
             url: '{{ route("cart.remove") }}',
             method: 'POST',
@@ -826,7 +846,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     // Remove the item with animation
-                    $(`[data-cart-item-id="${cartItemId}"]`).fadeOut(400, function() {
+                    $('[data-cart-item-id="' + cartItemId + '"]').fadeOut(400, function() {
                         $(this).remove();
                         
                         // Update summary first
@@ -852,7 +872,7 @@ $(document).ready(function() {
         });
     }
     
-    function moveToCart(saveId, $button = null, originalHtml = null) {
+    function moveToCart(saveId, $button, originalHtml) {
         $.ajax({
             url: '{{ route("cart.move_to_cart") }}',
             method: 'POST',
@@ -862,32 +882,10 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    const $saveItem = $(`[data-save-item-id="${saveId}"]`);
-                    
-                    // Get item details before removing from saved items
-                    const itemData = extractItemDataFromSaveItem($saveItem);
-                    
-                    $saveItem.fadeOut(400, function() {
-                        $(this).remove();
-                        
-                        // Update cart summary
-                        if (response.summary) {
-                            updateCartSummary(response.summary);
-                        }
-                        
-                        // Add item to cart section
-                        if (response.cart_item) {
-                            addItemToCart(response.cart_item);
-                        }
-                        
-                        // Update save for later count (cart count is updated in addItemToCart)
-                        updateSaveForLaterCount();
-                        
-                        // Update save for later section
-                        checkEmptySaveForLater();
-                        
-                        toastr.success(response.message);
-                    });
+                    toastr.success(response.message || 'Item moved to cart');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 300);
                 } else {
                     // Re-enable button on error
                     if ($button) {
@@ -906,7 +904,7 @@ $(document).ready(function() {
         });
     }
     
-    function removeSaved(saveId, $button = null, originalHtml = null) {
+    function removeSaved(saveId, $button, originalHtml) {
         $.ajax({
             url: '{{ route("cart.remove_saved") }}',
             method: 'POST',
@@ -916,7 +914,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    $(`[data-save-item-id="${saveId}"]`).fadeOut(function() {
+                    $('[data-save-item-id="' + saveId + '"]').fadeOut(function() {
                         $(this).remove();
                         checkEmptySaveForLater();
                         updateSaveForLaterCount();
@@ -979,7 +977,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const response = xhr.responseJSON;
-                toastr.error(response?.message || 'Failed to apply coupon');
+                toastr.error((response && response.message) || 'Failed to apply coupon');
             },
             complete: function() {
                 $applyButton.prop('disabled', false).text('Apply');
@@ -1028,20 +1026,19 @@ $(document).ready(function() {
         $('#coupon-discount-row').remove();
         
         // Create new coupon discount row
-        const couponRow = `
-            <div class="d-flex justify-content-between mb-3 text-success" id="coupon-discount-row">
-                <span>
-                    <i class="bi bi-tag me-1"></i>
-                    Coupon Discount (${coupon.code}):
-                    <button class="btn btn-sm btn-outline-danger ms-2" id="remove-coupon-btn" title="Remove coupon">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </span>
-                <span class="fw-bold" id="cart-discount">
-                    -₹${coupon.discount_amount.toFixed(2)}
-                </span>
-            </div>
-        `;
+        const couponRow =
+            '<div class="d-flex justify-content-between mb-3 text-success" id="coupon-discount-row">' +
+                '<span>' +
+                    '<i class="bi bi-tag me-1"></i>' +
+                    'Coupon Discount (' + coupon.code + '):' +
+                    '<button class="btn btn-sm btn-outline-danger ms-2" id="remove-coupon-btn" title="Remove coupon">' +
+                        '<i class="bi bi-x"></i>' +
+                    '</button>' +
+                '</span>' +
+                '<span class="fw-bold" id="cart-discount">' +
+                    '-₹' + coupon.discount_amount.toFixed(2) +
+                '</span>' +
+            '</div>';
         
         // Insert before the hr element
         $('hr:last').before(couponRow);
@@ -1083,7 +1080,7 @@ $(document).ready(function() {
         }
         
         // Update item count text in summary sidebar
-        const summaryItemText = `Subtotal (${summary.items || 0} items):`;
+        const summaryItemText = 'Subtotal (' + (summary.items || 0) + ' items):';
         $('#cart-subtotal').parent().find('span:first').text(summaryItemText);
         
         // Hide/show checkout button based on cart status
@@ -1097,7 +1094,7 @@ $(document).ready(function() {
     }
     
     function updateItemTotal(cartItemId, quantity) {
-        const $itemTotal = $(`[data-cart-item-id="${cartItemId}"] .item-total`);
+        const $itemTotal = $('[data-cart-item-id="' + cartItemId + '"] .item-total');
         const price = parseFloat($itemTotal.data('price'));
         const total = price * quantity;
         $itemTotal.text('₹' + total.toFixed(2));
@@ -1106,21 +1103,21 @@ $(document).ready(function() {
     function checkEmptyCart() {
         if ($('.cart-item').length === 0) {
             // Update cart items container
-            $('#cart-items-container').html(`
-                <div class="text-center py-5" id="empty-cart">
-                    <i class="bi bi-cart-x text-muted" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3 text-muted">Your cart is empty</h4>
-                    <p class="text-muted">Add some products to get started!</p>
-                    <a href="{{ route('products.index') }}" class="btn btn-primary btn-lg">
-                        <i class="bi bi-shop me-2"></i>Start Shopping
-                    </a>
-                </div>
-            `);
+            $('#cart-items-container').html(
+                '<div class="text-center py-5" id="empty-cart">' +
+                    '<i class="bi bi-cart-x text-muted" style="font-size: 4rem;"></i>' +
+                    '<h4 class="mt-3 text-muted">Your cart is empty</h4>' +
+                    '<p class="text-muted">Add some products to get started!</p>' +
+                    '<a href="{{ route("products.index") }}" class="btn btn-primary btn-lg">' +
+                        '<i class="bi bi-shop me-2"></i>Start Shopping' +
+                    '</a>' +
+                '</div>'
+            );
             
             // Update cart header
-            $('.card-header h4').html(`
-                <i class="bi bi-cart3 text-primary me-2"></i>Shopping Cart
-            `);
+            $('.card-header h4').html(
+                '<i class="bi bi-cart3 text-primary me-2"></i>Shopping Cart'
+            );
             
             // Hide clear cart button
             $('.card-header .btn-outline-danger').hide();
@@ -1187,78 +1184,70 @@ $(document).ready(function() {
     function addItemToSaveForLater(itemData) {
         // Create save for later section if it doesn't exist
         if ($('#save-for-later-section').length === 0) {
-            const saveSection = `
-                <div class="card shadow-sm mb-4" id="save-for-later-section">
-                    <div class="card-header bg-warning bg-opacity-10 border-warning">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="bi bi-bookmark-heart text-warning me-2"></i>
-                                Saved For Later (<span id="save-count">0</span>)
-                            </h5>
-                            <button class="btn btn-outline-warning btn-sm" onclick="toggleSaveForLater()">
-                                <i class="bi bi-chevron-up" id="save-toggle-icon"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body" id="save-for-later-content">
-                        <div class="row g-3" id="save-items-grid"></div>
-                    </div>
-                </div>
-            `;
+            const saveSection =
+                '<div class="card shadow-sm mb-4" id="save-for-later-section">' +
+                    '<div class="card-header bg-warning bg-opacity-10 border-warning">' +
+                        '<div class="d-flex justify-content-between align-items-center">' +
+                            '<h5 class="mb-0">' +
+                                '<i class="bi bi-bookmark-heart text-warning me-2"></i>' +
+                                'Saved For Later (<span id="save-count">0</span>)' +
+                            '</h5>' +
+                            '<button class="btn btn-outline-warning btn-sm" onclick="toggleSaveForLater()">' +
+                                '<i class="bi bi-chevron-up" id="save-toggle-icon"></i>' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="card-body" id="save-for-later-content">' +
+                        '<div class="row g-3" id="save-items-grid"></div>' +
+                    '</div>' +
+                '</div>';
             $('.col-lg-8 .card').first().before(saveSection);
         } else {
             $('#save-for-later-section').show();
         }
-        
-        // Create the save item HTML
-        const saveItemHtml = `
-            <div class="col-lg-6 col-md-6 col-12" data-save-item-id="${itemData.id || 'new-' + Date.now()}">
-                <div class="card border-0 bg-light">
-                    <div class="card-body p-3">
-                        <div class="row g-3">
-                            <div class="col-4">
-                                ${itemData.image_url ? 
-                                    `<img src="${itemData.image_url}" class="img-fluid rounded" alt="${itemData.alt_text}" style="aspect-ratio: 1; object-fit: cover;">` :
-                                    `<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="aspect-ratio: 1;"><i class="bi bi-image text-white"></i></div>`
-                                }
-                            </div>
-                            <div class="col-8">
-                                <h6 class="mb-2">${itemData.product_name}</h6>
-                                <p class="text-muted small mb-1">${itemData.sku}</p>
-                                <p class="fw-bold text-primary mb-2">${itemData.price}</p>
-                                <div class="d-flex gap-1 flex-wrap">
-                                    <button class="btn btn-primary btn-sm move-to-cart-btn" data-save-id="${itemData.id || 'new-' + Date.now()}">
-                                        <i class="bi bi-cart-plus"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm remove-saved-btn" data-save-id="${itemData.id || 'new-' + Date.now()}">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Add to save items grid
+
         if ($('#save-items-grid').length === 0) {
             $('#save-for-later-content .row').attr('id', 'save-items-grid');
         }
-        
-        // Check if item already exists to prevent duplicates
-        const itemId = itemData.id || 'new-' + Date.now();
-        if ($(`[data-save-item-id="${itemId}"]`).length > 0) {
+
+        const itemId = itemData.id || ('new-' + Date.now());
+
+        if ($('[data-save-item-id="' + itemId + '"]').length > 0) {
             return;
         }
-        
+
+        const imageHtml = itemData.image_url
+            ? '<img src="' + itemData.image_url + '" class="img-fluid rounded" alt="' + (itemData.alt_text || '') + '" style="aspect-ratio: 1; object-fit: cover;">'
+            : '<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="aspect-ratio: 1;"><i class="bi bi-image text-white"></i></div>';
+
+        const saveItemHtml =
+            '<div class="col-lg-6 col-md-6 col-12" data-save-item-id="' + itemId + '">' +
+                '<div class="card border-0 bg-light">' +
+                    '<div class="card-body p-3">' +
+                        '<div class="row g-3">' +
+                            '<div class="col-4">' + imageHtml + '</div>' +
+                            '<div class="col-8">' +
+                                '<h6 class="mb-2">' + (itemData.product_name || '') + '</h6>' +
+                                '<p class="text-muted small mb-1">' + (itemData.sku || '') + '</p>' +
+                                '<p class="fw-bold text-primary mb-2">' + (itemData.price || '') + '</p>' +
+                                '<div class="d-flex gap-1 flex-wrap">' +
+                                    '<button class="btn btn-primary btn-sm move-to-cart-btn" data-save-id="' + itemId + '">' +
+                                        '<i class="bi bi-cart-plus"></i>' +
+                                    '</button>' +
+                                    '<button class="btn btn-outline-danger btn-sm remove-saved-btn" data-save-id="' + itemId + '">' +
+                                        '<i class="bi bi-trash"></i>' +
+                                    '</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
         $('#save-items-grid').prepend(saveItemHtml);
-        
-        // Update count
+
         updateSaveForLaterCount();
-        
-        // Animate the new item
-        $(`[data-save-item-id="${itemId}"]`).hide().fadeIn(400);
+        $('[data-save-item-id="' + itemId + '"]').hide().fadeIn(400);
     }
     
     // Add item to cart section  
@@ -1268,10 +1257,10 @@ $(document).ready(function() {
             $('#cart-items-container').html('');
             
             // Show cart header with items
-            $('#cart-header').html(`
-                <i class="bi bi-cart3 text-primary me-2"></i>Shopping Cart
-                <span class="badge bg-primary" id="cart-header-badge">1 item</span>
-            `);
+            $('#cart-header').html(
+                '<i class="bi bi-cart3 text-primary me-2"></i>Shopping Cart' +
+                '<span class="badge bg-primary" id="cart-header-badge">1 item</span>'
+            );
             
             // Show clear cart button
             $('.card-header .btn-outline-danger').show();
@@ -1293,95 +1282,87 @@ $(document).ready(function() {
             }
             
             // Animate the new item
-            $(`[data-cart-item-id="${itemData.id}"]`).hide().fadeIn(400);
+            $('[data-cart-item-id="' + itemData.id + '"]').hide().fadeIn(400);
         }
     }
     
     // Helper function to create cart item HTML
     function createCartItemHTML(itemData) {
-        return `
-            <div class="cart-item border-bottom py-4" data-cart-item-id="${itemData.id}">
-                <div class="row g-4">
-                    <!-- Product Image -->
-                    <div class="col-lg-2 col-md-3 col-4">
-                        ${itemData.image_url ? 
-                            `<img src="${itemData.image_url}" class="img-fluid rounded shadow-sm" alt="${itemData.alt_text}" style="aspect-ratio: 1; object-fit: cover;">` :
-                            `<div class="bg-light rounded d-flex align-items-center justify-content-center shadow-sm" style="aspect-ratio: 1;"><i class="bi bi-image text-muted fs-1"></i></div>`
-                        }
-                    </div>
-                    
-                    <!-- Product Details -->
-                    <div class="col-lg-4 col-md-5 col-8">
-                        <h5 class="mb-2">
-                            <a href="#" class="text-decoration-none text-dark">
-                                ${itemData.product_name}
-                            </a>
-                        </h5>
-                        <div class="text-muted small mb-2">
-                            <p class="mb-1"><strong>SKU:</strong> ${itemData.sku}</p>
-                        </div>
-                        
-                        <!-- Stock Status -->
-                        <div class="stock-status mb-2">
-                            ${itemData.stock > 0 ? 
-                                `<small class="text-success"><i class="bi bi-check-circle me-1"></i>In Stock (${itemData.stock} available)</small>` :
-                                `<small class="text-danger"><i class="bi bi-x-circle me-1"></i>Out of Stock</small>`
-                            }
-                        </div>
-                    </div>
-                    
-                    <!-- Quantity Controls -->
-                    <div class="col-lg-2 col-md-4 col-6">
-                        <div class="quantity-section">
-                            <label class="form-label small">Quantity</label>
-                            <div class="input-group">
-                                <button class="btn btn-outline-secondary btn-sm qty-minus" data-cart-item-id="${itemData.id}">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <input type="number" class="form-control form-control-sm text-center qty-input" 
-                                       value="${itemData.quantity}" min="1" max="${Math.min(50, itemData.stock)}"
-                                       data-cart-item-id="${itemData.id}">
-                                <button class="btn btn-outline-secondary btn-sm qty-plus" data-cart-item-id="${itemData.id}">
-                                    <i class="bi bi-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Price and Actions -->
-                    <div class="col-lg-4 col-md-12 col-12">
-                        <div class="d-flex flex-column h-100">
-                            <div class="price-section mb-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <small class="text-muted">Price:</small>
-                                        <div class="fw-bold text-primary">${itemData.price}</div>
-                                    </div>
-                                    <div class="text-end">
-                                        <small class="text-muted">Total:</small>
-                                        <div class="fw-bold fs-5 item-total" data-price="${itemData.price.replace('₹', '').replace(',', '')}">
-                                            ₹${(parseFloat(itemData.price.replace('₹', '').replace(',', '')) * itemData.quantity).toFixed(2)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Action Buttons -->
-                            <div class="mt-auto">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button class="btn btn-outline-warning btn-sm save-for-later-btn" data-cart-item-id="${itemData.id}">
-                                        <i class="bi bi-bookmark-heart me-1"></i>Save for Later
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm remove-item-btn" data-cart-item-id="${itemData.id}">
-                                        <i class="bi bi-trash me-1"></i>Remove
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const itemId = itemData.id || '';
+        const stock = parseInt(itemData.stock || 0);
+        const quantity = parseInt(itemData.quantity || 1);
+        const maxQty = Math.min(50, stock || 1);
+        const numericPrice = parseFloat(String(itemData.price || '0').replace('₹', '').replace(/,/g, '')) || 0;
+        const totalPrice = (numericPrice * quantity).toFixed(2);
+
+        const imageHtml = itemData.image_url
+            ? '<img src="' + itemData.image_url + '" class="img-fluid rounded shadow-sm" alt="' + (itemData.alt_text || '') + '" style="aspect-ratio: 1; object-fit: cover;">'
+            : '<div class="bg-light rounded d-flex align-items-center justify-content-center shadow-sm" style="aspect-ratio: 1;"><i class="bi bi-image text-muted fs-1"></i></div>';
+
+        const stockHtml = stock > 0
+            ? '<small class="text-success"><i class="bi bi-check-circle me-1"></i>In Stock (' + stock + ' available)</small>'
+            : '<small class="text-danger"><i class="bi bi-x-circle me-1"></i>Out of Stock</small>';
+
+        return (
+            '<div class="cart-item border-bottom py-4" data-cart-item-id="' + itemId + '">' +
+                '<div class="row g-4">' +
+                    '<div class="col-lg-2 col-md-3 col-4">' +
+                        imageHtml +
+                    '</div>' +
+                    '<div class="col-lg-4 col-md-5 col-8">' +
+                        '<h5 class="mb-2">' +
+                            '<a href="#" class="text-decoration-none text-dark">' + (itemData.product_name || '') + '</a>' +
+                        '</h5>' +
+                        '<div class="text-muted small mb-2">' +
+                            '<p class="mb-1"><strong>SKU:</strong> ' + (itemData.sku || '') + '</p>' +
+                        '</div>' +
+                        '<div class="stock-status mb-2">' + stockHtml + '</div>' +
+                    '</div>' +
+                    '<div class="col-lg-2 col-md-4 col-6">' +
+                        '<div class="quantity-section">' +
+                            '<label class="form-label small">Quantity</label>' +
+                            '<div class="input-group">' +
+                                '<button class="btn btn-outline-secondary btn-sm qty-minus" data-cart-item-id="' + itemId + '">' +
+                                    '<i class="bi bi-dash"></i>' +
+                                '</button>' +
+                                '<input type="number" class="form-control form-control-sm text-center qty-input" value="' + quantity + '" min="1" max="' + maxQty + '" data-cart-item-id="' + itemId + '">' +
+                                '<button class="btn btn-outline-secondary btn-sm qty-plus" data-cart-item-id="' + itemId + '">' +
+                                    '<i class="bi bi-plus"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="col-lg-4 col-md-12 col-12">' +
+                        '<div class="d-flex flex-column h-100">' +
+                            '<div class="price-section mb-3">' +
+                                '<div class="d-flex justify-content-between align-items-center">' +
+                                    '<div>' +
+                                        '<small class="text-muted">Price:</small>' +
+                                        '<div class="fw-bold text-primary">' + (itemData.price || '₹0.00') + '</div>' +
+                                    '</div>' +
+                                    '<div class="text-end">' +
+                                        '<small class="text-muted">Total:</small>' +
+                                        '<div class="fw-bold fs-5 item-total" data-price="' + numericPrice + '">' +
+                                            '₹' + totalPrice +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="mt-auto">' +
+                                '<div class="d-flex gap-2 flex-wrap">' +
+                                    '<button class="btn btn-outline-warning btn-sm save-for-later-btn" data-cart-item-id="' + itemId + '">' +
+                                        '<i class="bi bi-bookmark-heart me-1"></i>Save for Later' +
+                                    '</button>' +
+                                    '<button class="btn btn-light border btn-sm remove-item-btn d-inline-flex align-items-center gap-1 text-danger fw-semibold px-3" data-cart-item-id="' + itemId + '">' +
+                                        '<i class="bi bi-trash3"></i><span>Remove</span>' +
+                                    '</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>'
+        );
     }
     
     // Update save for later count
@@ -1420,7 +1401,7 @@ $(document).ready(function() {
             removeDuplicateSaveItems();
             
             // Use server-side count for save for later (most reliable)
-            const serverSaveCount = {{ $saveForLaterItems->count() }};
+            const serverSaveCount = parseInt($('#save-for-later-section').attr('data-server-save-count') || '0', 10);
             const domSaveCount = $('[data-save-item-id]').length;
             const actualCartCount = $('.cart-item').length;
          
@@ -1429,7 +1410,7 @@ $(document).ready(function() {
             
             // If DOM count doesn't match server count, log warning
             if (domSaveCount !== serverSaveCount) {
-                toastr.warning(`Save for later count mismatch! Server: ${serverSaveCount}, DOM: ${domSaveCount}`);
+                        toastr.warning('Save for later count mismatch! Server: ' + serverSaveCount + ', DOM: ' + domSaveCount);
             }
             
             // Update cart count based on DOM (this should be accurate)
@@ -1477,7 +1458,7 @@ $(document).ready(function() {
                    
                     if (cleanedDuplicates > 0) {
                         
-                        toastr.info(`Cleaned ${cleanedDuplicates} duplicate saved items`);
+                        toastr.info('Cleaned ' + cleanedDuplicates + ' duplicate saved items');
                         
                         // Reload page to refresh the cleaned data
                         setTimeout(() => location.reload(), 2000);
