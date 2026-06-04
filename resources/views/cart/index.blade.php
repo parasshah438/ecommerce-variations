@@ -1066,25 +1066,25 @@ $(document).ready(function() {
         $('#cart-total').text('₹' + total.toFixed(2));
         
         // Update cart badge in navigation
-        $('#cart-badge').text(summary.items || 0);
+        $('#cart-badge').text(summary.unique_items || 0);
         
         // Update cart header item count
-        const itemText = (summary.items || 0) === 1 ? 'item' : 'items';
-        $('#cart-header-badge').text((summary.items || 0) + ' ' + itemText);
+        const itemText = (summary.unique_items || 0) === 1 ? 'item' : 'items';
+        $('#cart-header-badge').text((summary.unique_items || 0) + ' ' + itemText);
         
         // Show/hide cart header badge
-        if ((summary.items || 0) === 0) {
+        if ((summary.unique_items || 0) === 0) {
             $('#cart-header-badge').hide();
         } else {
             $('#cart-header-badge').show();
         }
         
         // Update item count text in summary sidebar
-        const summaryItemText = 'Subtotal (' + (summary.items || 0) + ' items):';
+        const summaryItemText = 'Subtotal (' + (summary.unique_items || 0) + ' items):';
         $('#cart-subtotal').parent().find('span:first').text(summaryItemText);
         
         // Hide/show checkout button based on cart status
-        if ((summary.items || 0) === 0) {
+        if ((summary.unique_items || 0) === 0) {
             $('.btn[href*="checkout"]').addClass('d-none');
             $('#apply-coupon-btn').addClass('d-none');
         } else {

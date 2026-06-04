@@ -1701,8 +1701,8 @@ $(document).ready(function() {
                         toastr.success('Product added to cart successfully!');
                         
                         // Update cart badge
-                        if (response.summary && response.summary.items) {
-                            $('#cart-badge').text(response.summary.items);
+                        if (response.summary && response.summary.unique_items) {
+                            $('#cart-badge').text(response.summary.unique_items);
                         }
                         
                         // Optional: Show cart preview

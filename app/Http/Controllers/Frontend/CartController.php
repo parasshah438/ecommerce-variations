@@ -85,7 +85,7 @@ class CartController extends Controller
         $cartIssues = $this->validateCartItems($cartItems);
         
         // Set cart count in session for header badge
-        session(['cart_count' => $cartSummary['items']]);
+        session(['cart_count' => $cartSummary['unique_items']]);
 
         $response = response()->view('cart.index', compact(
             'cartItems', 
@@ -157,7 +157,7 @@ class CartController extends Controller
         $summary = $this->cartService->cartSummary($cart);
 
         // Update session cart count for header badge
-        session(['cart_count' => $summary['items']]);
+        session(['cart_count' => $summary['unique_items']]);
 
         $response = response()->json([
             'success' => true, 
@@ -236,7 +236,7 @@ class CartController extends Controller
         $summary = $this->cartService->cartSummary($cart);
 
         // Update session cart count for header badge
-        session(['cart_count' => $summary['items']]);
+        session(['cart_count' => $summary['unique_items']]);
 
         return response()->json([
             'success' => true,
@@ -296,7 +296,7 @@ class CartController extends Controller
             $summary = $this->cartService->cartSummary($cart);
             
             // Update session cart count for header badge
-            session(['cart_count' => $summary['items']]);
+            session(['cart_count' => $summary['unique_items']]);
             
             DB::commit();
 
@@ -377,7 +377,7 @@ class CartController extends Controller
             $summary = $this->cartService->cartSummary($cart);
             
             // Update session cart count for header badge
-            session(['cart_count' => $summary['items']]);
+            session(['cart_count' => $summary['unique_items']]);
             
             DB::commit();
 
@@ -481,7 +481,7 @@ class CartController extends Controller
             $summary = $this->cartService->cartSummary($cart);
             
             // Update session cart count for header badge
-            session(['cart_count' => $summary['items']]);
+            session(['cart_count' => $summary['unique_items']]);
             
             DB::commit();
 

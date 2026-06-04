@@ -119,6 +119,14 @@
                     </a>
                 </div>
                 <div class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.coupons*') ? 'active' : '' }}" 
+                       href="{{ route('admin.coupons.index') }}"
+                       data-keywords="coupons discounts promo codes vouchers offers marketing">
+                        <i class="nav-icon fas fa-ticket-alt"></i>
+                        <span class="nav-text">Coupons</span>
+                    </a>
+                </div>
+                <div class="nav-item">
                     <a class="nav-link" href="#" data-keywords="purchases sales transactions checkout cart">
                         <i class="nav-icon fas fa-shopping-cart"></i>
                         <span class="nav-text">Orders</span>

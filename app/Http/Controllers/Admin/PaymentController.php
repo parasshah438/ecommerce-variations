@@ -13,17 +13,17 @@ class PaymentController extends Controller
         $query = Payment::with(['order', 'user']);
 
         // Filter by status
-        if ($request->has('status') && $request->status != '') {
+        if ($request->filled('status')) {
             $query->where('payment_status', $request->status);
         }
 
         // Filter by gateway
-        if ($request->has('gateway') && $request->gateway != '') {
+        if ($request->filled('gateway')) {
             $query->where('gateway', $request->gateway);
         }
 
         // Search by payment ID or order ID
-        if ($request->has('search') && $request->search != '') {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('payment_id', 'like', "%{$search}%")
@@ -34,28 +34,23 @@ class PaymentController extends Controller
             });
         }
 
-        $payments = $query->latest()->paginate(50);
+        $payments = $query->latest()->paginate(50)->appends($request->query());
 
-        return response()->json([
-            'success' => true,
-            'data' => $payments,
-            'summary' => [
-                'total_payments' => Payment::count(),
-                'successful_payments' => Payment::successful()->count(),
-                'failed_payments' => Payment::failed()->count(),
-                'pending_payments' => Payment::pending()->count(),
-                'total_amount' => Payment::successful()->sum('amount'),
-            ]
-        ]);
+        $summary = [
+            'total_payments'      => Payment::count(),
+            'successful_payments' => Payment::successful()->count(),
+            'failed_payments'     => Payment::failed()->count(),
+            'pending_payments'    => Payment::pending()->count(),
+            'total_amount'        => Payment::successful()->sum('amount'),
+        ];
+
+        return view('admin.payments.index', compact('payments', 'summary'));
     }
 
     public function show(Payment $payment)
     {
         $payment->load(['order.items.variation.product', 'user']);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $payment
-        ]);
+
+        return view('admin.payments.show', compact('payment'));
     }
 }

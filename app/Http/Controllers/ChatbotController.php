@@ -61,6 +61,70 @@ class ChatbotController extends Controller
                 ]);
             }
 
+            // Clear the "expects order id" flag unless the user explicitly asks for order status intent.
+            // This prevents numeric-first (after reload) from auto-triggering status lookup.
+            $isOrderStatusIntentThisMessage =
+                (strpos($userMessageLower, 'order status') !== false) ||
+                (strpos($userMessageLower, "what's my order") !== false) ||
+                (strpos($userMessageLower, 'whats my order') !== false) ||
+                (strpos($userMessageLower, 'order tracking') !== false) ||
+                (strpos($userMessageLower, 'track my order') !== false);
+
+            if (!$isOrderStatusIntentThisMessage) {
+                session()->forget('chatbot_order_status_expects_id');
+            }
+
+            // Fast-path: if message is numeric-only (e.g. "5"), treat it as an order id lookup
+            // BUT only after user first asks the intent ("what's my order status?").
+            $trimmedMessage = trim($userMessage);
+            if (preg_match('/^\d+$/', $trimmedMessage) === 1) {
+                if (!$userId) {
+                    return response()->json([
+                        'success' => true,
+                        'reply' => "Please log in to check your order status.",
+                        'timestamp' => now()->toDateTimeString()
+                    ]);
+                }
+
+                $expectsOrderId = session()->get('chatbot_order_status_expects_id', false);
+
+                if (!$expectsOrderId) {
+                    return response()->json([
+                        'success' => true,
+                        'reply' => "To check your order status, please ask: <br><b>What's my order status?</b><br>Then share your order id (example: 5).",
+                        'timestamp' => now()->toDateTimeString()
+                    ]);
+                }
+
+                $orderStatusReply = $this->getOrderStatusReply($userId, $userMessageLower, $trimmedMessage);
+                if ($orderStatusReply !== null) {
+                    return response()->json([
+                        'success' => true,
+                        'reply' => $orderStatusReply,
+                        'timestamp' => now()->toDateTimeString()
+                    ]);
+                }
+            }
+
+            // Handle FAQ-style questions early (prevents them being mis-detected as product searches)
+            $orderStatusReply = $this->getOrderStatusReply($userId, $userMessageLower, $userMessage);
+            if ($orderStatusReply !== null) {
+                return response()->json([
+                    'success' => true,
+                    'reply' => $orderStatusReply,
+                    'timestamp' => now()->toDateTimeString()
+                ]);
+            }
+
+            $faqReply = $this->getFAQReply($userMessageLower);
+            if ($faqReply !== null) {
+                return response()->json([
+                    'success' => true,
+                    'reply' => $faqReply,
+                    'timestamp' => now()->toDateTimeString()
+                ]);
+            }
+
             //Check if user is asking about products
             $productKeywords = ['product', 'have', 'available', 'sell', 'buy', 'price', 'cost', 'laptop', 'phone', 'shirt', 'shoe', 'item', 'what do you', 'do you have', 'show me', 'find', 'search', 'looking for', 'need', 'want', 'get', 'camera', 'mobile', 'watch', 'headphone', 'tablet', 'laptop', 'computer', 'keyboard', 'mouse', 'monitor', 'speaker', 'charger', 'cable', 'adapter'];
             $isProductQuery = false;
@@ -729,10 +793,204 @@ INFO;
             'Do you offer free shipping?',
             'How do I track my order?',
             'What payment methods do you accept?',
-            'Can I cancel my order?'
+            'Can I cancel my order?',
+            "What's my order status?"
         ];
 
         return response()->json(['suggestions' => $suggestions]);
+    }
+
+    /**
+     * Match common FAQ questions and return a deterministic reply.
+     * This prevents generic questions (checkout, delivery, returns, etc.)
+     * from being mis-detected as product searches.
+     */
+    private function getFAQReply(string $userMessageLower): ?string
+    {
+        // NOTE: use substring matches so "How long does delivery take?" works
+        if (strpos($userMessageLower, 'checkout') !== false || strpos($userMessageLower, 'check out') !== false) {
+            return "Sure! Here’s how our checkout process works:<br><br>1) Browse products and add them to your cart<br>2) Go to Cart → proceed to Checkout<br>3) Enter/select delivery address and review your order<br>4) Choose your payment method<br>5) Place the order and complete payment (or COD where available)<br><br>If you want, tell me which product(s) you’re checking out and I’ll guide you step-by-step.";
+        }
+
+        if (strpos($userMessageLower, 'return policy') !== false || strpos($userMessageLower, 'return') !== false || strpos($userMessageLower, 'refund') !== false || strpos($userMessageLower, 'exchange') !== false) {
+            return "We have a 30-day return policy for unused items in original packaging.<br><br>To start a return, contact our support team for return authorization.";
+        }
+
+        if (strpos($userMessageLower, 'delivery') !== false || strpos($userMessageLower, 'delivery time') !== false || strpos($userMessageLower, 'shipping') !== false || strpos($userMessageLower, 'ship') !== false) {
+            // If it specifically asks free shipping, prioritize that
+            if (strpos($userMessageLower, 'free shipping') !== false || strpos($userMessageLower, 'free') !== false && strpos($userMessageLower, 'shipping') !== false) {
+                return "Yes — we offer free shipping on orders above ₹500.<br><br>Standard delivery typically takes 5–7 business days, and express delivery takes 2–3 business days.";
+            }
+
+            return "Delivery time depends on the service level:<br><br>• Standard delivery: 5–7 business days<br>• Express delivery: 2–3 business days";
+        }
+
+        if (strpos($userMessageLower, 'payment') !== false || strpos($userMessageLower, 'pay') !== false) {
+            return "We accept the following payment methods:<br><br>• Credit/Debit Cards<br>• Digital Wallets<br>• Bank Transfers<br>• Cash on Delivery (where available)";
+        }
+
+        if (strpos($userMessageLower, 'cancel') !== false || strpos($userMessageLower, 'cancellation') !== false) {
+            return "You can cancel your order within 24 hours of placement (if it hasn’t shipped yet). Please contact support immediately so we can help you.";
+        }
+
+        if (strpos($userMessageLower, 'price') !== false || strpos($userMessageLower, 'cost') !== false) {
+            return "Sure — tell me which product you’re interested in, and I’ll help you with the price and availability.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Order status intent:
+     * - If user asks for "my order status" without order number -> ask for it
+     * - If message contains an order number -> query DB and return status
+     */
+    private function getOrderStatusReply($userId, string $userMessageLower, string $userMessageOriginal): ?string
+    {
+        // Trigger when:
+        //  1) user asks intent (order status / track order)
+        //  2) user provides a numeric order id (second step)
+        $looksLikeOrderId = (preg_match('/^\s*\d+\s*$/', trim($userMessageOriginal)) === 1);
+
+        \Log::info('Chatbot order-status debug', [
+            'user_id' => $userId,
+            'message_original' => $userMessageOriginal,
+            'message_trimmed' => trim($userMessageOriginal),
+            'looks_like_order_id' => $looksLikeOrderId,
+        ]);
+
+            // If user sends numeric-only (e.g. "5"), treat it as orders.id ALWAYS.
+            if ($looksLikeOrderId) {
+                if (!$userId) {
+                    return "Please log in to check your order status.";
+                }
+
+                $orderId = $this->extractNumericOrderIdFromMessage($userMessageOriginal);
+
+                if (!$orderId) {
+                    return null;
+                }
+
+                $order = Order::where('user_id', $userId)
+                    ->where('id', $orderId)
+                    ->first();
+
+                if (!$order) {
+                    return "I couldn’t find an order with id <b>#{$orderId}</b> for your account. Please double-check and try again.";
+                }
+
+                $formattedStatus = isset($order->formatted_status)
+                    ? $order->formatted_status
+                    : ($order->status ?? 'unknown');
+
+                $trackingUrl = null;
+                try {
+                    $trackingUrl = route('order.track', ['order' => $order->id]);
+                } catch (\Throwable $e) {
+                    $trackingUrl = null;
+                }
+
+                if ($trackingUrl) {
+                    return "Your order <b>#{$orderId}</b> current status is: <b>{$formattedStatus}</b>.<br><br><b>Track here:</b> <a href=\"{$trackingUrl}\" target=\"_blank\">{$trackingUrl}</a>";
+                }
+
+                return "Your order <b>#{$orderId}</b> current status is: <b>{$formattedStatus}</b>.";
+            }
+
+            // If user sends an order number like ORD-12345, prefer querying by order_number
+            // (your public tracking page uses $order->order_number)
+            if (preg_match('/\b(ORD-[A-Za-z0-9]+)\b/i', $userMessageOriginal, $m)) {
+                if (!$userId) {
+                    return "Please log in to check your order status.";
+                }
+
+                $orderNumber = $m[1];
+
+                $order = Order::where('user_id', $userId)
+                    ->where('order_number', $orderNumber)
+                    ->first();
+
+                if (!$order) {
+                    return "I couldn’t find an order with order number <b>{$orderNumber}</b> for your account. Please double-check and try again.";
+                }
+
+                $formattedStatus = isset($order->formatted_status)
+                    ? $order->formatted_status
+                    : ($order->status ?? 'unknown');
+
+                $trackingUrl = null;
+                try {
+                    $trackingUrl = route('order.track', ['order' => $order->id]);
+                } catch (\Throwable $e) {
+                    $trackingUrl = null;
+                }
+
+                if ($trackingUrl) {
+                    return "Your order <b>{$orderNumber}</b> current status is: <b>{$formattedStatus}</b>.<br><br><b>Track here:</b> <a href=\"{$trackingUrl}\" target=\"_blank\">{$trackingUrl}</a>";
+                }
+
+                return "Your order <b>{$orderNumber}</b> current status is: <b>{$formattedStatus}</b>.";
+            }
+
+            // Otherwise, only handle when user asks for order status intent.
+        $isOrderStatusIntent =
+            (strpos($userMessageLower, 'order status') !== false) ||
+            (strpos($userMessageLower, "what's my order") !== false) ||
+            (strpos($userMessageLower, 'whats my order') !== false) ||
+            (strpos($userMessageLower, 'order tracking') !== false) ||
+            (strpos($userMessageLower, 'track my order') !== false);
+
+        if (!$isOrderStatusIntent) {
+            return null;
+        }
+
+        if (!$userId) {
+            return "Please log in to check your order status.";
+        }
+
+        // Since your Order model/db doesn’t have `order_number`, we only support numeric `orders.id`.
+        $orderId = $this->extractNumericOrderIdFromMessage($userMessageOriginal);
+
+        if (!$orderId) {
+            return "Sure — please share your order id (example: 5).";
+        }
+
+        $order = Order::where('user_id', $userId)
+            ->where('id', $orderId)
+            ->first();
+
+        if (!$order) {
+            return "I couldn’t find an order with id <b>#{$orderId}</b> for your account. Please double-check and try again.";
+        }
+
+        $formattedStatus = $order->formatted_status ?? ($order->status ?? 'unknown');
+
+        $trackingUrl = null;
+        try {
+            $trackingUrl = route('order.track', ['order' => $order->id]);
+        } catch (\Throwable $e) {
+            $trackingUrl = null;
+        }
+
+        if ($trackingUrl) {
+            return "Your order <b>#{$orderId}</b> current status is: <b>{$formattedStatus}</b>.<br><br><b>Track here:</b> <a href=\"{$trackingUrl}\" target=\"_blank\">{$trackingUrl}</a>";
+        }
+
+        return "Your order <b>#{$orderId}</b> current status is: <b>{$formattedStatus}</b>.";
+    }
+
+    /**
+     * Extract numeric order id from message (e.g., "5").
+     */
+    private function extractNumericOrderIdFromMessage(string $message): ?int
+    {
+        $trimmed = trim($message);
+
+        if (preg_match('/^\d+$/', $trimmed)) {
+            return (int) $trimmed;
+        }
+
+        return null;
     }
 
     /**
@@ -772,30 +1030,34 @@ INFO;
                         ];
                     });
 
-                // Get current cart items
-                $context['cart_items'] = \App\Models\CartItem::where('user_id', $userId)
-                    ->with('productVariation.product')
-                    ->get()
-                    ->map(function($item) {
+                // Get current cart items via carts.user_id (cart_items table may not have user_id)
+                $context['cart_items'] = \App\Models\Cart::where('user_id', $userId)
+                    ->with(['items.productVariation.product'])
+                    ->latest()
+                    ->first()
+                    ?->items
+                    ->map(function ($item) {
                         return [
                             'name' => $item->productVariation->product->name ?? 'Unknown',
                             'quantity' => $item->quantity,
                             'price' => $item->productVariation->price
                         ];
-                    });
+                    })
+                    ->values()
+                    ->all() ?? [];
 
                 // Get wishlist items
-                $context['wishlist_items'] = \App\Models\WishlistItem::where('user_id', $userId)
-                    ->with('productVariation.product')
-                    ->get()
-                    ->map(function($item) {
-                        return [
-                            'name' => $item->productVariation->product->name ?? 'Unknown',
-                            'price' => $item->productVariation->price
-                        ];
-                    });
-
+                // $context['wishlist_items'] = \App\Models\Wishlist::where('user_id', $userId)
+                //     //->with('productVariation.product')
+                //     ->get()
+                //     ->map(function($item) {
+                //         return [
+                //             'name' => $item->productVariation->product->name ?? 'Unknown',
+                //             'price' => $item->productVariation->price
+                //         ];
+                //     });
             } catch (\Exception $e) {
+                // If cart/wishlist queries fail (e.g. missing cart_items.user_id), we still must not break chatbot endpoint.
                 \Log::error('Error getting user context: ' . $e->getMessage());
             }
         }

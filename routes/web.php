@@ -92,7 +92,9 @@ Route::get('/location-integration', function () {
 })->name('location.integration');
 
 //chatbot
-Route::post('chatbot/chat', [App\Http\Controllers\ChatbotController::class, 'chat'])->name('chatbot.chat');
+Route::post('chatbot/chat', [App\Http\Controllers\ChatbotController::class, 'chat'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('chatbot.chat');
 Route::get('chatbot/suggestions', [App\Http\Controllers\ChatbotController::class, 'getSuggestedQuestions'])->name('chatbot.suggestions');
 Route::post('chatbot/search-products', [App\Http\Controllers\ChatbotController::class, 'searchProducts'])->name('chatbot.search_products');
 Route::post('chatbot/product-details', [App\Http\Controllers\ChatbotController::class, 'getProductDetails'])->name('chatbot.product_details');

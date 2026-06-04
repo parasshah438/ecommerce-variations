@@ -15,5 +15,11 @@ class VerifyCsrfToken extends Middleware
         'admin/users/test',
         'admin/users/debug',
         'admin/users/statistics',
+
+        // Chatbot endpoint (avoid 419 Page Expired)
+        'chatbot/chat',
+        '/chatbot/chat',
+        'chatbot/chat/',
+        '/chatbot/chat/',
     ];
 }

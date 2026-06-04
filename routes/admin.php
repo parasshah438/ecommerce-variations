@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\TaxSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\Category;
@@ -163,6 +164,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/api/get-product', [\App\Http\Controllers\Admin\SaleController::class, 'getProduct'])->name('get-product');
         Route::post('/api/products-by-category', [\App\Http\Controllers\Admin\SaleController::class, 'productsByCategory'])->name('products-by-category');
     });
+
+    // Coupon Management Routes
+    Route::resource('coupons', CouponController::class);
 
     // Tax Settings Routes
     Route::prefix('tax-settings')->name('tax-settings.')->group(function () {
