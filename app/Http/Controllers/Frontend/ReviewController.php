@@ -51,29 +51,19 @@ class ReviewController extends Controller
 
         try {
             // Create the review
-            $review = Review::create([
+            $review = Review::create(array_merge([
                 'product_id' => $product->id,
                 'user_id' => Auth::id(),
                 'rating' => $request->rating,
                 'title' => $request->title,
                 'comment' => $request->comment,
                 'verified_purchase' => $this->checkVerifiedPurchase($product->id, Auth::id()),
-                'is_approved' => true // Auto-approve for now, you can add moderation later
-            ]);
+            ], Review::directPublishAttributes()));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Review submitted successfully!',
-                'review' => [
-                    'id' => $review->id,
-                    'user_id' => $review->user_id,
-                    'rating' => $review->rating,
-                    'title' => $review->title,
-                    'comment' => $review->comment,
-                    'user_name' => Auth::user()->name,
-                    'created_at' => $review->created_at->format('M j, Y'),
-                    'verified_purchase' => $review->verified_purchase
-                ]
+                'message' => 'Thank you! Your review has been published.',
+                'review' => $this->formatReviewResponse($review),
             ]);
 
         } catch (\Exception $e) {
@@ -92,7 +82,7 @@ class ReviewController extends Controller
         $perPage = $request->get('per_page', 10);
         
         $reviews = Review::where('product_id', $product->id)
-                        ->where('is_approved', true)
+                        ->approved()
                         ->with('user:id,name')
                         ->latest()
                         ->paginate($perPage);
@@ -105,7 +95,7 @@ class ReviewController extends Controller
                 'title' => $review->title,
                 'comment' => $review->comment,
                 'user_name' => $review->user ? $review->user->name : 'Anonymous',
-                'created_at' => $review->created_at->format('M j, Y'),
+                'created_at' => $review->created_at->format('d M Y, h:i A'),
                 'verified_purchase' => $review->verified_purchase
             ];
         });
@@ -120,6 +110,22 @@ class ReviewController extends Controller
                 'per_page' => $reviews->perPage()
             ]
         ]);
+    }
+
+    private function formatReviewResponse(Review $review): array
+    {
+        return [
+            'id' => $review->id,
+            'user_id' => $review->user_id,
+            'rating' => $review->rating,
+            'title' => $review->title,
+            'comment' => $review->comment,
+            'user_name' => Auth::user()->name,
+            'created_at' => $review->created_at->format('d M Y, h:i A'),
+            'verified_purchase' => $review->verified_purchase,
+            'status' => $review->status,
+            'published' => true,
+        ];
     }
 
     /**
@@ -141,8 +147,7 @@ class ReviewController extends Controller
      */
     public function statistics(Product $product)
     {
-        $reviews = Review::where('product_id', $product->id)
-                        ->where('is_approved', true);
+        $reviews = Review::where('product_id', $product->id)->approved();
 
         $totalReviews = $reviews->count();
         $averageRating = $totalReviews > 0 ? $reviews->avg('rating') : 0;
@@ -190,32 +195,22 @@ class ReviewController extends Controller
 
         try {
             // Update the existing review
-            $existingReview->update([
+            $existingReview->update(array_merge([
                 'rating' => $request->rating,
                 'title' => $request->title,
                 'comment' => $request->comment,
                 'verified_purchase' => $this->checkVerifiedPurchase($product->id, Auth::id()),
-                'is_approved' => true
-            ]);
+            ], Review::directPublishAttributes()));
 
-            // Update product statistics
-            $product->updateReviewStats();
+            $existingReview->refresh();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Review updated successfully!',
-                'review' => [
-                    'id' => $existingReview->id,
-                    'user_id' => $existingReview->user_id,
-                    'rating' => $existingReview->rating,
-                    'title' => $existingReview->title,
-                    'comment' => $existingReview->comment,
-                    'user_name' => Auth::user()->name,
-                    'created_at' => $existingReview->created_at->format('M j, Y'),
-                    'updated_at' => $existingReview->updated_at->format('M j, Y'),
-                    'verified_purchase' => $existingReview->verified_purchase,
-                    'is_updated' => true
-                ]
+                'message' => 'Your review has been updated and published.',
+                'review' => array_merge($this->formatReviewResponse($existingReview), [
+                    'is_updated' => true,
+                    'updated_at' => $existingReview->updated_at->format('d M Y, h:i A'),
+                ]),
             ]);
 
         } catch (\Exception $e) {

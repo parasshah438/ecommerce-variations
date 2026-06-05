@@ -41,38 +41,19 @@ class CouponController extends Controller
             return response()->json(['success' => false, 'message' => 'Cart is empty']);
         }
 
-        // Validate coupon using model methods
+        $cart->load('items');
         $cartSubtotal = $cart->subtotal;
-        $validationError = $coupon->getValidationError($cartSubtotal);
-        
+        $validationError = $coupon->getValidationError($cartSubtotal, $user?->id);
+
         if ($validationError) {
             return response()->json(['success' => false, 'message' => $validationError]);
         }
 
-        // Calculate discount using coupon model
-        $discountAmount = $coupon->calculateDiscount($cartSubtotal);
-        
-        // Business rule: Check if discount results in very low total
-        $subtotal = $cart->subtotal;
-        $finalTotal = $subtotal - $discountAmount;
-        
-        // Optional business rule: Prevent free or very cheap orders
-        /*
-        if ($finalTotal < 50) { // Minimum ₹50 order value
-            return response()->json([
-                'success' => false, 
-                'message' => 'This coupon would make your order total too low. Minimum order value is ₹50.'
-            ]);
-        }
-        */
-        
-        // Apply the coupon
-        $cart->coupon_id = $coupon->id;
-        $cart->discount_amount = $discountAmount;
-        $cart->save();
+        $cart->applyCoupon($coupon);
+        $discountAmount = $cart->discount_amount;
 
-        // Get updated cart summary
-        $summary = $this->cartService->cartSummary($cart);
+        $pincode = $request->input('pincode');
+        $summary = $this->cartService->cartSummary($cart, $pincode);
 
         return response()->json([
             'success' => true, 
@@ -97,49 +78,15 @@ class CouponController extends Controller
             return response()->json(['success' => false, 'message' => 'No coupon applied']);
         }
 
-        $cart->coupon_id = null;
-        $cart->discount_amount = 0;
-        $cart->save();
+        $cart->removeCoupon();
 
-        $summary = $this->cartService->cartSummary($cart);
+        $pincode = $request->input('pincode');
+        $summary = $this->cartService->cartSummary($cart, $pincode);
 
         return response()->json([
             'success' => true,
             'message' => 'Coupon removed successfully',
             'summary' => $summary
         ]);
-    }
-
-    private function calculateDiscount($cart, $coupon)
-    {
-        $subtotal = $cart->subtotal;
-        
-        if ($coupon->type === 'percentage') {
-            $discount = round(($subtotal * $coupon->discount) / 100, 2);
-            // Optional: Cap percentage discounts at 90% of subtotal
-            // return min($discount, $subtotal * 0.9);
-            return $discount;
-        }
-        
-        // Fixed discount logic with business rules
-        if ($coupon->type === 'fixed') {
-            // Option A: Allow full discount (current behavior)
-            return min($coupon->discount, $subtotal);
-            
-            // Option B: Prevent discount equal to or greater than cart total
-            // Uncomment the lines below to require minimum ₹50 payment
-            /*
-            $maxDiscount = max($subtotal - 50, 0); // Minimum ₹50 payment required
-            return min($coupon->discount, $maxDiscount);
-            */
-            
-            // Option C: Cap fixed discounts at 90% of cart total
-            /*
-            $maxDiscount = $subtotal * 0.9; // Maximum 90% discount
-            return min($coupon->discount, $maxDiscount);
-            */
-        }
-        
-        return 0;
     }
 }

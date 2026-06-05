@@ -9,7 +9,9 @@ use App\Http\Controllers\Admin\AttributeValueController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\TaxSettingsController;
+use App\Http\Controllers\Admin\WebsiteSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\Category;
 
@@ -165,8 +167,19 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/api/products-by-category', [\App\Http\Controllers\Admin\SaleController::class, 'productsByCategory'])->name('products-by-category');
     });
 
-    // Coupon Management Routes
-    Route::resource('coupons', CouponController::class);
+    // Coupon Management Routes (admin only)
+    Route::resource('coupons', CouponController::class)->middleware('admin');
+
+    // Review Moderation Routes (admin only)
+    Route::prefix('reviews')->name('reviews.')->middleware('admin')->group(function () {
+        Route::get('/', [ReviewController::class, 'index'])->name('index');
+        Route::get('/{review}', [ReviewController::class, 'show'])->name('show');
+        Route::post('/{review}/approve', [ReviewController::class, 'approve'])->name('approve');
+        Route::post('/{review}/reject', [ReviewController::class, 'reject'])->name('reject');
+        Route::post('/{review}/report', [ReviewController::class, 'report'])->name('report');
+        Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [ReviewController::class, 'bulkAction'])->name('bulk-action');
+    });
 
     // Tax Settings Routes
     Route::prefix('tax-settings')->name('tax-settings.')->group(function () {
@@ -222,6 +235,17 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/view', [UserController::class, 'view_user_activity'])->name('view');
         Route::post('/delete', [UserController::class, 'delete_user_activity'])->name('delete');
         Route::post('/delete-multiple', [UserController::class, 'delete_all_user_activity'])->name('delete-multiple');
+    });
+
+    // Website / System Settings (.env management, admin only)
+    Route::prefix('settings')->name('settings.')->middleware('admin')->group(function () {
+        Route::get('/', [WebsiteSettingsController::class, 'index'])->name('index');
+        Route::put('/{tab}', [WebsiteSettingsController::class, 'update'])->name('update');
+        Route::post('/test-database', [WebsiteSettingsController::class, 'testDatabase'])->name('test-database');
+        Route::post('/test-mail', [WebsiteSettingsController::class, 'testMail'])->name('test-mail');
+        Route::post('/database-backup', [WebsiteSettingsController::class, 'runDatabaseBackup'])->name('database-backup');
+        Route::post('/backup-env', [WebsiteSettingsController::class, 'backupEnv'])->name('backup-env');
+        Route::post('/clear-cache', [WebsiteSettingsController::class, 'clearCache'])->name('clear-cache');
     });
 
     // Cache Management Routes (Admin Only)

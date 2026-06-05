@@ -9,6 +9,11 @@ use Illuminate\Validation\Rule;
 
 class CouponController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
     /**
      * Display a listing of coupons.
      */
@@ -94,12 +99,12 @@ class CouponController extends Controller
             'minimum_cart_value' => ['nullable', 'numeric', 'min:0'],
             'maximum_discount_limit' => ['nullable', 'numeric', 'min:0'],
             'usage_limit' => ['nullable', 'integer', 'min:1'],
-            'used_count' => ['nullable', 'integer', 'min:0'],
+            'per_user_limit' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validated['code'] = strtoupper(trim($validated['code']));
         $validated['minimum_cart_value'] = $validated['minimum_cart_value'] ?? 0;
-        $validated['used_count'] = $validated['used_count'] ?? 0;
+        $validated['used_count'] = 0;
 
         if ($validated['type'] === 'percentage') {
             $validated['discount'] = min((float) $validated['discount'], 100);
@@ -150,12 +155,12 @@ class CouponController extends Controller
             'minimum_cart_value' => ['nullable', 'numeric', 'min:0'],
             'maximum_discount_limit' => ['nullable', 'numeric', 'min:0'],
             'usage_limit' => ['nullable', 'integer', 'min:1'],
-            'used_count' => ['nullable', 'integer', 'min:0'],
+            'per_user_limit' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validated['code'] = strtoupper(trim($validated['code']));
         $validated['minimum_cart_value'] = $validated['minimum_cart_value'] ?? 0;
-        $validated['used_count'] = $validated['used_count'] ?? 0;
+        unset($validated['used_count']);
 
         if ($validated['type'] === 'percentage') {
             $validated['discount'] = min((float) $validated['discount'], 100);

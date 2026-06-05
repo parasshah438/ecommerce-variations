@@ -127,6 +127,18 @@
                     </a>
                 </div>
                 <div class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.reviews*') ? 'active' : '' }}" 
+                       href="{{ route('admin.reviews.index') }}"
+                       data-keywords="reviews ratings feedback moderation approve reject report">
+                        <i class="nav-icon fas fa-star"></i>
+                        <span class="nav-text">Reviews</span>
+                        @php $pendingReviews = \App\Models\Review::pending()->count(); @endphp
+                        @if($pendingReviews > 0)
+                            <span class="nav-badge">{{ $pendingReviews }}</span>
+                        @endif
+                    </a>
+                </div>
+                <div class="nav-item">
                     <a class="nav-link" href="#" data-keywords="purchases sales transactions checkout cart">
                         <i class="nav-icon fas fa-shopping-cart"></i>
                         <span class="nav-text">Orders</span>
@@ -181,21 +193,19 @@
             <div class="nav-section">
                 <div class="nav-section-title">System</div>
                 <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="configuration options preferences setup config">
+                    <a class="nav-link {{ request()->routeIs('admin.settings*') ? 'active' : '' }}"
+                       href="{{ route('admin.settings.index') }}"
+                       data-keywords="configuration env smtp payment database cache backup website settings">
                         <i class="nav-icon fas fa-cog"></i>
-                        <span class="nav-text">Settings</span>
+                        <span class="nav-text">Website Settings</span>
                     </a>
                 </div>
                 <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="protection safety authentication permissions access">
-                        <i class="nav-icon fas fa-shield-alt"></i>
-                        <span class="nav-text">Security</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="backup restore database export import">
-                        <i class="nav-icon fas fa-database"></i>
-                        <span class="nav-text">Database Backup</span>
+                    <a class="nav-link {{ request()->routeIs('admin.cache*') ? 'active' : '' }}"
+                       href="{{ route('admin.cache.index') }}"
+                       data-keywords="cache clear config route view">
+                        <i class="nav-icon fas fa-bolt"></i>
+                        <span class="nav-text">Cache Manager</span>
                     </a>
                 </div>
             </div>

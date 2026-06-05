@@ -74,18 +74,9 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="used_count" class="form-label">Used Count</label>
-                            <input type="number"
-                                   min="0"
-                                   class="form-control @error('used_count') is-invalid @enderror"
-                                   id="used_count"
-                                   name="used_count"
-                                   value="{{ old('used_count', 0) }}"
-                                   placeholder="0">
-                            <div class="form-text">Usually keep this at 0 for a new coupon.</div>
-                            @error('used_count')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label">Used Count</label>
+                            <input type="text" class="form-control bg-light" value="0" readonly disabled>
+                            <div class="form-text">Managed automatically when customers place orders.</div>
                         </div>
 
                         <div class="col-md-6">
@@ -153,7 +144,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label for="usage_limit" class="form-label">Usage Limit</label>
+                            <label for="usage_limit" class="form-label">Global Usage Limit</label>
                             <input type="number"
                                    min="1"
                                    class="form-control @error('usage_limit') is-invalid @enderror"
@@ -161,8 +152,23 @@
                                    name="usage_limit"
                                    value="{{ old('usage_limit') }}"
                                    placeholder="Unlimited">
-                            <div class="form-text">Leave blank for unlimited usage.</div>
+                            <div class="form-text">Total uses across all customers.</div>
                             @error('usage_limit')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="per_user_limit" class="form-label">Per-Customer Limit</label>
+                            <input type="number"
+                                   min="1"
+                                   class="form-control @error('per_user_limit') is-invalid @enderror"
+                                   id="per_user_limit"
+                                   name="per_user_limit"
+                                   value="{{ old('per_user_limit') }}"
+                                   placeholder="Unlimited">
+                            <div class="form-text">Set to 1 for once per customer.</div>
+                            @error('per_user_limit')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

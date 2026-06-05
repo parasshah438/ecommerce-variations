@@ -135,7 +135,7 @@ class Product extends Model
     public function updateReviewStats()
     {
         $stats = $this->reviews()
-            ->where('is_approved', true)
+            ->approved()
             ->selectRaw('COUNT(*) as count, AVG(rating) as average')
             ->first();
         

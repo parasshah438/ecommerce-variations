@@ -126,9 +126,17 @@
                     </div>
                     <div class="col-md-4">
                         <div class="border rounded p-3 h-100">
-                            <div class="text-muted small">Usage Limit</div>
+                            <div class="text-muted small">Global Usage Limit</div>
                             <div class="fw-semibold">
-                                {{ $coupon->usage_limit ? 'Limited' : 'Unlimited' }}
+                                {{ $coupon->usage_limit ? $coupon->usage_limit . ' total' : 'Unlimited' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small">Per-Customer Limit</div>
+                            <div class="fw-semibold">
+                                {{ $coupon->per_user_limit ? $coupon->per_user_limit . ' per user' : 'Unlimited' }}
                             </div>
                         </div>
                     </div>

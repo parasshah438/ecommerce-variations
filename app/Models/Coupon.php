@@ -19,7 +19,14 @@ class Coupon extends Model
         'minimum_cart_value',
         'maximum_discount_limit',
         'usage_limit',
-        'used_count'
+        'per_user_limit',
+        'used_count',
+    ];
+
+    protected $casts = [
+        'per_user_limit' => 'integer',
+        'usage_limit' => 'integer',
+        'used_count' => 'integer',
     ];
 
     /**
@@ -89,9 +96,39 @@ class Coupon extends Model
     }
 
     /**
+     * Count completed orders by a user that used this coupon code.
+     */
+    public function getUserUsageCount(?int $userId): int
+    {
+        if (!$userId) {
+            return 0;
+        }
+
+        return Order::where('user_id', $userId)
+            ->where('coupon_code', $this->code)
+            ->whereNotIn('status', [
+                Order::STATUS_CANCELLED,
+                Order::STATUS_REFUNDED,
+            ])
+            ->count();
+    }
+
+    /**
+     * Check if the user has reached their per-user usage limit.
+     */
+    public function hasUserReachedLimit(?int $userId): bool
+    {
+        if (!$this->per_user_limit || !$userId) {
+            return false;
+        }
+
+        return $this->getUserUsageCount($userId) >= $this->per_user_limit;
+    }
+
+    /**
      * Get validation error message for this coupon.
      */
-    public function getValidationError($cartSubtotal): ?string
+    public function getValidationError($cartSubtotal, ?int $userId = null): ?string
     {
         if (!$this->isValid()) {
             if ($this->valid_from && $this->valid_from > now()->toDateString()) {
@@ -108,6 +145,14 @@ class Coupon extends Model
 
         if ($this->hasReachedUsageLimit()) {
             return "This coupon has reached its usage limit";
+        }
+
+        if ($this->hasUserReachedLimit($userId)) {
+            if ($this->per_user_limit === 1) {
+                return 'You have already used this coupon';
+            }
+
+            return "You have reached the maximum uses ({$this->per_user_limit}) for this coupon";
         }
 
         return null;

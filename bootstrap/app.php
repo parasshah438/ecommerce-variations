@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register single session middleware for authenticated routes
         $middleware->alias([
             'single.session' => \App\Http\Middleware\SingleSessionMiddleware::class,
+            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

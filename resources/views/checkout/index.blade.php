@@ -250,7 +250,9 @@
                                 <div class="row g-3 mb-4">
                                     @foreach(auth()->user()->addresses as $address)
                                         <div class="col-md-6">
-                                            <div class="address-card position-relative {{ $address->is_default ? 'selected' : '' }}" onclick="selectAddress({{ $address->id }})">
+                                            <div class="address-card position-relative {{ $address->is_default ? 'selected' : '' }}"
+                                                 data-zip="{{ $address->zip ?? $address->postal_code ?? '' }}"
+                                                 onclick="selectAddress({{ $address->id }})">
                                                 <input type="radio" name="address_id" value="{{ $address->id }}" 
                                                        class="form-check-input" id="address_{{ $address->id }}" 
                                                        {{ $address->is_default ? 'checked' : '' }} hidden>
@@ -555,26 +557,44 @@
                             <div class="border-top pt-3 mt-3">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Subtotal ({{ $cartSummary['items'] ?? 0 }} items)</span>
-                                    <span>₹{{ number_format($cartSummary['subtotal'] ?? 0, 2) }}</span>
+                                    <span id="checkout-subtotal">₹{{ number_format($cartSummary['subtotal'] ?? 0, 2) }}</span>
                                 </div>
                                 @if(isset($cartSummary['coupon']) && $cartSummary['coupon'])
-                                <div class="d-flex justify-content-between mb-2 text-success">
-                                    <span>Coupon Discount ({{ $cartSummary['coupon']['code'] }})</span>
-                                    <span>-₹{{ number_format($cartSummary['discount_amount'] ?? 0, 2) }}</span>
+                                <div class="d-flex justify-content-between mb-2 text-success" id="checkout-coupon-row">
+                                    <span>
+                                        <i class="bi bi-tag me-1"></i>
+                                        Coupon ({{ $cartSummary['coupon']['code'] }})
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" id="checkout-remove-coupon-btn" title="Remove coupon">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </span>
+                                    <span id="checkout-discount">-₹{{ number_format($cartSummary['discount_amount'] ?? 0, 2) }}</span>
                                 </div>
                                 @endif
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Shipping</span>
-                                    <span class="text-success">{{ ($cartSummary['shipping_cost'] ?? 0) > 0 ? '₹' . number_format($cartSummary['shipping_cost'], 2) : 'Free' }}</span>
+                                    <span class="text-success" id="checkout-shipping">{{ ($cartSummary['shipping_cost'] ?? 0) > 0 ? '₹' . number_format($cartSummary['shipping_cost'], 2) : 'Free' }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Tax (GST)</span>
-                                    <span>₹{{ number_format($cartSummary['tax_amount'] ?? 0, 2) }}</span>
+                                    <span id="checkout-tax">₹{{ number_format($cartSummary['tax_amount'] ?? 0, 2) }}</span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between mb-3">
                                     <h6 class="fw-bold">Total</h6>
-                                    <h6 class="fw-bold text-primary">₹{{ number_format($cartSummary['total'] ?? 0, 2) }}</h6>
+                                    <h6 class="fw-bold text-primary" id="checkout-total">₹{{ number_format($cartSummary['total'] ?? 0, 2) }}</h6>
+                                </div>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm w-100 mb-2 {{ isset($cartSummary['coupon']) && $cartSummary['coupon'] ? 'd-none' : '' }}"
+                                        id="checkout-apply-coupon-btn">
+                                    <i class="bi bi-tag me-1"></i>Apply Coupon
+                                </button>
+                                <div class="mb-3 {{ isset($cartSummary['coupon']) && $cartSummary['coupon'] ? 'd-none' : '' }}" id="checkout-coupon-section">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="checkout-coupon-code" placeholder="Enter coupon code">
+                                        <button type="button" class="btn btn-outline-primary" id="checkout-apply-coupon">Apply</button>
+                                    </div>
                                 </div>
 
                                 <!-- Place Order Button -->
@@ -759,6 +779,168 @@
 
 @section('scripts')
 <script>
+// Checkout coupon helpers
+function getCheckoutPincode() {
+    const selectedAddress = document.querySelector('input[name="address_id"]:checked');
+    if (selectedAddress) {
+        const card = selectedAddress.closest('.address-card');
+        if (card && card.dataset.zip) {
+            return card.dataset.zip;
+        }
+    }
+    const zipField = document.getElementById('zip');
+    if (zipField && zipField.value) {
+        return zipField.value;
+    }
+    return '';
+}
+
+function updateCheckoutSummary(summary) {
+    if (!summary) return;
+
+    const subtotalEl = document.getElementById('checkout-subtotal');
+    if (subtotalEl) {
+        subtotalEl.textContent = '₹' + parseFloat(summary.subtotal || 0).toFixed(2);
+    }
+
+    const shippingEl = document.getElementById('checkout-shipping');
+    if (shippingEl) {
+        const shipping = parseFloat(summary.shipping_cost || 0);
+        shippingEl.textContent = shipping > 0 ? '₹' + shipping.toFixed(2) : 'Free';
+    }
+
+    const taxEl = document.getElementById('checkout-tax');
+    if (taxEl) {
+        taxEl.textContent = '₹' + parseFloat(summary.tax_amount || 0).toFixed(2);
+    }
+
+    const totalEl = document.getElementById('checkout-total');
+    if (totalEl) {
+        totalEl.textContent = '₹' + parseFloat(summary.total || 0).toFixed(2);
+    }
+
+    const discountRow = document.getElementById('checkout-coupon-row');
+    if (summary.coupon && parseFloat(summary.discount_amount || 0) > 0) {
+        if (!discountRow) {
+            showCheckoutAppliedCoupon(summary.coupon, summary.discount_amount);
+        } else {
+            const discountEl = document.getElementById('checkout-discount');
+            if (discountEl) {
+                discountEl.textContent = '-₹' + parseFloat(summary.discount_amount).toFixed(2);
+            }
+        }
+        document.getElementById('checkout-apply-coupon-btn')?.classList.add('d-none');
+        document.getElementById('checkout-coupon-section')?.classList.add('d-none');
+    } else if (discountRow) {
+        discountRow.remove();
+        document.getElementById('checkout-apply-coupon-btn')?.classList.remove('d-none');
+        document.getElementById('checkout-coupon-section')?.classList.remove('d-none');
+    }
+}
+
+function showCheckoutAppliedCoupon(coupon, discountAmount) {
+    const subtotalRow = document.getElementById('checkout-subtotal')?.closest('.d-flex');
+    if (!subtotalRow || document.getElementById('checkout-coupon-row')) return;
+
+    const row = document.createElement('div');
+    row.className = 'd-flex justify-content-between mb-2 text-success';
+    row.id = 'checkout-coupon-row';
+    row.innerHTML =
+        '<span><i class="bi bi-tag me-1"></i>Coupon (' + coupon.code + ')' +
+        '<button type="button" class="btn btn-sm btn-outline-danger ms-1" id="checkout-remove-coupon-btn" title="Remove coupon">' +
+        '<i class="bi bi-x"></i></button></span>' +
+        '<span id="checkout-discount">-₹' + parseFloat(discountAmount).toFixed(2) + '</span>';
+
+    subtotalRow.insertAdjacentElement('afterend', row);
+}
+
+function applyCheckoutCoupon(code) {
+    const $btn = $('#checkout-apply-coupon');
+    $btn.prop('disabled', true).text('Applying...');
+
+    $.ajax({
+        url: '{{ route("coupon.apply") }}',
+        method: 'POST',
+        data: {
+            code: code,
+            pincode: getCheckoutPincode(),
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(response.message || 'Coupon applied!');
+                }
+                updateCheckoutSummary(response.summary);
+                $('#checkout-coupon-code').val('');
+            } else if (typeof toastr !== 'undefined') {
+                toastr.error(response.message || 'Invalid coupon');
+            }
+        },
+        error: function(xhr) {
+            const msg = xhr.responseJSON?.message || 'Failed to apply coupon';
+            if (typeof toastr !== 'undefined') toastr.error(msg);
+        },
+        complete: function() {
+            $btn.prop('disabled', false).text('Apply');
+        }
+    });
+}
+
+function removeCheckoutCoupon() {
+    const $btn = $('#checkout-remove-coupon-btn');
+    $btn.prop('disabled', true);
+
+    $.ajax({
+        url: '{{ route("coupon.remove") }}',
+        method: 'POST',
+        data: {
+            pincode: getCheckoutPincode(),
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(response.message || 'Coupon removed');
+                }
+                updateCheckoutSummary(response.summary);
+            }
+        },
+        error: function() {
+            if (typeof toastr !== 'undefined') toastr.error('Failed to remove coupon');
+        },
+        complete: function() {
+            $btn.prop('disabled', false);
+        }
+    });
+}
+
+$(document).ready(function() {
+    $('#checkout-apply-coupon-btn').on('click', function() {
+        $('#checkout-coupon-section').toggleClass('d-none');
+    });
+
+    $('#checkout-apply-coupon').on('click', function() {
+        const code = $('#checkout-coupon-code').val();
+        if (code && code.trim()) {
+            applyCheckoutCoupon(code.trim());
+        } else if (typeof toastr !== 'undefined') {
+            toastr.error('Please enter a coupon code');
+        }
+    });
+
+    $('#checkout-coupon-code').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            $('#checkout-apply-coupon').click();
+        }
+    });
+
+    $(document).on('click', '#checkout-remove-coupon-btn', function() {
+        removeCheckoutCoupon();
+    });
+});
+
 // Address Selection
 function selectAddress(addressId) {
     // Remove selected class from all address cards

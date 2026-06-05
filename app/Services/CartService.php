@@ -12,9 +12,14 @@ class CartService
 {
     protected $shippingCalculator;
 
-    public function __construct(ShippingCalculatorService $shippingCalculator)
-    {
+    protected $couponService;
+
+    public function __construct(
+        ShippingCalculatorService $shippingCalculator,
+        CouponService $couponService
+    ) {
         $this->shippingCalculator = $shippingCalculator;
+        $this->couponService = $couponService;
     }
     public function getOrCreateCart(?\Illuminate\Contracts\Auth\Authenticatable $user, ?string $uuid)
     {
@@ -64,7 +69,10 @@ class CartService
             ]);
         }
 
-        return $cart->refresh();
+        $cart = $cart->refresh();
+        $this->couponService->recalculateCartCoupon($cart);
+
+        return $cart;
     }
 
     public function mergeGuestCartToUser(Cart $guestCart, \App\Models\User $user)
@@ -82,7 +90,10 @@ class CartService
 
         // delete guest cart
         $guestCart->delete();
-        return $userCart->refresh();
+        $userCart = $userCart->refresh();
+        $this->couponService->recalculateCartCoupon($userCart);
+
+        return $userCart;
     }
 
     /**
@@ -94,9 +105,10 @@ class CartService
      */
     public function cartSummary(Cart $cart, $pincode = null): array
     {
-        // Load cart with coupon relationship
-        $cart->load('coupon');
         $items = $cart->items()->with(['productVariation.product', 'productVariation.stock'])->get();
+        $cart->setRelation('items', $items);
+        $this->couponService->recalculateCartCoupon($cart);
+        $cart->load('coupon');
         
         // Handle empty cart
         if ($items->isEmpty()) {

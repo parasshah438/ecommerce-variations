@@ -46,45 +46,31 @@ class CacheManagementController extends Controller
         try {
             switch ($cacheType) {
                 case 'application':
-                    $exitCode = Artisan::call('cache:clear');
-                    $results['application'] = $exitCode === 0 ? 'success' : 'failed';
+                    $results['application'] = $this->runArtisanSilently('cache:clear') ? 'success' : 'failed';
                     break;
 
                 case 'config':
-                    $exitCode = Artisan::call('config:clear');
-                    $results['config_clear'] = $exitCode === 0 ? 'success' : 'failed';
-                    $exitCode = Artisan::call('config:cache');
-                    $results['config_cache'] = $exitCode === 0 ? 'success' : 'failed';
+                    $results['config_clear'] = $this->runArtisanSilently('config:clear') ? 'success' : 'failed';
                     break;
 
                 case 'route':
-                    $exitCode = Artisan::call('route:clear');
-                    $results['route_clear'] = $exitCode === 0 ? 'success' : 'failed';
-                    $exitCode = Artisan::call('route:cache');
-                    $results['route_cache'] = $exitCode === 0 ? 'success' : 'failed';
+                    $results['route_clear'] = $this->runArtisanSilently('route:clear') ? 'success' : 'failed';
                     break;
 
                 case 'view':
-                    $exitCode = Artisan::call('view:clear');
-                    $results['view_clear'] = $exitCode === 0 ? 'success' : 'failed';
-                    $exitCode = Artisan::call('view:cache');
-                    $results['view_cache'] = $exitCode === 0 ? 'success' : 'failed';
+                    $results['view_clear'] = $this->runArtisanSilently('view:clear') ? 'success' : 'failed';
                     break;
 
                 case 'all':
                     $commands = [
                         'cache:clear',
                         'config:clear',
-                        'config:cache',
                         'route:clear',
-                        'route:cache',
                         'view:clear',
-                        'view:cache'
                     ];
 
                     foreach ($commands as $command) {
-                        $exitCode = Artisan::call($command);
-                        $results[$command] = $exitCode === 0 ? 'success' : 'failed';
+                        $results[$command] = $this->runArtisanSilently($command) ? 'success' : 'failed';
                     }
                     break;
             }
@@ -227,6 +213,16 @@ class CacheManagementController extends Controller
         }
 
         return $stats;
+    }
+
+    private function runArtisanSilently(string $command): bool
+    {
+        ob_start();
+        try {
+            return Artisan::call($command) === 0;
+        } finally {
+            ob_end_clean();
+        }
     }
 
     /**

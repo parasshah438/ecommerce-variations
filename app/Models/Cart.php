@@ -113,16 +113,13 @@ class Cart extends Model
      */
     public function calculateDiscount(): float
     {
-        if (!$this->coupon) {
+        $this->loadMissing(['coupon', 'items']);
+
+        if (!$this->coupon || $this->items->isEmpty()) {
             return 0;
         }
 
-        if ($this->coupon->type === 'percentage') {
-            return ($this->subtotal * $this->coupon->discount) / 100;
-        }
-
-        // Fixed discount
-        return min($this->coupon->discount, $this->subtotal);
+        return $this->coupon->calculateDiscount($this->subtotal);
     }
 
     /**
@@ -130,8 +127,9 @@ class Cart extends Model
      */
     public function applyCoupon(Coupon $coupon): void
     {
+        $this->loadMissing('items');
         $this->coupon_id = $coupon->id;
-        $this->discount_amount = $this->calculateDiscount();
+        $this->discount_amount = round($coupon->calculateDiscount($this->subtotal), 2);
         $this->save();
     }
 

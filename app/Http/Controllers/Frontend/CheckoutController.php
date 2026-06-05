@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\CartService;
+use App\Services\CouponService;
 use App\Services\RazorpayService;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -18,9 +19,12 @@ class CheckoutController extends Controller
 {
     protected $cartService;
 
-    public function __construct(CartService $cartService)
+    protected $couponService;
+
+    public function __construct(CartService $cartService, CouponService $couponService)
     {
         $this->cartService = $cartService;
+        $this->couponService = $couponService;
     }
 
     public function index()
@@ -70,7 +74,7 @@ class CheckoutController extends Controller
 
         \Log::info('Validation passed');
 
-        $cart = Cart::where('user_id', $user->id)->with('items.productVariation.stock')->first();
+        $cart = Cart::where('user_id', $user->id)->with(['items.productVariation.stock', 'coupon'])->first();
         if (! $cart || $cart->items->isEmpty()) {
             \Log::warning('Cart is empty or not found', ['user_id' => $user->id]);
             return redirect()->back()->with('error', 'Your cart is empty');
@@ -131,9 +135,18 @@ class CheckoutController extends Controller
                 \Log::info('New address created', ['address_id' => $address->id]);
             }
 
+            $couponError = $this->couponService->validateForCheckout($cart);
+            if ($couponError) {
+                throw new \RuntimeException($couponError);
+            }
+
             // Get cart summary with coupon information — use the submitted pincode for accurate shipping
             $pincode = $address->zip ?? $address->postal_code ?? $request->input('zip');
             $cartSummary = $this->cartService->cartSummary($cart, $pincode);
+
+            if ($cartSummary['coupon'] && $cartSummary['discount_amount'] <= 0) {
+                throw new \RuntimeException('Coupon discount could not be applied. Please update your cart and try again.');
+            }
 
             // Create order in PENDING status (stock not yet reserved)
             $order = Order::create([
@@ -183,6 +196,8 @@ class CheckoutController extends Controller
                     'payment_type' => 'cash_on_delivery'
                 ]
             ]);
+
+            $this->couponService->recordCouponUsage($order->coupon_code);
 
             // Clear cart (order is placed but stock not reserved)
             $cart->items()->delete();
@@ -287,7 +302,7 @@ class CheckoutController extends Controller
             'zip' => 'required_without:address_id|string|nullable',
         ]);
 
-        $cart = Cart::where('user_id', $user->id)->with('items.productVariation.stock')->first();
+        $cart = Cart::where('user_id', $user->id)->with(['items.productVariation.stock', 'coupon'])->first();
         if (!$cart || $cart->items->isEmpty()) {
             return response()->json(['error' => 'Your cart is empty'], 400);
         }
@@ -321,9 +336,18 @@ class CheckoutController extends Controller
                 ]);
             }
 
+            $couponError = $this->couponService->validateForCheckout($cart);
+            if ($couponError) {
+                throw new \RuntimeException($couponError);
+            }
+
             // Get cart summary with coupon information — use the submitted pincode for accurate shipping
             $pincode = $address->zip ?? $address->postal_code ?? $request->input('zip');
             $cartSummary = $this->cartService->cartSummary($cart, $pincode);
+
+            if ($cartSummary['coupon'] && $cartSummary['discount_amount'] <= 0) {
+                throw new \RuntimeException('Coupon discount could not be applied. Please update your cart and try again.');
+            }
 
             // Create order with pending payment status
             $order = Order::create([
@@ -455,6 +479,8 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Payment verification failed'], 400);
         }
 
+        $wasAlreadyPaid = $order->payment_status === Order::PAYMENT_PAID;
+
         DB::beginTransaction();
         try {
             // Fetch payment details from Razorpay
@@ -499,6 +525,10 @@ class CheckoutController extends Controller
                     'order_id' => $order->id,
                     'razorpay_order_id' => $request->razorpay_order_id
                 ]);
+            }
+
+            if (!$wasAlreadyPaid && $order->coupon_code) {
+                $this->couponService->recordCouponUsage($order->coupon_code);
             }
 
             // Clear cart after successful payment
