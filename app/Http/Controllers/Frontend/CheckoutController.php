@@ -205,25 +205,20 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            // Simulate payment process - for demo, auto-confirm COD orders
+            // For COD, immediately confirm the order (reserves stock + triggers ShipRocket)
             if ($order->payment_method === 'cod') {
-                \Log::info('COD order placed', [
+                \Log::info('COD order placed, confirming immediately', [
                     'order_id' => $order->id,
                     'payment_id' => $payment->payment_id
                 ]);
-                $message = 'Order placed successfully! (Confirmation skipped for debugging)';
-                
-                // TEMPORARILY DISABLED FOR DEBUGGING
-                /*
-                // For COD, immediately confirm the order (this reserves stock)
                 $orderService = app(\App\Services\OrderService::class);
                 try {
-                    \Log::info('Attempting to confirm order', ['order_id' => $order->id]);
+                    \Log::info('Attempting to confirm COD order', ['order_id' => $order->id]);
                     $orderService->confirmOrder($order);
-                    \Log::info('Order confirmed successfully', ['order_id' => $order->id]);
+                    \Log::info('COD order confirmed successfully', ['order_id' => $order->id]);
                     $message = 'Order placed and confirmed successfully! Stock has been reserved.';
                 } catch (\Exception $e) {
-                    \Log::error('Order confirmation failed', [
+                    \Log::error('COD order confirmation failed', [
                         'order_id' => $order->id,
                         'error' => $e->getMessage()
                     ]);
@@ -231,7 +226,6 @@ class CheckoutController extends Controller
                     $orderService->cancelOrder($order, 'Stock unavailable during confirmation', false);
                     return redirect()->back()->with('error', 'Order could not be confirmed: ' . $e->getMessage());
                 }
-                */
             } else {
                 $message = 'Order placed successfully! Stock will be reserved after payment confirmation.';
             }

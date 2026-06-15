@@ -350,7 +350,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            $this->orderService->returnOrder($order, $request->reason, $request->all());
+            $this->orderService->returnOrder($order, $request->return_items, $request->reason);
             return redirect()->back()->with('success', 'Order returned successfully and stock restored');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to process return: ' . $e->getMessage());

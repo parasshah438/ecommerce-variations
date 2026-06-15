@@ -94,7 +94,9 @@ class ShiprocketOrderProcessor
             throw new Exception("Order must be confirmed before shipping");
         }
 
-        if ($order->payment_status !== Order::PAYMENT_PAID) {
+        // COD orders have payment_status = pending until delivery — allow them through
+        $isCod = $order->payment_method === 'cod';
+        if ($order->payment_status !== Order::PAYMENT_PAID && !$isCod) {
             throw new Exception("Order payment must be completed before shipping");
         }
 
