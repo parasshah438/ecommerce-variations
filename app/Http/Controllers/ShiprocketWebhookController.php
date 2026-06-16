@@ -77,6 +77,16 @@ class ShiprocketWebhookController extends Controller
 
     /**
      * Handle order status webhook
+     * 
+     * ShipRocket sends order status updates when:
+     * - Order is confirmed in ShipRocket
+     * - Pickup is scheduled
+     * - Courier is assigned / AWB generated
+     * - Order is picked up
+     * - Order is shipped / in transit
+     * - Out for delivery
+     * - Delivered
+     * - RTO / Cancelled
      */
     public function handleOrderStatus(Request $request): JsonResponse
     {
@@ -88,10 +98,164 @@ class ShiprocketWebhookController extends Controller
                 'data' => $data
             ]);
 
-            // Process order-specific webhook data
-            // Implementation depends on specific webhook format
+            // Extract identifiers from the webhook payload
+            // ShipRocket can send: order_id (ours), channel_order_id, or shipment_id
+            $localOrderId     = $data['order_id'] ?? null;         // our local order ID if echoed back
+            $channelOrderId   = $data['channel_order_id'] ?? null; // our local order ID from channel
+            $shiprocketOrderId = $data['shiprocket_order_id'] ?? $data['order_id_sr'] ?? null;
+            $shipmentId       = $data['shipment_id'] ?? null;
+            $currentStatus    = $data['current_status'] ?? $data['status'] ?? '';
+            $awb              = $data['awb'] ?? $data['awb_code'] ?? null;
+            $courierName      = $data['courier_name'] ?? $data['courier_company_name'] ?? null;
+            $eta              = $data['estimated_delivery'] ?? $data['etd'] ?? null;
+
+            // Find the local order
+            $order = null;
+            $existingShipment = null;
+            if ($localOrderId) {
+                $order = Order::find($localOrderId);
+            } elseif ($channelOrderId) {
+                $order = Order::find($channelOrderId);
+            } elseif ($shipmentId) {
+                $existingShipment = Shipment::where('shiprocket_shipment_id', $shipmentId)->first();
+                $order = $existingShipment?->order;
+            } elseif ($shiprocketOrderId) {
+                $existingShipment = Shipment::where('shiprocket_order_id', $shiprocketOrderId)->first();
+                $order = $existingShipment?->order;
+            }
+
+            if (!$order) {
+                Log::warning('Order not found for Shiprocket order webhook', [
+                    'data' => $data
+                ]);
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            // Find or create the related shipment
+            $shipment = null;
+            if ($shipmentId) {
+                $shipment = Shipment::where('shiprocket_shipment_id', $shipmentId)->first();
+            } elseif ($shiprocketOrderId) {
+                $shipment = $order->shipments()
+                    ->where('shiprocket_order_id', $shiprocketOrderId)
+                    ->first();
+            }
+
+            if (!$shipment && ($shiprocketOrderId || $shipmentId || $awb)) {
+                // Try to find by AWB
+                if ($awb) {
+                    $shipment = Shipment::where('awb_code', $awb)
+                        ->orWhere('tracking_number', $awb)
+                        ->first();
+                }
+            }
+
+            // If we still don't have a shipment, create one
+            if (!$shipment) {
+                $shipment = Shipment::create([
+                    'order_id'                => $order->id,
+                    'shiprocket_order_id'     => $shiprocketOrderId,
+                    'shiprocket_shipment_id'  => $shipmentId,
+                    'status'                  => $this->mapShiprocketStatus($currentStatus),
+                    'carrier'                 => $courierName,
+                    'awb_code'                => $awb,
+                    'tracking_number'         => $awb,
+                    'estimated_delivery'      => $eta ? \Carbon\Carbon::parse($eta) : null,
+                    'shiprocket_response'     => $data,
+                    'created_at'              => now(),
+                    'updated_at'              => now(),
+                ]);
+                Log::info('Shipment auto-created from webhook', [
+                    'order_id' => $order->id,
+                    'shipment_id' => $shipment->id,
+                    'awb' => $awb
+                ]);
+            }
+
+            // Update shipment with data from this webhook
+            $shipmentUpdate = [];
             
-            return response()->json(['success' => true]);
+            if ($currentStatus) {
+                $shipmentUpdate['status'] = $this->mapShiprocketStatus($currentStatus);
+            }
+            if ($awb && !$shipment->awb_code) {
+                $shipmentUpdate['awb_code'] = $awb;
+                $shipmentUpdate['tracking_number'] = $awb;
+            }
+            if ($courierName && !$shipment->carrier) {
+                $shipmentUpdate['carrier'] = $courierName;
+            }
+            if ($eta && !$shipment->estimated_delivery) {
+                $shipmentUpdate['estimated_delivery'] = \Carbon\Carbon::parse($eta);
+            }
+
+            // Set shipped_date / delivered_date based on status
+            $normalizedStatus = strtolower(trim($currentStatus));
+            if (in_array($normalizedStatus, ['shipped', 'picked up', 'in transit'])) {
+                $shipmentUpdate['shipped_date'] = $shipment->shipped_date ?? now();
+            }
+            if ($normalizedStatus === 'delivered') {
+                $shipmentUpdate['delivered_date'] = now();
+                $shipmentUpdate['actual_delivery'] = now();
+            }
+
+            // Append this webhook event to tracking_data for scan event history
+            $trackingData = $shipment->tracking_data ?? [];
+            $trackingData[] = [
+                'timestamp' => now()->toISOString(),
+                'webhook_data' => [
+                    'current_status'    => $currentStatus,
+                    'current_location'  => $data['current_location'] ?? $data['location'] ?? $data['pickup_location'] ?? '',
+                    'activity'          => $data['activity'] ?? $data['remarks'] ?? $currentStatus,
+                    'awb'               => $awb,
+                    'courier_name'      => $courierName,
+                    'estimated_delivery' => $eta,
+                ]
+            ];
+            $shipmentUpdate['tracking_data'] = $trackingData;
+
+            $shipment->update($shipmentUpdate);
+
+            // Update order status based on shipment status
+            $orderUpdateData = [];
+            switch ($shipment->status) {
+                case Shipment::STATUS_PICKED_UP:
+                case Shipment::STATUS_IN_TRANSIT:
+                case Shipment::STATUS_OUT_FOR_DELIVERY:
+                    if (!in_array($order->status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED])) {
+                        $orderUpdateData['status'] = Order::STATUS_SHIPPED;
+                        $orderUpdateData['shipped_at'] = $order->shipped_at ?? now();
+                    }
+                    break;
+
+                case Shipment::STATUS_DELIVERED:
+                    if ($order->status !== Order::STATUS_DELIVERED) {
+                        $orderUpdateData['status'] = Order::STATUS_DELIVERED;
+                        $orderUpdateData['delivered_at'] = now();
+                    }
+                    break;
+
+                case Shipment::STATUS_CANCELLED:
+                case Shipment::STATUS_RTO:
+                    $orderUpdateData['notes'] = ($order->notes ? $order->notes . "\n" : '') .
+                        "Shipment {$shipment->status} via webhook on " . now()->format('Y-m-d H:i:s');
+                    break;
+            }
+
+            if (!empty($orderUpdateData)) {
+                $order->update($orderUpdateData);
+                Log::info("Order #{$order->id} status updated from order-status webhook", [
+                    'new_order_status' => $orderUpdateData['status'] ?? 'unchanged'
+                ]);
+            }
+
+            Log::info('Shiprocket order webhook processed successfully', [
+                'order_id' => $order->id,
+                'shipment_id' => $shipment->id,
+                'status' => $currentStatus
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Webhook processed']);
 
         } catch (\Exception $e) {
             Log::error('Shiprocket order webhook processing failed', [
@@ -213,12 +377,14 @@ class ShiprocketWebhookController extends Controller
             case Shipment::STATUS_IN_TRANSIT:
                 if ($order->status !== Order::STATUS_SHIPPED) {
                     $orderUpdateData['status'] = Order::STATUS_SHIPPED;
+                    $orderUpdateData['shipped_at'] = $order->shipped_at ?? now();
                 }
                 break;
 
             case Shipment::STATUS_DELIVERED:
                 if ($order->status !== Order::STATUS_DELIVERED) {
                     $orderUpdateData['status'] = Order::STATUS_DELIVERED;
+                    $orderUpdateData['delivered_at'] = now();
                 }
                 break;
 

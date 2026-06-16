@@ -1,6 +1,6 @@
 @extends('layouts.frontend')
 
-@section('title', 'Order Tracking - ' . $order->order_number . ' - ' . config('app.name'))
+@section('title', 'Order Tracking - #' . $order->id . ' - ' . config('app.name'))
 
 @section('breadcrumb')
 <div class="bg-light py-3">
@@ -9,7 +9,7 @@
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}"><i class="bi bi-house-door me-1"></i>Home</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('order.track.public') }}">Track Order</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $order->order_number }}</li>
+                <li class="breadcrumb-item active" aria-current="page">#{{ $order->id }}</li>
             </ol>
         </nav>
     </div>
@@ -37,7 +37,7 @@
                     </div>
                 </div>
                 <div>
-                    <h1 class="h3 mb-1">Order #{{ $order->order_number }}</h1>
+                    <h1 class="h3 mb-1">Order #{{ $order->id }}</h1>
                     <p class="text-muted mb-0">
                         Placed on {{ $order->created_at->format('M d, Y') }} at {{ $order->created_at->format('h:i A') }}
                     </p>
@@ -70,7 +70,7 @@
     </div>
 
     <div class="row">
-        <!-- Tracking Timeline -->
+        <!-- Tracking Timeline (Left Column) -->
         <div class="col-lg-8 mb-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-bottom">
@@ -110,7 +110,7 @@
                                                     <p class="mb-0 text-muted small">{{ $step['description'] }}</p>
                                                 </div>
                                                 @if($step['completed'] && $step['timestamp'])
-                                                    <small class="text-muted">
+                                                    <small class="text-muted text-nowrap ms-3">
                                                         {{ $step['timestamp']->format('M d, Y') }}<br>
                                                         {{ $step['timestamp']->format('h:i A') }}
                                                     </small>
@@ -121,10 +121,52 @@
                                 @endif
                             @endforeach
                         </div>
+
+                        <!-- Courier Scan Events (Amazon-style) -->
+                        @if(!empty($courierScans))
+                            <div class="mt-4 pt-3 border-top">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-activity me-2"></i>Courier Scan Events
+                                </h6>
+                                <div class="tracking-timeline scan-events">
+                                    @foreach($courierScans as $scan)
+                                        <div class="timeline-item completed">
+                                            <div class="timeline-marker scan-marker">
+                                                <i class="bi bi-dot fs-4"></i>
+                                            </div>
+                                            <div class="timeline-content">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <h6 class="mb-1 small">{{ $scan['activity'] }}</h6>
+                                                        <p class="mb-0 text-muted small">
+                                                            @if($scan['location'])
+                                                                <i class="bi bi-geo-alt me-1"></i>{{ $scan['location'] }}
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                    @if($scan['date'])
+                                                        <small class="text-muted text-nowrap ms-3">
+                                                            {{ $scan['date']->format('M d, Y') }}<br>
+                                                            {{ $scan['date']->format('h:i A') }}
+                                                        </small>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     @endif
 
-                    <!-- Estimated Delivery -->
-                    @if(in_array($order->status, ['confirmed', 'processing', 'shipped']))
+                    <!-- Estimated Delivery — using shipment's estimated_delivery if available -->
+                    @if($activeShipment && $activeShipment->estimated_delivery)
+                        <div class="alert alert-info mt-4">
+                            <i class="bi bi-calendar-event me-2"></i>
+                            <strong>Estimated Delivery:</strong> 
+                            {{ $activeShipment->estimated_delivery->format('M d, Y') }}
+                        </div>
+                    @elseif(in_array($order->status, ['confirmed', 'processing', 'shipped']))
                         <div class="alert alert-info mt-4">
                             <i class="bi bi-calendar-event me-2"></i>
                             <strong>Estimated Delivery:</strong> 
@@ -139,8 +181,56 @@
             </div>
         </div>
 
-        <!-- Order Details Sidebar -->
+        <!-- Right Column -->
         <div class="col-lg-4">
+            @if($activeShipment && ($activeShipment->awb_code || $activeShipment->tracking_number))
+            <!-- Live Shipment Card (Amazon-style) — NOW VISIBLE ON PUBLIC TRACKING -->
+            <div class="card border-0 shadow-sm mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-truck me-2"></i>Live Tracking
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-box text-primary me-2"></i>
+                        <span class="fw-semibold">{{ $activeShipment->carrier ?? 'Courier Partner' }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">AWB / Tracking Number</small>
+                        <div class="fw-bold font-monospace">{{ $activeShipment->awb_code ?: $activeShipment->tracking_number }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Status</small>
+                        <div>
+                            <span class="badge 
+                                @if($activeShipment->isDelivered()) bg-success
+                                @elseif($activeShipment->isInTransit()) bg-info
+                                @elseif($activeShipment->hasIssues()) bg-danger
+                                @else bg-secondary
+                                @endif">
+                                {{ $activeShipment->formatted_status }}
+                            </span>
+                        </div>
+                    </div>
+                    @if($activeShipment->estimated_delivery)
+                    <div class="mb-3">
+                        <small class="text-muted">Estimated Delivery</small>
+                        <div class="fw-semibold">{{ $activeShipment->estimated_delivery->format('M d, Y') }}</div>
+                    </div>
+                    @endif
+                    @if($activeShipment->awb_code)
+                    <a href="https://shiprocket.co/tracking/{{ $activeShipment->awb_code }}" target="_blank" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Track on ShipRocket
+                    </a>
+                    <div class="mt-2 text-center">
+                        <small class="text-muted">AWB: {{ $activeShipment->awb_code }}</small>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
             <!-- Order Items -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom">
@@ -262,7 +352,7 @@
                         <i class="bi bi-headset me-2"></i>Contact Support
                     </a>
                 @endif
-                @if($order->user->email)
+                @if($order->user && $order->user->email)
                     <a href="mailto:{{ $order->user->email }}" class="btn btn-outline-info">
                         <i class="bi bi-envelope me-2"></i>Email Updates
                     </a>
@@ -330,6 +420,39 @@
     align-items: center;
 }
 
+/* Scan event markers — smaller dots */
+.scan-events .timeline-item {
+    padding-bottom: 1rem;
+}
+
+.scan-events .timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.scan-events .timeline-marker.scan-marker {
+    width: 1.5rem;
+    height: 1.5rem;
+    left: -2rem;
+    border-width: 2px;
+}
+
+.scan-events .timeline-item:not(.last)::before {
+    left: -1.25rem;
+    top: 1.5rem;
+    height: calc(100% - 0.5rem);
+}
+
+/* Suppress the main timeline's connector for scan event items within scan-events block */
+.scan-events .timeline-item.completed:not(.last)::before {
+    background: #adb5bd;
+}
+
+.scan-events .timeline-item .timeline-marker.scan-marker {
+    border-color: #6c757d;
+    background: white;
+    color: #6c757d;
+}
+
 @media (max-width: 768px) {
     .tracking-timeline {
         padding-left: 1.5rem;
@@ -344,6 +467,16 @@
     .timeline-item:not(.last)::before {
         left: -1.5rem;
         top: 2rem;
+    }
+    
+    .scan-events .timeline-marker.scan-marker {
+        left: -1.5rem;
+        width: 1.2rem;
+        height: 1.2rem;
+    }
+    
+    .scan-events .timeline-item:not(.last)::before {
+        left: -0.9rem;
     }
 }
 

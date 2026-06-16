@@ -464,7 +464,7 @@
                 
                 <!-- Action Buttons -->
                 <div class="text-center action-buttons">
-                    <a href="#" class="btn btn-primary">
+                    <a href="{{ route('order.track', $order) }}" class="btn btn-primary">
                         <i class="bi bi-truck me-2"></i>Track Order
                     </a>
                     <a href="{{ route('welcome') }}" class="btn btn-outline-primary">

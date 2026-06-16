@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register shiprocket.enabled binding for use across the app
+        $this->app->bind('shiprocket.enabled', function () {
+            return !empty(config('shiprocket.email')) && !empty(config('shiprocket.password'));
+        });
     }
 
     /**

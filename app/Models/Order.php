@@ -32,7 +32,11 @@ class Order extends Model
         'notes',
         'cancelled_at',
         'returned_at',
-        'refunded_at'
+        'refunded_at',
+        'confirmed_at',
+        'processing_at',
+        'shipped_at',
+        'delivered_at'
     ];
 
     protected $casts = [
@@ -46,6 +50,10 @@ class Order extends Model
         'cancelled_at' => 'datetime',
         'returned_at' => 'datetime',
         'refunded_at' => 'datetime',
+        'confirmed_at' => 'datetime',
+        'processing_at' => 'datetime',
+        'shipped_at' => 'datetime',
+        'delivered_at' => 'datetime',
     ];
 
     // Order statuses

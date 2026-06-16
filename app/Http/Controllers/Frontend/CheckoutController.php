@@ -690,9 +690,17 @@ class CheckoutController extends Controller
             abort(403, 'Unauthorized access to order tracking.');
         }
 
-        $order->load(['items.productVariation.product', 'address']);
+        $order->load([
+            'items.productVariation.product',
+            'items.productVariation.variationImages',
+            'address',
+            'shipments',
+        ]);
 
-        // Define tracking timeline
+        // Get active shipment with tracking info
+        $activeShipment = $order->shipments->where('status', '!=', 'cancelled')->first();
+
+        // Build tracking steps from order status — using dedicated timestamp columns
         $trackingSteps = [
             Order::STATUS_PENDING => [
                 'title' => 'Order Placed',
@@ -704,29 +712,29 @@ class CheckoutController extends Controller
                 'title' => 'Order Confirmed',
                 'description' => 'Your order has been confirmed and is being prepared',
                 'completed' => in_array($order->status, [Order::STATUS_CONFIRMED, Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
-                'timestamp' => $order->status === Order::STATUS_CONFIRMED ? $order->updated_at : null
+                'timestamp' => $order->confirmed_at ?? ($order->status === Order::STATUS_CONFIRMED ? $order->updated_at : null)
             ],
             Order::STATUS_PROCESSING => [
                 'title' => 'Processing',
                 'description' => 'Your order is being processed and packed',
                 'completed' => in_array($order->status, [Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
-                'timestamp' => $order->status === Order::STATUS_PROCESSING ? $order->updated_at : null
+                'timestamp' => $order->processing_at ?? ($order->status === Order::STATUS_PROCESSING ? $order->updated_at : null)
             ],
             Order::STATUS_SHIPPED => [
                 'title' => 'Shipped',
                 'description' => 'Your order has been shipped and is on the way',
                 'completed' => in_array($order->status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
-                'timestamp' => $order->status === Order::STATUS_SHIPPED ? $order->updated_at : null
+                'timestamp' => $order->shipped_at ?? ($order->status === Order::STATUS_SHIPPED ? $order->updated_at : null)
             ],
             Order::STATUS_DELIVERED => [
                 'title' => 'Delivered',
                 'description' => 'Your order has been delivered successfully',
                 'completed' => $order->status === Order::STATUS_DELIVERED,
-                'timestamp' => $order->status === Order::STATUS_DELIVERED ? $order->updated_at : null
+                'timestamp' => $order->delivered_at ?? ($order->status === Order::STATUS_DELIVERED ? $order->updated_at : null)
             ]
         ];
 
-        return view('orders.track', compact('order', 'trackingSteps'));
+        return view('orders.track', compact('order', 'trackingSteps', 'activeShipment'));
     }
 
     /**
@@ -786,9 +794,169 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Display public order tracking details
+     * Display public order tracking details (guest access)
      */
-    
+    public function publicTrackOrder($orderNumber)
+    {
+        $order = Order::with([
+            'items.productVariation.product',
+            'items.productVariation.variationImages',
+            'address',
+            'user',
+            'shipments'
+        ])->findOrFail($orderNumber);
+
+        // Get active shipment with tracking info
+        $activeShipment = $order->shipments->where('status', '!=', 'cancelled')->first();
+
+        // Fetch courier scan events from ShipRocket if active shipment has an AWB
+        $courierScans = [];
+        if ($activeShipment && ($activeShipment->awb_code || $activeShipment->tracking_number)) {
+            $awb = $activeShipment->awb_code ?: $activeShipment->tracking_number;
+
+            // First, check if we have tracking_data stored locally from webhooks
+            if ($activeShipment->tracking_data && is_array($activeShipment->tracking_data)) {
+                $courierScans = $this->parseTrackingDataFromWebhook($activeShipment->tracking_data);
+            }
+
+            // If no local data, try fetching live from ShipRocket API
+            if (empty($courierScans) && app('shiprocket.enabled')) {
+                try {
+                    $shipmentService = app(\App\Services\ShiprocketShipmentService::class);
+                    $apiScans = $shipmentService->getTrackingHistory($awb);
+                    if (!empty($apiScans)) {
+                        $courierScans = $this->parseTrackingDataFromApi($apiScans);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to fetch ShipRocket tracking history', [
+                        'awb' => $awb,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // As fallback, extract from stored raw tracking_data
+            if (empty($courierScans) && $activeShipment->tracking_data) {
+                $courierScans = $this->extractScansFromTrackingData($activeShipment->tracking_data);
+            }
+        }
+
+        // Build tracking timeline steps — using dedicated timestamp columns
+        $trackingSteps = [
+            Order::STATUS_PENDING => [
+                'title' => 'Order Placed',
+                'description' => 'Your order has been placed successfully',
+                'completed' => true,
+                'timestamp' => $order->created_at,
+                'icon' => 'bi-check-circle-fill',
+            ],
+            Order::STATUS_CONFIRMED => [
+                'title' => 'Order Confirmed',
+                'description' => 'Your order has been confirmed and is being prepared',
+                'completed' => in_array($order->status, [Order::STATUS_CONFIRMED, Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->confirmed_at ?? ($order->status === Order::STATUS_CONFIRMED ? $order->updated_at : null),
+                'icon' => 'bi-check-circle-fill',
+            ],
+            Order::STATUS_PROCESSING => [
+                'title' => 'Processing',
+                'description' => 'Your order is being processed and packed',
+                'completed' => in_array($order->status, [Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->processing_at ?? ($order->status === Order::STATUS_PROCESSING ? $order->updated_at : null),
+                'icon' => 'bi-gear-fill',
+            ],
+            Order::STATUS_SHIPPED => [
+                'title' => 'Shipped',
+                'description' => 'Your order has been shipped and is on the way',
+                'completed' => in_array($order->status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED]),
+                'timestamp' => $order->shipped_at ?? ($order->status === Order::STATUS_SHIPPED ? $order->updated_at : null),
+                'icon' => 'bi-truck',
+            ],
+            Order::STATUS_DELIVERED => [
+                'title' => 'Delivered',
+                'description' => 'Your order has been delivered successfully',
+                'completed' => $order->status === Order::STATUS_DELIVERED,
+                'timestamp' => $order->delivered_at ?? ($order->status === Order::STATUS_DELIVERED ? $order->updated_at : null),
+                'icon' => 'bi-house-door-fill',
+            ],
+        ];
+
+        // Load attribute values for each item
+        foreach ($order->items as $item) {
+            if ($item->productVariation) {
+                $item->productVariation->setAttribute('attributeValues', $item->productVariation->attributeValues());
+            }
+        }
+
+        return view('orders.public-track-details', compact('order', 'trackingSteps', 'activeShipment', 'courierScans'));
+    }
+
+    /**
+     * Parse tracking data stored from webhook snapshots into uniform scan events.
+     */
+    private function parseTrackingDataFromWebhook(array $trackingData): array
+    {
+        $scans = [];
+        // tracking_data is an array of webhook snapshots
+        foreach ($trackingData as $entry) {
+            if (isset($entry['webhook_data'])) {
+                $wd = $entry['webhook_data'];
+                $scans[] = [
+                    'location' => $wd['current_location'] ?? $wd['location'] ?? '',
+                    'status'   => $wd['current_status'] ?? $wd['status'] ?? '',
+                    'activity' => $wd['activity'] ?? $wd['current_status'] ?? '',
+                    'date'     => isset($entry['timestamp']) ? \Carbon\Carbon::parse($entry['timestamp']) : now(),
+                ];
+            } elseif (isset($entry['current_status'])) {
+                $scans[] = [
+                    'location' => $entry['location'] ?? $entry['current_location'] ?? '',
+                    'status'   => $entry['current_status'],
+                    'activity' => $entry['activity'] ?? $entry['current_status'],
+                    'date'     => isset($entry['timestamp']) ? \Carbon\Carbon::parse($entry['timestamp']) : (isset($entry['date']) ? \Carbon\Carbon::parse($entry['date']) : null),
+                ];
+            }
+        }
+        return $scans;
+    }
+
+    /**
+     * Parse tracking data returned from ShipRocket API getTrackingHistory().
+     * ShipRocket returns array of track_status objects.
+     */
+    private function parseTrackingDataFromApi(array $apiData): array
+    {
+        $scans = [];
+        foreach ($apiData as $entry) {
+            $scans[] = [
+                'location' => $entry['location'] ?? $entry['current_location'] ?? '',
+                'status'   => $entry['status'] ?? $entry['current_status'] ?? '',
+                'activity' => $entry['activity'] ?? $entry['status'] ?? '',
+                'date'     => isset($entry['date']) ? \Carbon\Carbon::parse($entry['date']) : (isset($entry['datetime']) ? \Carbon\Carbon::parse($entry['datetime']) : null),
+            ];
+        }
+        return $scans;
+    }
+
+    /**
+     * Extract scan events from raw tracking_data array (stored from webhook or API response).
+     */
+    private function extractScansFromTrackingData(array $trackingData): array
+    {
+        $scans = [];
+        // Check if tracking_data has a 'track_status' key (from ShipRocket API response format)
+        if (isset($trackingData['track_status']) && is_array($trackingData['track_status'])) {
+            return $this->parseTrackingDataFromApi($trackingData['track_status']);
+        }
+        // Check if it's an array of scan objects directly
+        if (isset($trackingData[0]) && is_array($trackingData[0])) {
+            // Try API format first
+            if (isset($trackingData[0]['status']) || isset($trackingData[0]['current_status'])) {
+                return $this->parseTrackingDataFromApi($trackingData);
+            }
+            // Try webhook format
+            return $this->parseTrackingDataFromWebhook($trackingData);
+        }
+        return $scans;
+    }
 
     /**
      * Cancel an order
@@ -810,14 +978,15 @@ class CheckoutController extends Controller
         ]);
 
         try {
+            $orderService = app(\App\Services\OrderService::class);
+
             DB::beginTransaction();
 
-            // Update order status
-            $order->update([
-                'status' => Order::STATUS_CANCELLED,
-                'cancelled_at' => now(),
-                'notes' => $request->reason
-            ]);
+            // Use OrderService for correct status + stock management:
+            // - Only restores stock if it was actually reserved (CONFIRMED/PROCESSING)
+            // - Updates the in_stock flag via StockService::restoreStockForOrder()
+            // - Does NOT restore stock for PENDING orders (was never reserved)
+            $orderService->cancelOrder($order, $request->reason);
 
             // If payment was made, initiate refund
             $payment = $order->latestPayment;
@@ -835,13 +1004,6 @@ class CheckoutController extends Controller
                             'refunded_at' => now()
                         ]);
                     }
-                }
-            }
-
-            // Restore stock for cancelled items
-            foreach ($order->items as $item) {
-                if ($item->productVariation && $item->productVariation->stock) {
-                    $item->productVariation->stock->increment('quantity', $item->quantity);
                 }
             }
 

@@ -95,6 +95,54 @@
 
                 <!-- Order Summary -->
                 <div class="col-lg-4">
+                    @if($activeShipment && $activeShipment->tracking_number)
+                    <!-- Live Shipment Tracking Card -->
+                    <div class="card shadow-sm mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-shipping-fast me-2"></i>Live Tracking
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-box text-primary me-2"></i>
+                                <span class="fw-semibold">{{ $activeShipment->carrier ?? 'Courier Partner' }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">AWB / Tracking Number</small>
+                                <div class="fw-bold font-monospace">{{ $activeShipment->tracking_number }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Status</small>
+                                <div>
+                                    <span class="badge 
+                                        @if($activeShipment->isDelivered()) bg-success
+                                        @elseif($activeShipment->isInTransit()) bg-info
+                                        @elseif($activeShipment->hasIssues()) bg-danger
+                                        @else bg-secondary
+                                        @endif">
+                                        {{ $activeShipment->formatted_status }}
+                                    </span>
+                                </div>
+                            </div>
+                            @if($activeShipment->estimated_delivery)
+                            <div class="mb-3">
+                                <small class="text-muted">Estimated Delivery</small>
+                                <div class="fw-semibold">{{ $activeShipment->estimated_delivery_formatted }}</div>
+                            </div>
+                            @endif
+                            <a href="{{ $activeShipment->tracking_url }}" target="_blank" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-external-link-alt me-1"></i> Track on ShipRocket
+                            </a>
+                            @if($activeShipment->awb_code)
+                            <div class="mt-2 text-center">
+                                <small class="text-muted">AWB: {{ $activeShipment->awb_code }}</small>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- Quick Info Card -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-white">

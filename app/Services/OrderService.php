@@ -42,6 +42,7 @@ class OrderService
             // Update order status only — payment_status is managed by the payment flow
             $order->update([
                 'status' => Order::STATUS_CONFIRMED,
+                'confirmed_at' => now(),
             ]);
 
             // Process for shipping with Shiprocket
@@ -438,10 +439,28 @@ class OrderService
             throw new \Exception("Invalid status transition from {$order->status} to {$newStatus}");
         }
 
-        $order->update([
+        $updateData = [
             'status' => $newStatus,
             'notes' => $notes,
-        ]);
+        ];
+
+        // Populate timestamps when transitioning to each status
+        switch ($newStatus) {
+            case Order::STATUS_CONFIRMED:
+                $updateData['confirmed_at'] = now();
+                break;
+            case Order::STATUS_PROCESSING:
+                $updateData['processing_at'] = now();
+                break;
+            case Order::STATUS_SHIPPED:
+                $updateData['shipped_at'] = now();
+                break;
+            case Order::STATUS_DELIVERED:
+                $updateData['delivered_at'] = now();
+                break;
+        }
+
+        $order->update($updateData);
 
         Log::info("Order status updated - Order #{$order->id}, From: {$order->status}, To: {$newStatus}");
         return true;
