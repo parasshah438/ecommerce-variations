@@ -190,8 +190,9 @@ class OrderService
 
             if ($activeItems->isEmpty()) {
                 // All items cancelled → cancel the full order
+                // Pass restoreStock:false — stock was already restored per-item in the foreach above
                 DB::commit();
-                $this->cancelOrder($order, $reason ?: 'All items cancelled');
+                $this->cancelOrder($order, $reason ?: 'All items cancelled', false);
                 return [
                     'success'       => true,
                     'all_cancelled' => true,
@@ -352,12 +353,57 @@ class OrderService
 
             DB::commit();
             Log::info("Order cancelled - Order #{$order->id}, Reason: {$reason}");
-            return true;
         } catch (\Exception $e) {
             DB::rollback();
             Log::error("Failed to cancel order #{$order->id}: " . $e->getMessage());
             throw $e;
         }
+
+        // --- Razorpay refund (outside DB transaction — external API call) ---
+        $payment = $order->latestPayment;
+        if ($payment && $payment->payment_status === Payment::PAYMENT_STATUS_PAID
+            && $payment->gateway === Payment::GATEWAY_RAZORPAY) {
+            try {
+                $razorpay = app(\App\Services\RazorpayService::class);
+                $refund = $razorpay->refundPayment(
+                    $payment->gateway_payment_id,
+                    $order->total,
+                    ['reason' => $reason ?: 'Order cancelled']
+                );
+                if (isset($refund['id'])) {
+                    $payment->update([
+                        'payment_status' => Payment::PAYMENT_STATUS_REFUNDED,
+                        'refund_id'      => $refund['id'],
+                        'refund_amount'  => $refund['amount'] / 100,
+                        'refunded_at'    => now(),
+                    ]);
+                    Log::info("Razorpay refund issued for Order #{$order->id}", ['refund_id' => $refund['id']]);
+                }
+            } catch (\Exception $e) {
+                Log::error("Razorpay refund failed for Order #{$order->id}: " . $e->getMessage());
+                // Refund failure does not roll back the cancellation
+            }
+        }
+
+        // --- Cancel ShipRocket shipment (outside DB transaction) ---
+        if (app('shiprocket.enabled')) {
+            try {
+                $shipment = $order->activeShipment ?? $order->shipments()->where('status', '!=', 'cancelled')->first();
+                if ($shipment && $shipment->shiprocket_order_id) {
+                    $this->shiprocketProcessor
+                        ->getShiprocketManager()
+                        ->orders()
+                        ->cancelOrders([$shipment->shiprocket_order_id]);
+                    $shipment->update(['status' => 'cancelled']);
+                    Log::info("ShipRocket order #{$shipment->shiprocket_order_id} cancelled for Order #{$order->id}");
+                }
+            } catch (\Exception $e) {
+                Log::error("ShipRocket cancellation failed for Order #{$order->id}: " . $e->getMessage());
+                // ShipRocket failure does not roll back the cancellation
+            }
+        }
+
+        return true;
     }
 
     /**

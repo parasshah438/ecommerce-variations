@@ -147,9 +147,12 @@ class Order extends Model
      */
     public function canBeCancelled()
     {
-        return in_array($this->status, [
-            self::STATUS_PENDING,
-            self::STATUS_CONFIRMED,
+        return ! in_array($this->status, [
+            self::STATUS_SHIPPED,
+            self::STATUS_DELIVERED,
+            self::STATUS_CANCELLED,
+            self::STATUS_RETURNED,
+            self::STATUS_REFUNDED,
         ]);
     }
 
