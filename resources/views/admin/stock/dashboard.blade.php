@@ -359,7 +359,7 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 // Load stock alerts
 function loadStockAlerts() {
@@ -487,9 +487,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Auto-refresh alerts every 5 minutes
 setInterval(loadStockAlerts, 300000);
 </script>
-@endsection
+@endpush
 
-@section('styles')
+@push('styles')
 <style>
 .border-left-primary {
     border-left: 0.25rem solid #4e73df !important;
@@ -541,4 +541,4 @@ setInterval(loadStockAlerts, 300000);
     }
 }
 </style>
-@endsection
+@endpush

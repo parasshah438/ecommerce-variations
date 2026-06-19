@@ -132,9 +132,13 @@ class StockDashboardController extends Controller
         // Out of stock alerts
         $outOfStock = VariationStock::with('variation.product')
             ->where('quantity', '<=', 0)
+            ->limit(50)
             ->get();
             
         foreach ($outOfStock as $stock) {
+            if (!$stock->relationLoaded('variation') || !$stock->variation || !$stock->variation->relationLoaded('product') || !$stock->variation->product) {
+                continue;
+            }
             $alerts[] = [
                 'type' => 'danger',
                 'title' => 'Out of Stock',
@@ -147,9 +151,13 @@ class StockDashboardController extends Controller
         // Low stock alerts
         $lowStock = VariationStock::with('variation.product')
             ->whereBetween('quantity', [1, 10])
+            ->limit(50)
             ->get();
             
         foreach ($lowStock as $stock) {
+            if (!$stock->relationLoaded('variation') || !$stock->variation || !$stock->variation->relationLoaded('product') || !$stock->variation->product) {
+                continue;
+            }
             $alerts[] = [
                 'type' => 'warning',
                 'title' => 'Low Stock',

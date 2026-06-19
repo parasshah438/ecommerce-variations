@@ -86,8 +86,9 @@
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        @if($variation->product->images->count() > 0)
-                                            <img src="{{ $variation->product->getThumbnailImage() ? $variation->product->getThumbnailImage()->getThumbnailUrl(150) : asset('images/product-placeholder.jpg') }}" 
+                                        @php $thumbnail = $variation->product->getThumbnailImage(); @endphp
+                                        @if($thumbnail)
+                                            <img src="{{ $thumbnail->getThumbnailUrl(150) }}" 
                                                  alt="{{ $variation->product->name }}" 
                                                  class="rounded me-3" 
                                                  style="width: 50px; height: 50px; object-fit: cover;">
@@ -277,7 +278,7 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 // Quick update functions
 function quickUpdate(variationId, currentQuantity) {
@@ -418,9 +419,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add any initialization code here
 });
 </script>
-@endsection
+@endpush
 
-@section('styles')
+@push('styles')
 <style>
 .border-left-warning {
     border-left: 0.25rem solid #f6c23e !important;
@@ -531,4 +532,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-@endsection
+@endpush
