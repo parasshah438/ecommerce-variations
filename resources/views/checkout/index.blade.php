@@ -572,7 +572,12 @@
                                 </div>
                                 @endif
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Shipping</span>
+                                    <span>
+                                        Shipping
+                                        <span id="checkout-shipping-source" class="badge {{ ($cartSummary['shipping_source'] ?? 'local_db') === 'shiprocket_realtime' ? 'bg-info-subtle text-info-emphasis' : 'bg-secondary-subtle text-secondary-emphasis' }} ms-2">
+                                            {{ ($cartSummary['shipping_source'] ?? 'local_db') === 'shiprocket_realtime' ? 'Live rate (ShipRocket)' : 'Fallback rate (DB)' }}
+                                        </span>
+                                    </span>
                                     <span class="text-success" id="checkout-shipping">{{ ($cartSummary['shipping_cost'] ?? 0) > 0 ? '₹' . number_format($cartSummary['shipping_cost'], 2) : 'Free' }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
@@ -809,6 +814,18 @@ function updateCheckoutSummary(summary) {
         shippingEl.textContent = shipping > 0 ? '₹' + shipping.toFixed(2) : 'Free';
     }
 
+    const shippingSourceBadgeEl = document.getElementById('checkout-shipping-source');
+    if (shippingSourceBadgeEl) {
+        const source = (summary.shipping_source || '').toString();
+        if (source === 'shiprocket_realtime') {
+            shippingSourceBadgeEl.textContent = 'Live rate (ShipRocket)';
+            shippingSourceBadgeEl.className = 'badge bg-info-subtle text-info-emphasis ms-2';
+        } else {
+            shippingSourceBadgeEl.textContent = 'Fallback rate (DB)';
+            shippingSourceBadgeEl.className = 'badge bg-secondary-subtle text-secondary-emphasis ms-2';
+        }
+    }
+
     const taxEl = document.getElementById('checkout-tax');
     if (taxEl) {
         taxEl.textContent = '₹' + parseFloat(summary.tax_amount || 0).toFixed(2);
@@ -836,6 +853,39 @@ function updateCheckoutSummary(summary) {
         document.getElementById('checkout-apply-coupon-btn')?.classList.remove('d-none');
         document.getElementById('checkout-coupon-section')?.classList.remove('d-none');
     }
+}
+
+let shippingRefreshTimer = null;
+
+function refreshCheckoutSummaryLive(pincode) {
+    const normalizedPincode = (pincode || '').toString().trim();
+
+    $.ajax({
+        url: '{{ route("checkout.summary") }}',
+        method: 'POST',
+        data: {
+            pincode: normalizedPincode,
+            _token: '{{ csrf_token() }}'
+        },
+        success: function(response) {
+            if (response.success && response.summary) {
+                updateCheckoutSummary(response.summary);
+            }
+        },
+        error: function() {
+            // Keep existing values if live refresh fails.
+        }
+    });
+}
+
+function refreshCheckoutSummaryDebounced(pincode, delayMs = 400) {
+    if (shippingRefreshTimer) {
+        clearTimeout(shippingRefreshTimer);
+    }
+
+    shippingRefreshTimer = setTimeout(function() {
+        refreshCheckoutSummaryLive(pincode);
+    }, delayMs);
 }
 
 function showCheckoutAppliedCoupon(coupon, discountAmount) {
@@ -1070,6 +1120,10 @@ function selectAddress(addressId) {
     
     // Check the radio button
     document.querySelector(`input[value="${addressId}"]`).checked = true;
+
+    // Live shipping refresh for selected saved address
+    const selectedZip = selectedCard.dataset.zip || '';
+    refreshCheckoutSummaryLive(selectedZip);
 }
 
 // Payment Method Selection
@@ -1432,6 +1486,11 @@ function initializeLocationFeatures() {
             e.target.value = e.target.value.replace(/[^0-9A-Za-z]/g, '');
             
             const pincode = e.target.value.trim();
+
+            // Live shipping refresh while typing pincode
+            if (pincode.length >= 3) {
+                refreshCheckoutSummaryDebounced(pincode, 500);
+            }
             
             // Show real-time validation feedback
             geoManager.showPincodeValidationFeedback(pincode, zipFeedback, zipField);
@@ -1474,6 +1533,13 @@ function initializeLocationFeatures() {
                         `;
                     }
                 }, 800);
+            }
+        });
+
+        zipField.addEventListener('blur', function(e) {
+            const pincode = (e.target.value || '').trim();
+            if (pincode) {
+                refreshCheckoutSummaryLive(pincode);
             }
         });
     }

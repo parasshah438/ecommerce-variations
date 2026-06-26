@@ -383,12 +383,38 @@ class ShiprocketOrderProcessor
                 (int) $bestCourier['courier_company_id']
             );
 
+            // Auto-generate shipping label right after AWB assignment
+            $labelResult = null;
+            $labelError = null;
+            try {
+                $labelResult = $this->shiprocketManager->shipments()->generateLabel([
+                    (int) $shipment->shiprocket_shipment_id
+                ]);
+            } catch (Exception $e) {
+                $labelError = $e->getMessage();
+                Log::warning("Label generation failed for Order #{$order->id}", [
+                    'shiprocket_shipment_id' => $shipment->shiprocket_shipment_id,
+                    'error' => $labelError,
+                ]);
+            }
+
+            $courierResponse = $shipment->courier_response ?? [];
+            $courierResponse['recommended_courier'] = $bestCourier;
+            $courierResponse['awb_assignment'] = $assignmentResult;
+            if ($labelResult) {
+                $courierResponse['label_generation'] = $labelResult;
+            }
+            if ($labelError) {
+                $courierResponse['label_error'] = $labelError;
+            }
+
             // Update local shipment with AWB and carrier
             $shipment->update([
                 'status' => 'courier_assigned',
                 'carrier' => $bestCourier['courier_name'] ?? null,
                 'awb_code' => $assignmentResult['awb_code'] ?? null,
                 'tracking_number' => $assignmentResult['awb_code'] ?? null,
+                'courier_response' => $courierResponse,
                 'estimated_delivery' => isset($bestCourier['estimated_delivery_days'])
                     ? now()->addDays((int) $bestCourier['estimated_delivery_days'])
                     : now()->addDays(7)
@@ -397,7 +423,9 @@ class ShiprocketOrderProcessor
             return [
                 'success' => true,
                 'courier' => $bestCourier,
-                'assignment_result' => $assignmentResult
+                'assignment_result' => $assignmentResult,
+                'label_result' => $labelResult,
+                'label_error' => $labelError,
             ];
 
         } catch (Exception $e) {

@@ -124,9 +124,16 @@ class CartService
         
         // Calculate total cart weight
         $totalWeight = $this->shippingCalculator->calculateCartWeight($items);
+        $dimensions = $this->shippingCalculator->calculateCartDimensions($items);
         
-        // Calculate weight-based shipping
-        $shippingData = $this->shippingCalculator->calculateShipping($totalWeight, $pincode, $subtotal);
+        // Calculate shipping: real-time ShipRocket first, DB fallback on API failure
+        $shippingData = $this->shippingCalculator->calculateShipping(
+            $totalWeight,
+            $pincode,
+            $subtotal,
+            $dimensions,
+            (int) round($subtotal)
+        );
         $shippingCost = $shippingData['cost'];
         
         // Get discount amount from applied coupon
@@ -168,6 +175,9 @@ class CartService
             'shipping_zone' => $shippingData['zone'] ?? 'Standard',
             'shipping_message' => $shippingData['message'] ?? '',
             'weight_slab' => $shippingData['weight_slab'] ?? '',
+            'shipping_source' => $shippingData['source'] ?? 'local_db',
+            'shipping_courier_name' => $shippingData['courier_name'] ?? null,
+            'shipping_estimated_delivery_days' => $shippingData['estimated_delivery_days'] ?? null,
             'tax_amount' => round($taxAmount ?? 0, 2),
             'tax_rate' => $taxRate,
             'tax_calculate_on' => $taxCalculateOn,
@@ -277,7 +287,14 @@ class CartService
         }
         
         $totalWeight = $this->shippingCalculator->calculateCartWeight($items);
+        $dimensions = $this->shippingCalculator->calculateCartDimensions($items);
         $subtotal = $items->sum(fn($item) => ($item->price ?? 0) * ($item->quantity ?? 0));
         
-        return $this->shippingCalculator->getShippingOptions($totalWeight, $pincode, $subtotal);
+        return $this->shippingCalculator->getShippingOptions(
+            $totalWeight,
+            $pincode,
+            $subtotal,
+            $dimensions,
+            (int) round($subtotal)
+        );
     }}

@@ -445,6 +445,7 @@ Route::middleware(['auth', 'single.session'])->group(function () {
 
     // Checkout routes
     Route::get('/checkout', [FrontCheckout::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/summary', [FrontCheckout::class, 'refreshSummary'])->name('checkout.summary');
     Route::post('/checkout/place-order', [FrontCheckout::class, 'placeOrder'])->name('checkout.place_order');
     Route::get('/checkout/success/{order}', [FrontCheckout::class, 'success'])->name('checkout.success');
     
@@ -540,6 +541,9 @@ Route::prefix('sales')->name('sales.')->group(function () {
 
 // Include admin routes
 require __DIR__.'/admin.php';
+
+// Include protected Shiprocket admin routes
+require __DIR__.'/shiprocket.php';
 
 //Test checkout route (remove in production)
 Route::get('/checkout-demo', function () {

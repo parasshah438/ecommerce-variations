@@ -11,6 +11,9 @@
             <p class="text-muted mb-0">Manage and track all customer orders</p>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ route('admin.orders.shiprocket.export.page') }}" class="btn btn-outline-dark">
+                <i class="fas fa-rocket me-2"></i>Shiprocket Export
+            </a>
             <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
                 <i class="fas fa-filter me-2"></i>Filter Orders
             </button>
@@ -273,6 +276,13 @@
                                                 <i class="fas fa-eye me-2"></i>View Details
                                             </a>
                                         </li>
+                                        @if($order->activeShipment && $order->activeShipment->shiprocket_order_id)
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="{{ route('admin.orders.shiprocket.details', $order) }}">
+                                                    <i class="fas fa-rocket me-2"></i>Shiprocket Order Details
+                                                </a>
+                                            </li>
+                                        @endif
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="downloadInvoice({{ $order->id }})">
                                                 <i class="fas fa-file-invoice me-2"></i>Download Invoice

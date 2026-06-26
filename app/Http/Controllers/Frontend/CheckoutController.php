@@ -51,6 +51,43 @@ class CheckoutController extends Controller
         return view('checkout.index', compact('cartSummary'));
     }
 
+    /**
+     * Recalculate checkout summary for a pincode (live shipping refresh).
+     */
+    public function refreshSummary(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $request->validate([
+            'pincode' => 'nullable|string|max:10',
+        ]);
+
+        $cart = Cart::where('user_id', $user->id)
+            ->with(['items.productVariation.stock', 'coupon'])
+            ->first();
+
+        if (!$cart || $cart->items->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cart is empty'
+            ], 422);
+        }
+
+        $pincode = $request->input('pincode');
+        $summary = $this->cartService->cartSummary($cart, $pincode);
+
+        return response()->json([
+            'success' => true,
+            'summary' => $summary,
+        ]);
+    }
+
     public function placeOrder(Request $request)
     {
         \Log::info('PlaceOrder method called', $request->all());

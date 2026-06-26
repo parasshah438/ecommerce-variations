@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ShippingZone;
 use App\Models\ShippingRate;
+use Illuminate\Support\Facades\Log;
 
 class ShippingCalculatorService
 {
@@ -25,7 +26,7 @@ class ShippingCalculatorService
     /**
      * Calculate shipping cost for given weight and pincode
      */
-    public function calculateShipping($totalWeight, $pincode = null, $subtotal = 0)
+    public function calculateShipping($totalWeight, $pincode = null, $subtotal = 0, array $dimensions = [], ?int $declaredValue = null)
     {
         // Free shipping threshold check first
         if ($subtotal >= config('shop.free_shipping_threshold', 999)) {
@@ -34,8 +35,15 @@ class ShippingCalculatorService
                 'zone' => 'Free Shipping',
                 'weight_slab' => 'N/A',
                 'is_free' => true,
+                'source' => 'local_db',
                 'message' => 'Free shipping on orders above ₹999'
             ];
+        }
+
+        // Try real-time ShipRocket rate first
+        $realTimeRate = $this->getShiprocketRealtimeRate($totalWeight, $pincode, $dimensions, $declaredValue ?? (int) $subtotal);
+        if ($realTimeRate) {
+            return $realTimeRate;
         }
 
         // Find shipping zone by pincode
@@ -60,6 +68,7 @@ class ShippingCalculatorService
             'zone' => $zone->name,
             'weight_slab' => $this->getWeightSlabDescription($shippingRate, $totalWeight),
             'is_free' => false,
+            'source' => 'local_db',
             'message' => "Shipping to {$zone->name}: ₹{$cost}"
         ];
     }
@@ -79,6 +88,36 @@ class ShippingCalculatorService
         }
 
         return $totalWeight;
+    }
+
+    /**
+     * Calculate cart package dimensions from items.
+     * length and breadth are max item dimensions, height is stacked by quantity.
+     */
+    public function calculateCartDimensions($cartItems): array
+    {
+        $maxLength = 0;
+        $maxBreadth = 0;
+        $totalHeight = 0;
+
+        foreach ($cartItems as $item) {
+            $variation = $item->productVariation ?? null;
+            $product = $variation?->product;
+
+            $length = (float) ($variation->length ?? $product->length ?? config('shiprocket.default_dimensions.length', 10));
+            $breadth = (float) ($variation->width ?? $product->width ?? config('shiprocket.default_dimensions.breadth', 10));
+            $height = (float) ($variation->height ?? $product->height ?? config('shiprocket.default_dimensions.height', 10));
+
+            $maxLength = max($maxLength, $length);
+            $maxBreadth = max($maxBreadth, $breadth);
+            $totalHeight += $height * max(1, (int) $item->quantity);
+        }
+
+        return [
+            'length' => (int) max(1, round($maxLength ?: config('shiprocket.default_dimensions.length', 10))),
+            'breadth' => (int) max(1, round($maxBreadth ?: config('shiprocket.default_dimensions.breadth', 10))),
+            'height' => (int) max(1, round($totalHeight ?: config('shiprocket.default_dimensions.height', 10))),
+        ];
     }
 
     /**
@@ -120,8 +159,81 @@ class ShippingCalculatorService
             'zone' => 'Standard',
             'weight_slab' => $this->getDefaultWeightSlab($weight),
             'is_free' => false,
+            'source' => 'default_fallback',
             'message' => "Standard shipping: ₹{$baseCost}"
         ];
+    }
+
+    /**
+     * Fetch real-time shipping charge from ShipRocket courier serviceability API.
+     * Returns null if API is unavailable or config is incomplete, so DB fallback can apply.
+     */
+    protected function getShiprocketRealtimeRate($totalWeight, $pincode = null, array $dimensions = [], ?int $declaredValue = null): ?array
+    {
+        if (empty($pincode) || !app('shiprocket.enabled')) {
+            return null;
+        }
+
+        $pickupPostcode = config('shiprocket.pickup_postcode');
+        if (empty($pickupPostcode)) {
+            return null;
+        }
+
+        try {
+            $weightKg = max(((float) $totalWeight) / 1000, 0.5);
+            $length = (int) ($dimensions['length'] ?? config('shiprocket.default_dimensions.length', 10));
+            $breadth = (int) ($dimensions['breadth'] ?? config('shiprocket.default_dimensions.breadth', 10));
+            $height = (int) ($dimensions['height'] ?? config('shiprocket.default_dimensions.height', 10));
+
+            $courierService = app(ShiprocketCourierService::class);
+            $serviceability = $courierService->checkServiceabilityForLocation(
+                (string) $pickupPostcode,
+                (string) $pincode,
+                $weightKg,
+                0,
+                0,
+                $length,
+                $breadth,
+                $height,
+                $declaredValue
+            );
+
+            $couriers = $serviceability['data']['available_courier_companies'] ?? [];
+            if (empty($couriers)) {
+                return null;
+            }
+
+            usort($couriers, function ($a, $b) {
+                return ((float) ($a['rate'] ?? 0)) <=> ((float) ($b['rate'] ?? 0));
+            });
+
+            $bestCourier = $couriers[0] ?? null;
+            if (!$bestCourier) {
+                return null;
+            }
+
+            $cost = (float) ($bestCourier['rate'] ?? 0);
+
+            return [
+                'cost' => $cost,
+                'zone' => 'ShipRocket Real-Time',
+                'weight_slab' => number_format($weightKg, 2) . 'kg',
+                'is_free' => false,
+                'source' => 'shiprocket_realtime',
+                'courier_name' => $bestCourier['courier_name'] ?? null,
+                'estimated_delivery_days' => $bestCourier['estimated_delivery_days'] ?? null,
+                'message' => 'Real-time rate via ShipRocket' .
+                    (isset($bestCourier['courier_name']) ? (': ' . $bestCourier['courier_name']) : ''),
+            ];
+        } catch (\Exception $e) {
+            Log::warning('ShipRocket realtime shipping rate failed, using DB fallback', [
+                'pincode' => $pincode,
+                'pickup_postcode' => $pickupPostcode,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -157,9 +269,9 @@ class ShippingCalculatorService
     /**
      * Get shipping options for a cart (standard, express, etc.)
      */
-    public function getShippingOptions($totalWeight, $pincode = null, $subtotal = 0)
+    public function getShippingOptions($totalWeight, $pincode = null, $subtotal = 0, array $dimensions = [], ?int $declaredValue = null)
     {
-        $standardShipping = $this->calculateShipping($totalWeight, $pincode, $subtotal);
+        $standardShipping = $this->calculateShipping($totalWeight, $pincode, $subtotal, $dimensions, $declaredValue);
         
         $options = [
             'standard' => [

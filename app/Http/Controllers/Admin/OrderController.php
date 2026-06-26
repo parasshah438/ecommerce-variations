@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderService;
+use App\Services\ShiprocketManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -456,6 +458,104 @@ class OrderController extends Controller
             return response()->json(['success' => true, 'message' => 'Export functionality to be implemented']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to export: ' . $e->getMessage()]);
+        }
+    }
+
+    public function shiprocketOrderDetails(Order $order)
+    {
+        $order->load(['user', 'activeShipment']);
+
+        $shipment = $order->activeShipment;
+        $shiprocketOrderId = $shipment?->shiprocket_order_id;
+
+        if (empty($shiprocketOrderId)) {
+            return redirect()->route('admin.orders.index')
+                ->with('error', "Shiprocket order is not available yet for Order #{$order->id}.");
+        }
+
+        try {
+            /** @var ShiprocketManager $shiprocket */
+            $shiprocket = app(ShiprocketManager::class);
+            $shiprocketResponse = $shiprocket->orders()->getOrderDetails((int) $shiprocketOrderId);
+
+            return view('admin.orders.shiprocket-order-details', [
+                'order' => $order,
+                'shipment' => $shipment,
+                'shiprocketOrderId' => $shiprocketOrderId,
+                'shiprocketResponse' => $shiprocketResponse,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch Shiprocket order details from admin', [
+                'order_id' => $order->id,
+                'shiprocket_order_id' => $shiprocketOrderId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('admin.orders.index')
+                ->with('error', 'Unable to fetch Shiprocket order details: ' . $e->getMessage());
+        }
+    }
+
+    public function shiprocketExportPage()
+    {
+        return view('admin.orders.shiprocket-export');
+    }
+
+    public function shiprocketExport(Request $request)
+    {
+        $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'status' => 'nullable|string|max:50',
+            'channel_order_id' => 'nullable|string|max:100',
+        ]);
+
+        $filters = array_filter([
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'status' => $request->input('status'),
+            'channel_order_id' => $request->input('channel_order_id'),
+        ], static fn($value) => $value !== null && $value !== '');
+
+        try {
+            /** @var ShiprocketManager $shiprocket */
+            $shiprocket = app(ShiprocketManager::class);
+            $result = $shiprocket->orders()->exportOrders($filters);
+
+            $message = $result['is_background_downloading'] ?? false
+                ? 'Shiprocket export started in background.'
+                : 'Shiprocket export request completed.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data' => $result,
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.orders.shiprocket.export.page')
+                ->with('success', $message)
+                ->with('shiprocket_export_result', $result)
+                ->with('shiprocket_export_filters', $filters);
+        } catch (\Exception $e) {
+            Log::error('Shiprocket export failed from admin', [
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Shiprocket export failed: ' . $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()
+                ->route('admin.orders.shiprocket.export.page')
+                ->with('error', 'Shiprocket export failed: ' . $e->getMessage())
+                ->withInput();
         }
     }
 }

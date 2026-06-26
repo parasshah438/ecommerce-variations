@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\WebsiteSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\Category;
 
+Route::pattern('order', '[0-9]+');
+
 // Debug route to check categories
 Route::get('/debug/categories', function () {
     $categories = Category::select('id', 'name')->get();
@@ -93,6 +95,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     // Order Management Routes
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+
+        // Shiprocket tools
+        Route::get('/shiprocket/export', [AdminOrderController::class, 'shiprocketExportPage'])->name('shiprocket.export.page');
+        Route::post('/shiprocket/export', [AdminOrderController::class, 'shiprocketExport'])->name('shiprocket.export');
+        Route::get('/{order}/shiprocket-details', [AdminOrderController::class, 'shiprocketOrderDetails'])->name('shiprocket.details');
+
         Route::get('/{order}', [AdminOrderController::class, 'show'])->name('show');
         
         // Status management
