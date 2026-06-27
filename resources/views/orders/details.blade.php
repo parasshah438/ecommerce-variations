@@ -196,11 +196,17 @@
                                     </a>
                                 @endif
 
-                                @if(in_array($order->status, ['pending', 'confirmed']))
+                                @if($order->canBeCancelled() && empty(optional($order->activeShipment)->awb_code))
                                     <button type="button" class="btn btn-outline-danger" 
                                             data-bs-toggle="modal" data-bs-target="#cancelModal">
                                         <i class="fas fa-times me-2"></i>Cancel Order
                                     </button>
+                                @elseif($order->canBeCancelled() && !empty(optional($order->activeShipment)->awb_code))
+                                    <div class="alert alert-warning py-2 px-3 mb-0" role="alert">
+                                        <i class="fas fa-truck me-2"></i>
+                                        <strong>Order Dispatched.</strong> Cancellation is no longer possible.
+                                        You can return the item after delivery.
+                                    </div>
                                 @endif
 
                                 @if($order->status === 'delivered')

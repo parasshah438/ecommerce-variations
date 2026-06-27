@@ -316,11 +316,15 @@
                                                     </a>
                                                 @endif
 
-                                                @if(in_array($order->status, ['pending', 'confirmed']))
+                                                @if($order->canBeCancelled() && empty(optional($order->activeShipment)->awb_code))
                                                     <button type="button" class="btn btn-outline-danger btn-sm" 
                                                             data-bs-toggle="modal" data-bs-target="#cancelModal{{ $order->id }}">
                                                         <i class="fas fa-times me-1"></i>Cancel
                                                     </button>
+                                                @elseif($order->canBeCancelled() && !empty(optional($order->activeShipment)->awb_code))
+                                                    <span class="btn btn-outline-secondary btn-sm disabled" title="Order dispatched – return after delivery">
+                                                        <i class="fas fa-truck me-1"></i>Dispatched
+                                                    </span>
                                                 @endif
 
                                                 @if($order->status === 'delivered')

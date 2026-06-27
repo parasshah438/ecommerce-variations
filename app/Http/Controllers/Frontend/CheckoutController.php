@@ -1005,9 +1005,21 @@ class CheckoutController extends Controller
             abort(403, 'Unauthorized access to cancel order.');
         }
 
-        // Check if order can be cancelled
-        if (!in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_CONFIRMED])) {
+        // Hard block: already cancelled / returned / refunded / delivered
+        if (!$order->canBeCancelled()) {
             return redirect()->back()->with('error', 'This order cannot be cancelled at this stage.');
+        }
+
+        // Amazon-style AWB gate:
+        // Once Shiprocket has assigned an AWB (label generated / courier pickup done),
+        // the parcel is physically on the way — customer cannot cancel anymore.
+        // They must wait for delivery and then raise a return request.
+        $shipment = $order->activeShipment;
+        if ($shipment && !empty($shipment->awb_code)) {
+            return redirect()->back()->with('error',
+                'Your order has already been dispatched (AWB: ' . $shipment->awb_code . '). ' .
+                'Cancellation is no longer possible. You can return the item after delivery.'
+            );
         }
 
         $request->validate([
@@ -1017,41 +1029,19 @@ class CheckoutController extends Controller
         try {
             $orderService = app(\App\Services\OrderService::class);
 
-            DB::beginTransaction();
-
-            // Use OrderService for correct status + stock management:
-            // - Only restores stock if it was actually reserved (CONFIRMED/PROCESSING)
-            // - Updates the in_stock flag via StockService::restoreStockForOrder()
-            // - Does NOT restore stock for PENDING orders (was never reserved)
+            // OrderService::cancelOrder() handles everything in the correct order:
+            //   1. DB transaction  → stock restore + status = CANCELLED
+            //   2. Razorpay refund → full order total (correct amount, correct unit)
+            //   3. Shiprocket cancel → shipment (if created but AWB not yet assigned) cancelled
             $orderService->cancelOrder($order, $request->reason);
 
-            // If payment was made, initiate refund
-            $payment = $order->latestPayment;
-            if ($payment && $payment->payment_status === Payment::PAYMENT_STATUS_PAID) {
-                // For Razorpay, initiate refund
-                if ($payment->gateway === Payment::GATEWAY_RAZORPAY) {
-                    $razorpayService = app(RazorpayService::class);
-                    $refund = $razorpayService->refundPayment($payment->gateway_payment_id, $order->total * 100);
-                    
-                    if ($refund && isset($refund['id'])) {
-                        $payment->update([
-                            'payment_status' => Payment::PAYMENT_STATUS_REFUNDED,
-                            'refund_id' => $refund['id'],
-                            'refund_amount' => $refund['amount'] / 100,
-                            'refunded_at' => now()
-                        ]);
-                    }
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('orders.index')->with('success', 'Order cancelled successfully.');
+            return redirect()->route('orders.index')->with('success',
+                'Order cancelled successfully. Refund will be processed within 5–7 business days.'
+            );
         } catch (\Exception $e) {
-            DB::rollback();
             \Log::error('Order cancellation failed', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error'    => $e->getMessage(),
             ]);
             return redirect()->back()->with('error', 'Failed to cancel order. Please try again.');
         }
@@ -1116,6 +1106,7 @@ class CheckoutController extends Controller
 
     /**
      * Request order return
+     * Creates an OrderReturnRequest for admin review.
      */
     public function returnOrder(Request $request, Order $order)
     {
@@ -1131,7 +1122,7 @@ class CheckoutController extends Controller
 
         // Check return window (e.g., 30 days)
         $returnWindow = 30; // days
-        if ($order->updated_at->diffInDays(now()) > $returnWindow) {
+        if ($order->delivered_at && $order->delivered_at->diffInDays(now()) > $returnWindow) {
             return redirect()->back()->with('error', "Return window of {$returnWindow} days has expired.");
         }
 
@@ -1142,23 +1133,23 @@ class CheckoutController extends Controller
         ]);
 
         try {
-            // Update order status
-            $order->update([
-                'status' => Order::STATUS_RETURNED,
-                'returned_at' => now(),
-                'notes' => $request->reason
-            ]);
+            // Submit return request via OrderService
+            $orderService = app(\App\Services\OrderService::class);
+            $returnRequest = $orderService->submitReturnRequest(
+                $order,
+                $request->return_items,
+                $request->reason
+            );
 
-            // Create return request record (you might want to create a separate ReturnRequest model)
-            // For now, we'll use the order notes field
-
-            return redirect()->route('orders.index')->with('success', 'Return request submitted successfully. We will contact you soon.');
+            return redirect()->route('orders.index')->with('success', 
+                'Return request #' . $returnRequest->id . ' submitted successfully. Our team will review and contact you within 24-48 hours.'
+            );
         } catch (\Exception $e) {
             \Log::error('Return request failed', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
-            return redirect()->back()->with('error', 'Failed to submit return request. Please try again.');
+            return redirect()->back()->with('error', 'Failed to submit return request: ' . $e->getMessage());
         }
     }
 

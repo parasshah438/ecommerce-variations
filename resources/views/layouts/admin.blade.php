@@ -303,6 +303,12 @@
                     </a>
                 </div>
                 <div class="nav-item">
+                    <a href="{{ route('admin.return-requests.index') }}" class="nav-link {{ Request::is('admin/return-requests*') ? 'active' : '' }}">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Return Requests</span>
+                    </a>
+                </div>
+                <div class="nav-item">
                     <a href="{{ route('admin.attributes.index') }}" class="nav-link {{ Request::is('admin/attributes*') ? 'active' : '' }}">
                         <i class="fas fa-list"></i>
                         <span>Attributes</span>

@@ -132,6 +132,17 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/api/statistics', [AdminOrderController::class, 'getOrderStatistics'])->name('statistics');
     });
     
+    // Return Request Management Routes
+    Route::prefix('return-requests')->name('return-requests.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('index');
+        Route::get('/{returnRequest}', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'show'])->name('show');
+        Route::post('/{returnRequest}/approve', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'approve'])->name('approve');
+        Route::post('/{returnRequest}/reject', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'reject'])->name('reject');
+        Route::post('/{returnRequest}/schedule-pickup', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'schedulePickup'])->name('schedule-pickup');
+        Route::post('/{returnRequest}/mark-picked-up', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'markPickedUp'])->name('mark-picked-up');
+        Route::post('/{returnRequest}/process-refund', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'processRefund'])->name('process-refund');
+    });
+
     // Payment Management Routes
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');

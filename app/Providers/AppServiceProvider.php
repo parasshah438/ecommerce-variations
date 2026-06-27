@@ -29,5 +29,8 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination view (updated with Bootstrap 5 styling)
         Paginator::defaultView('pagination::bootstrap-4');
         Paginator::defaultSimpleView('pagination::simple-bootstrap-4');
+
+        // Explicit route model binding for return requests
+        \Illuminate\Support\Facades\Route::model('returnRequest', \App\Models\OrderReturnRequest::class);
     }
 }

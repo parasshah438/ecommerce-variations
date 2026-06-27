@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturnRequest;
 use App\Models\Payment;
 use App\Services\StockService;
+use App\Services\ShiprocketReturnService;
+use App\Services\RazorpayService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -518,5 +521,293 @@ class OrderService
     public function getOrderStockStatus(Order $order)
     {
         return $this->stockService->getOrderStockStatus($order);
+    }
+
+    // ──────────────────────────────────────────────
+    //  RETURN REQUEST WORKFLOW (Customer → Admin → Pickup → Refund)
+    // ──────────────────────────────────────────────
+
+    /**
+     * Customer submits a return request for a delivered order.
+     * Creates an OrderReturnRequest with pending status.
+     */
+    public function submitReturnRequest(Order $order, array $itemIds, string $reason): OrderReturnRequest
+    {
+        if (!$order->canBeReturned()) {
+            throw new \Exception('Only delivered orders can be returned.');
+        }
+
+        // Check return window (30 days)
+        $returnWindow = 30;
+        if ($order->delivered_at && $order->delivered_at->diffInDays(now()) > $returnWindow) {
+            throw new \Exception("Return window of {$returnWindow} days has expired.");
+        }
+
+        // Calculate refund amount from selected items
+        $items = $order->items()->whereIn('id', $itemIds)->get();
+        if ($items->isEmpty()) {
+            throw new \Exception('No valid items selected for return.');
+        }
+
+        $refundAmount = 0;
+        foreach ($items as $item) {
+            $refundAmount += $item->price * $item->quantity;
+        }
+
+        // Create the return request
+        $returnRequest = OrderReturnRequest::create([
+            'order_id'        => $order->id,
+            'user_id'         => $order->user_id,
+            'status'          => OrderReturnRequest::STATUS_PENDING,
+            'customer_reason' => $reason,
+            'return_items'    => $itemIds,
+            'refund_amount'   => $refundAmount,
+        ]);
+
+        // Update order notes
+        $order->update([
+            'notes' => ($order->notes ? $order->notes . "\n" : '') .
+                       "Return requested on " . now()->format('Y-m-d H:i') . ": {$reason}",
+        ]);
+
+        Log::info("Return request submitted - Order #{$order->id}, Request #{$returnRequest->id}, Amount: {$refundAmount}");
+
+        return $returnRequest;
+    }
+
+    /**
+     * Admin approves a return request.
+     * Restores stock for returned items and schedules Shiprocket return pickup.
+     */
+    public function approveReturnRequest(OrderReturnRequest $returnRequest, $adminUser, ?string $adminNote = null): void
+    {
+        if (!$returnRequest->canBeApproved()) {
+            throw new \Exception('Return request cannot be approved in its current state.');
+        }
+
+        $order = $returnRequest->order;
+
+        DB::beginTransaction();
+        try {
+            // Restore stock for returned items
+            $returnItemIds = $returnRequest->return_items ?? [];
+            $itemsToRestore = $order->items()->whereIn('id', $returnItemIds)->get();
+
+            foreach ($itemsToRestore as $item) {
+                if ($item->productVariation && $item->productVariation->stock) {
+                    $item->productVariation->stock->increment('quantity', $item->quantity);
+                    $item->productVariation->stock->update(['in_stock' => true]);
+                }
+            }
+
+            // Update request status
+            $returnRequest->update([
+                'status'      => OrderReturnRequest::STATUS_APPROVED,
+                'admin_note'  => $adminNote,
+                'reviewed_by' => $adminUser->id,
+                'reviewed_at' => now(),
+            ]);
+
+            // Update order
+            $order->update([
+                'status' => Order::STATUS_RETURNED,
+                'returned_at' => now(),
+                'notes' => ($order->notes ? $order->notes . "\n" : '') .
+                           "Return approved on " . now()->format('Y-m-d H:i') . ": {$adminNote}",
+            ]);
+
+            DB::commit();
+
+            Log::info("Return request #{$returnRequest->id} approved, stock restored for Order #{$order->id}");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to approve return request #{$returnRequest->id}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Schedule Shiprocket return pickup for an approved return request.
+     */
+    public function scheduleReturnPickup(OrderReturnRequest $returnRequest, ?string $pickupDate = null): void
+    {
+        if (!$returnRequest->isApproved()) {
+            throw new \Exception('Return request must be approved before scheduling pickup.');
+        }
+
+        $order = $returnRequest->order;
+        $shipment = $order->activeShipment;
+
+        if (!$shipment || !$shipment->shiprocket_order_id) {
+            // If no Shiprocket shipment exists, mark pickup scheduled locally
+            $returnRequest->update([
+                'status' => OrderReturnRequest::STATUS_PICKUP_SCHEDULED,
+                'pickup_scheduled_date' => $pickupDate ? now()->parse($pickupDate) : now()->addDay(),
+            ]);
+            Log::info("Return pickup marked scheduled (no Shiprocket) for request #{$returnRequest->id}");
+            return;
+        }
+
+        // Shiprocket return pickup via ShiprocketReturnService
+        if (app('shiprocket.enabled')) {
+            try {
+                $returnService = app(ShiprocketReturnService::class);
+
+                // Build return data for Shiprocket using original order's pickup location
+                $returnData = $this->buildShiprocketReturnData($order, $returnRequest, $shipment);
+                $result = $returnService->processReturn($returnData);
+
+                if ($result['success'] && isset($result['return_order'])) {
+                    $returnOrder = $result['return_order'];
+                    $returnRequest->update([
+                        'status'                     => OrderReturnRequest::STATUS_PICKUP_SCHEDULED,
+                        'shiprocket_return_order_id' => $returnOrder['order_id'] ?? null,
+                        'shiprocket_shipment_id'     => $returnOrder['shipment_id'] ?? null,
+                        'pickup_scheduled_date'      => $pickupDate ? now()->parse($pickupDate) : now()->addDay(),
+                    ]);
+
+                    Log::info("Shiprocket return pickup scheduled for request #{$returnRequest->id}", [
+                        'shiprocket_return_order_id' => $returnOrder['order_id'] ?? null,
+                    ]);
+                    return;
+                }
+
+                // If Shiprocket processReturn fails, still mark as scheduled for manual handling
+                $returnRequest->update([
+                    'status'                => OrderReturnRequest::STATUS_PICKUP_SCHEDULED,
+                    'pickup_scheduled_date' => $pickupDate ? now()->parse($pickupDate) : now()->addDay(),
+                ]);
+                Log::warning("Shiprocket return processing failed, marked scheduled locally: " . ($result['error'] ?? 'Unknown'));
+
+            } catch (\Exception $e) {
+                Log::error("Shiprocket return pickup failed for request #{$returnRequest->id}: " . $e->getMessage());
+                // Fall back to local pickup schedule
+                $returnRequest->update([
+                    'status'                => OrderReturnRequest::STATUS_PICKUP_SCHEDULED,
+                    'pickup_scheduled_date' => $pickupDate ? now()->parse($pickupDate) : now()->addDay(),
+                ]);
+            }
+        } else {
+            // Shiprocket not configured — mark locally
+            $returnRequest->update([
+                'status'                => OrderReturnRequest::STATUS_PICKUP_SCHEDULED,
+                'pickup_scheduled_date' => $pickupDate ? now()->parse($pickupDate) : now()->addDay(),
+            ]);
+            Log::info("Return pickup scheduled locally (Shiprocket not configured) for request #{$returnRequest->id}");
+        }
+    }
+
+    /**
+     * Build the return data payload for Shiprocket.
+     */
+    protected function buildShiprocketReturnData(Order $order, OrderReturnRequest $returnRequest, $shipment): array
+    {
+        $address = $order->address;
+        $user = $order->user;
+
+        $returnItems = [];
+        $items = $order->items()->whereIn('id', $returnRequest->return_items ?? [])->get();
+        foreach ($items as $item) {
+            $product = $item->productVariation->product ?? null;
+            $returnItems[] = [
+                'name'          => $product->name ?? 'Product',
+                'sku'           => $item->productVariation->sku ?? 'SKU',
+                'units'         => $item->quantity,
+                'selling_price' => $item->price,
+            ];
+        }
+
+        return [
+            'order_id'              => (string) $order->id,
+            'order_date'            => $order->created_at->format('Y-m-d H:i'),
+            'pickup_customer_name'  => $address->name ?? $user->name,
+            'pickup_address'        => $address->address_line ?? '',
+            'pickup_city'           => $address->city ?? '',
+            'pickup_state'          => $address->state ?? '',
+            'pickup_country'        => $address->country ?? 'India',
+            'pickup_pincode'        => $address->zip ?? '',
+            'pickup_email'          => $user->email,
+            'pickup_phone'          => $address->phone ?? $user->phone ?? '',
+            'shipping_customer_name' => config('shiprocket.return_shipping_name', 'Warehouse'),
+            'shipping_address'      => config('shiprocket.return_shipping_address', ''),
+            'shipping_city'         => config('shiprocket.return_shipping_city', ''),
+            'shipping_state'        => config('shiprocket.return_shipping_state', ''),
+            'shipping_country'      => 'India',
+            'shipping_pincode'      => config('shiprocket.return_shipping_pincode', ''),
+            'shipping_email'        => config('shiprocket.return_shipping_email', ''),
+            'shipping_phone'        => config('shiprocket.return_shipping_phone', ''),
+            'order_items'           => $returnItems,
+            'payment_method'        => $order->payment_method === 'cod' ? 'COD' : 'Prepaid',
+            'sub_total'             => $returnRequest->refund_amount ?? $order->subtotal,
+            'length'                => 20,
+            'breadth'               => 15,
+            'height'                => 10,
+            'weight'                => 0.5,
+        ];
+    }
+
+    /**
+     * Process refund for a picked-up return request.
+     * Triggers Razorpay refund for the return amount.
+     */
+    public function processReturnRefund(OrderReturnRequest $returnRequest, float $refundAmount): void
+    {
+        if ($returnRequest->status !== OrderReturnRequest::STATUS_PICKED_UP) {
+            throw new \Exception('Items must be picked up before processing refund.');
+        }
+
+        $order = $returnRequest->order;
+
+        // Try Razorpay refund
+        $refundId = null;
+        $payment = $order->latestPayment;
+        if ($payment && $payment->payment_status === Payment::PAYMENT_STATUS_PAID
+            && $payment->gateway === Payment::GATEWAY_RAZORPAY) {
+            try {
+                $razorpay = app(RazorpayService::class);
+                $refund = $razorpay->refundPayment(
+                    $payment->gateway_payment_id,
+                    $refundAmount,
+                    ['reason' => 'Return request #' . $returnRequest->id]
+                );
+                if (isset($refund['id'])) {
+                    $refundId = $refund['id'];
+                    // Record in payment metadata
+                    $existingMeta = $payment->metadata ?? [];
+                    $existingMeta['return_refunds'][] = [
+                        'return_request_id' => $returnRequest->id,
+                        'refund_id'         => $refund['id'],
+                        'amount'            => $refundAmount,
+                        'created_at'        => now()->toISOString(),
+                    ];
+                    $payment->update(['metadata' => $existingMeta]);
+                    Log::info("Razorpay refund issued for return request #{$returnRequest->id}", [
+                        'refund_id' => $refund['id'],
+                        'amount'    => $refundAmount,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error("Razorpay refund failed for return request #{$returnRequest->id}: " . $e->getMessage());
+                // Continue — we still mark it refunded locally
+            }
+        }
+
+        // Update return request
+        $returnRequest->update([
+            'status'       => OrderReturnRequest::STATUS_REFUNDED,
+            'refund_id'    => $refundId,
+            'refund_amount' => $refundAmount,
+            'refunded_at'  => now(),
+        ]);
+
+        // Update order status
+        $order->update([
+            'payment_status' => Order::PAYMENT_REFUNDED,
+            'refunded_at'    => now(),
+            'notes' => ($order->notes ? $order->notes . "\n" : '') .
+                       "Return refunded ₹" . number_format($refundAmount, 2) . " on " . now()->format('Y-m-d H:i'),
+        ]);
+
+        Log::info("Return refund processed for request #{$returnRequest->id}, Order #{$order->id}, Amount: ₹{$refundAmount}");
     }
 }

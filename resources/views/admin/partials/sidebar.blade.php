@@ -145,6 +145,14 @@
                         <span class="nav-badge">12</span>
                     </a>
                 </div>
+                <div class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.return-requests*') ? 'active' : '' }}" 
+                       href="{{ route('admin.return-requests.index') }}"
+                       data-keywords="returns refunds exchanges replacement returns requests">
+                        <i class="nav-icon fas fa-exchange-alt"></i>
+                        <span class="nav-text">Return Requests</span>
+                    </a>
+                </div>
             </div>
 
             <div class="nav-section">
