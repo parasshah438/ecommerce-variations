@@ -844,6 +844,13 @@ Route::post('/test-image-upload', function(\Illuminate\Http\Request $request) {
 // Sitemap XML route
 Route::get('/sitemap.xml', [App\Http\Controllers\PagesController::class, 'sitemapXml'])->name('sitemap.xml');
 
+// Blog / Content Marketing Routes (SEO-friendly public routes)
+Route::prefix('blog')->name('blog.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\BlogController::class, 'index'])->name('index');
+    Route::get('/category/{blogCategory}', [\App\Http\Controllers\BlogController::class, 'category'])->name('category');
+    Route::get('/{blogPost}', [\App\Http\Controllers\BlogController::class, 'show'])->name('show');
+});
+
 // Custom 404 route (should be at the end)
 Route::fallback([App\Http\Controllers\PagesController::class, 'error404']);
 
