@@ -150,7 +150,10 @@
                                                          loading="lazy"
                                                          onerror="handleImageError(this)">
                                                 </picture>
-                                                @if($isVariationImage)
+                                                @if($product->cover_image)
+                                                    <span class="position-absolute badge bg-primary rounded-pill variation-indicator" 
+                                                          title="Cover Image">C</span>
+                                                @elseif($isVariationImage)
                                                     <span class="position-absolute badge bg-info rounded-pill variation-indicator" 
                                                           title="Variation Image">V</span>
                                                 @endif

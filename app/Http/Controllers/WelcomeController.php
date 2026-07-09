@@ -41,9 +41,13 @@ class WelcomeController extends Controller
                 $maxPrice = $product->price;
             }
 
-            // Get first image
-            $image = $product->images->first();
-            $imageUrl = $image ? asset('storage/' . $image->path) : 'https://via.placeholder.com/400x300?text=No+Image';
+            // Get image: cover_image first, then first product image
+            if ($product->cover_image) {
+                $imageUrl = asset('storage/' . $product->cover_image);
+            } else {
+                $image = $product->images->first();
+                $imageUrl = $image ? asset('storage/' . $image->path) : 'https://via.placeholder.com/400x300?text=No+Image';
+            }
 
             return [
                 'id' => $product->id,

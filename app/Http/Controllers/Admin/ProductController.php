@@ -60,6 +60,7 @@ class ProductController extends Controller
             'height' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB - dedicated cover image
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
             'variations' => 'nullable|array',
@@ -102,6 +103,23 @@ class ProductController extends Controller
                 'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true),
             ];
+
+            // Handle cover image
+            if ($request->hasFile('cover_image')) {
+                // Delete old cover image if exists
+                if ($product->cover_image && Storage::disk('public')->exists($product->cover_image)) {
+                    Storage::disk('public')->delete($product->cover_image);
+                }
+                $updateData['cover_image'] = $request->file('cover_image')->store('products/covers', 'public');
+            }
+            // If no cover_image file provided but there was one previously, keep it (don't change)
+            // If remove_cover flag is set, clear it
+            if ($request->boolean('remove_cover')) {
+                if ($product->cover_image && Storage::disk('public')->exists($product->cover_image)) {
+                    Storage::disk('public')->delete($product->cover_image);
+                }
+                $updateData['cover_image'] = null;
+            }
 
             if ($request->hasFile('video')) {
                 // Delete old video if exists
@@ -508,6 +526,9 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
             
+            // Cover image (dedicated main/cover image)
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+            
             // Main product images
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             
@@ -566,6 +587,12 @@ class ProductController extends Controller
                 'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true), // Handle boolean properly
             ]);
+
+            // Handle cover image (dedicated main/cover photo)
+            if ($request->hasFile('cover_image')) {
+                $coverPath = $request->file('cover_image')->store('products/covers', 'public');
+                $product->update(['cover_image' => $coverPath]);
+            }
 
             // Handle main product images
             if ($request->hasFile('images')) {

@@ -9,7 +9,7 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'weight', 'length', 'width', 'height', 'volumetric_weight', 'active', 'reviews_count', 'average_rating'];
+    protected $fillable = ['name', 'slug', 'description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'weight', 'length', 'width', 'height', 'volumetric_weight', 'active', 'cover_image', 'reviews_count', 'average_rating'];
 
     protected $casts = [
         'weight' => 'decimal:2',
@@ -146,12 +146,37 @@ class Product extends Model
     }
 
     /**
-     * Get the best thumbnail image for display in listings
-     * Priority: variation images > product images
+     * Get the best thumbnail for display in listings
+     * Priority: cover_image > variation images > product images
+     * Returns either a string URL or a model instance with ->path property
      */
     public function getThumbnailImage()
     {
-        // 1) First try to get any variation image (using eager loaded relationship)
+        // 0) Check dedicated cover_image first
+        if ($this->cover_image) {
+            $coverImage = $this->cover_image;
+            // Return a simple object that behaves like an image model
+            return (object) [
+                'path' => $coverImage,
+                'product_variation_id' => null,
+                'getThumbnailUrl' => function ($size = 150) use ($coverImage) {
+                    return \Illuminate\Support\Facades\Storage::disk('public')->url($coverImage);
+                },
+                'getOptimizedImageUrl' => function () use ($coverImage) {
+                    return \Illuminate\Support\Facades\Storage::disk('public')->url($coverImage);
+                },
+                'getWebPUrl' => function () use ($coverImage) {
+                    $pathInfo = pathinfo($coverImage);
+                    $webpPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '.webp';
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($webpPath)) {
+                        return \Illuminate\Support\Facades\Storage::disk('public')->url($webpPath);
+                    }
+                    return \Illuminate\Support\Facades\Storage::disk('public')->url($coverImage);
+                },
+            ];
+        }
+
+        // 1) Try variation images
         if ($this->relationLoaded('variationImages') && $this->variationImages->isNotEmpty()) {
             return $this->variationImages->sortBy('position')->first();
         } elseif (class_exists(ProductVariationImage::class)) {
@@ -163,7 +188,7 @@ class Product extends Model
             }
         }
 
-        // 2) Try product images attached to any variation (using eager loaded relationship)
+        // 2) Try product images attached to any variation
         if ($this->relationLoaded('images')) {
             $variationImage = $this->images
                 ->where('product_variation_id', '!=', null)
@@ -182,7 +207,7 @@ class Product extends Model
             }
         }
 
-        // 3) Fallback to product-level images (using eager loaded relationship)
+        // 3) Fallback to product-level images
         if ($this->relationLoaded('images')) {
             return $this->images
                 ->where('product_variation_id', null)
