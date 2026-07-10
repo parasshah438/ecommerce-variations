@@ -160,6 +160,25 @@
                 </h5>
             </div>
             <div class="card-body">
+                <!-- Cover Image -->
+                @if($product->cover_image)
+                    <div class="mb-3">
+                        <h6 class="fw-semibold mb-2">
+                            <i class="bi bi-bookmark-star-fill text-primary me-1"></i>Cover Image
+                        </h6>
+                        <div class="position-relative d-inline-block">
+                            <img src="{{ Storage::disk('public')->url($product->cover_image) }}" 
+                                 alt="{{ $product->name }} Cover" 
+                                 class="img-fluid rounded border border-primary"
+                                 style="width: 100%; max-height: 200px; object-fit: cover;"
+                                 loading="lazy"
+                                 onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
+                            <span class="badge bg-primary position-absolute top-0 start-0 m-1">Cover</span>
+                        </div>
+                        <hr>
+                    </div>
+                @endif
+
                 @php
                     $allImages = collect();
                     

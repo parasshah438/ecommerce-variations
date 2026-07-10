@@ -38,7 +38,7 @@
     }
     
     .btn-group .btn {
-        margin: 0 2px;
+        margin: 2px;
     }
     
     .loading-spinner {
@@ -64,21 +64,28 @@
 <div class="container-fluid">
     <!-- Toolbar -->
     <div class="row mb-3">
-        <div class="col-md-6">
-            <div class="d-flex gap-2 flex-wrap">
-                <select class="form-select form-select-sm" id="userFilter" style="width: auto;">
+        <div class="col-md-8">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <select class="form-select form-select-sm" id="userFilter" style="width: auto; min-width: 200px;">
                     <option value="">All Users</option>
+                    @foreach($users as $user)
+                        <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                    @endforeach
                 </select>
                 <input type="date" class="form-control form-control-sm" id="dateFilter" style="width: auto;">
+                <div class="input-group input-group-sm" style="width: auto; min-width: 200px;">
+                    <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="tableSearch" placeholder="Search logs...">
+                </div>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="resetFilters">
-                    <i class="fas fa-refresh"></i> Reset
+                    <i class="fas fa-sync-alt me-1"></i>Reset
                 </button>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="d-flex gap-2 justify-content-md-end">
                 <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteBtn" disabled>
-                    <i class="fas fa-trash"></i> Delete Selected
+                    <i class="fas fa-trash me-1"></i>Delete Selected
                 </button>
             </div>
         </div>
@@ -129,7 +136,7 @@
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
                 <h5 class="modal-title" id="viewActivityModalLabel">
-                    <i class="fas fa-info-circle me-2"></i>Activity Details
+                    <i class="fas fa-info-circle me-2"></i>User Activities
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -197,7 +204,7 @@ $(document).ready(function() {
                 render: function(data, type, row) {
                     return `
                         <div class="activity-item">
-                            <div class="fw-semibold text-truncate" style="max-width: 300px;" title="${data}">
+                            <div class="fw-semibold text-truncate" style="max-width: 350px;" title="${data}">
                                 ${data}
                             </div>
                         </div>
@@ -220,11 +227,21 @@ $(document).ready(function() {
         language: {
             processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
             emptyTable: 'No activity logs found',
-            zeroRecords: 'No matching activity logs found'
+            zeroRecords: 'No matching activity logs found',
+            search: '_INPUT_',
+            searchPlaceholder: 'Search logs...'
         },
         drawCallback: function() {
             updateBulkActionButtons();
         }
+    });
+
+    // Remove default DataTables search and use custom one
+    $('.dataTables_filter').hide();
+
+    // Custom search input
+    $('#tableSearch').on('keyup', function() {
+        activityLogsTable.search(this.value).draw();
     });
 
     // Filter handlers
@@ -233,7 +250,8 @@ $(document).ready(function() {
     });
 
     $('#resetFilters').on('click', function() {
-        $('#userFilter, #dateFilter').val('').trigger('change');
+        $('#userFilter, #dateFilter, #tableSearch').val('').trigger('change');
+        activityLogsTable.search('').draw();
     });
 
     // Select all functionality
@@ -258,9 +276,19 @@ $(document).ready(function() {
         $('#bulkDeleteBtn').prop('disabled', selectedCount === 0);
     }
 
-    // View Activity
+    // View Activity - shows all activities for this user
     $(document).on('click', '.view-activity', function() {
         const userId = $(this).data('id');
+        
+        $('#activityDetailsContent').html(`
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading user activities...</p>
+            </div>
+        `);
+        $('#viewActivityModal').modal('show');
         
         $.ajax({
             url: "{{ route('admin.user-activities.view') }}",
@@ -272,11 +300,16 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     displayActivityDetails(response.user, response.activities);
-                    $('#viewActivityModal').modal('show');
+                } else {
+                    $('#activityDetailsContent').html('<div class="alert alert-danger">Failed to load activities.</div>');
                 }
             },
-            error: function() {
-                showToast('Error loading activity details', 'error');
+            error: function(xhr) {
+                let msg = 'Error loading activity details';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                $('#activityDetailsContent').html('<div class="alert alert-danger">' + msg + '</div>');
             }
         });
     });
@@ -288,7 +321,23 @@ $(document).ready(function() {
         showConfirmModal(
             'Are you sure you want to delete this activity log? This action cannot be undone.',
             function() {
-                deleteActivity(activityId);
+                $.ajax({
+                    url: "{{ route('admin.user-activities.delete') }}",
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        id: activityId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            activityLogsTable.draw();
+                            showToast(response.message, 'success');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error deleting activity log', 'error');
+                    }
+                });
             }
         );
     });
@@ -302,7 +351,24 @@ $(document).ready(function() {
         showConfirmModal(
             `Are you sure you want to delete ${selectedIds.length} selected activity logs? This action cannot be undone.`,
             function() {
-                bulkDeleteActivities(selectedIds);
+                $.ajax({
+                    url: "{{ route('admin.user-activities.delete-multiple') }}",
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        id: selectedIds
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            activityLogsTable.draw();
+                            $('#selectAll').prop('checked', false);
+                            showToast(response.message, 'success');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error deleting activity logs', 'error');
+                    }
+                });
             }
         );
     });
@@ -312,9 +378,50 @@ $(document).ready(function() {
         showConfirmModal(
             'Are you sure you want to clear ALL activity logs? This will permanently delete all activity records.',
             function() {
-                clearAllLogs();
+                // Select all visible rows and delete them via bulk delete
+                const allIds = [];
+                activityLogsTable.rows().every(function() {
+                    const data = this.data();
+                    if (data && data.id) {
+                        allIds.push(data.id);
+                    }
+                });
+                
+                if (allIds.length === 0) {
+                    showToast('No logs to delete', 'info');
+                    return;
+                }
+                
+                $.ajax({
+                    url: "{{ route('admin.user-activities.delete-multiple') }}",
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        id: allIds
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            activityLogsTable.draw();
+                            showToast(response.message, 'success');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error clearing logs', 'error');
+                    }
+                });
             }
         );
+    });
+
+    // Export Logs
+    $('#exportLogsBtn').on('click', function() {
+        // Gather current filter state
+        const params = new URLSearchParams();
+        if ($('#userFilter').val()) params.append('user_filter', $('#userFilter').val());
+        if ($('#dateFilter').val()) params.append('date_filter', $('#dateFilter').val());
+        if ($('#tableSearch').val()) params.append('search', $('#tableSearch').val());
+        
+        showToast('Export functionality to be implemented', 'info');
     });
 
     // Helper Functions
@@ -323,30 +430,51 @@ $(document).ready(function() {
         
         if (activities && activities.length > 0) {
             activities.forEach(function(activity) {
+                const dateStr = activity.created_at 
+                    ? (typeof activity.created_at === 'string' 
+                        ? activity.created_at 
+                        : new Date(activity.created_at).toLocaleString())
+                    : 'N/A';
+                    
                 activitiesHtml += `
                     <div class="activity-item mb-3 p-3 border rounded">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <div class="fw-semibold">${activity.log_description}</div>
-                                <small class="text-muted">IP: ${activity.ip_address}</small>
+                                <div class="fw-semibold">${activity.log_description || 'No description'}</div>
+                                <small class="text-muted">
+                                    <i class="fas fa-network-wired me-1"></i>IP: ${activity.ip_address || 'Unknown'}
+                                </small>
                             </div>
-                            <small class="text-muted">${new Date(activity.created_at).toLocaleString()}</small>
+                            <small class="text-muted text-nowrap ms-3">${dateStr}</small>
                         </div>
                     </div>
                 `;
             });
         } else {
-            activitiesHtml = '<p class="text-muted">No activities found for this user.</p>';
+            activitiesHtml = `
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No activities found for this user.</p>
+                </div>
+            `;
         }
 
         const html = `
             <div class="row">
-                <div class="col-md-4 text-center">
-                    <h5>${user.name}</h5>
-                    <p class="text-muted">${user.email}</p>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light h-100">
+                        <div class="card-body text-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x"></i>
+                            </div>
+                            <h5 class="mb-1">${user.name}</h5>
+                            <p class="text-muted mb-0">${user.email}</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-8">
-                    <h6>Recent Activities:</h6>
+                    <h6 class="mb-3"><i class="fas fa-list me-2"></i>Recent Activities (${activities.length})</h6>
                     <div class="activities-list" style="max-height: 400px; overflow-y: auto;">
                         ${activitiesHtml}
                     </div>
@@ -355,52 +483,6 @@ $(document).ready(function() {
         `;
         
         $('#activityDetailsContent').html(html);
-    }
-
-    function deleteActivity(activityId) {
-        $.ajax({
-            url: "{{ route('admin.user-activities.delete') }}",
-            type: 'POST',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content'),
-                id: activityId
-            },
-            success: function(response) {
-                if (response.success) {
-                    activityLogsTable.draw();
-                    showToast(response.message, 'success');
-                }
-            },
-            error: function() {
-                showToast('Error deleting activity log', 'error');
-            }
-        });
-    }
-
-    function bulkDeleteActivities(ids) {
-        $.ajax({
-            url: "{{ route('admin.user-activities.delete-multiple') }}",
-            type: 'POST',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content'),
-                id: ids
-            },
-            success: function(response) {
-                if (response.success) {
-                    activityLogsTable.draw();
-                    $('#selectAll').prop('checked', false);
-                    showToast(response.message, 'success');
-                }
-            },
-            error: function() {
-                showToast('Error deleting activity logs', 'error');
-            }
-        });
-    }
-
-    function clearAllLogs() {
-        // This would need a separate endpoint to clear all logs
-        showToast('Clear all logs functionality needs to be implemented', 'warning');
     }
 
     function showConfirmModal(message, callback) {
@@ -414,13 +496,16 @@ $(document).ready(function() {
     }
 
     function showToast(message, type = 'info') {
+        // Remove existing toasts
+        $('.custom-toast').remove();
+        
         const alertClass = type === 'success' ? 'alert-success' : 
                           type === 'error' ? 'alert-danger' : 
                           type === 'warning' ? 'alert-warning' : 'alert-info';
         
         const toast = $(`
-            <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            <div class="alert ${alertClass} alert-dismissible fade show position-fixed custom-toast" 
+                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px;">
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -429,7 +514,7 @@ $(document).ready(function() {
         $('body').append(toast);
         
         setTimeout(function() {
-            toast.alert('close');
+            toast.fadeOut(function() { $(this).remove(); });
         }, 5000);
     }
 });

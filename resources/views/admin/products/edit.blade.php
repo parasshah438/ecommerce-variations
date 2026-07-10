@@ -193,20 +193,60 @@
                     </div>
                 </div>
             </div>
-            <!-- Product Images -->
+            <!-- Product Cover Image -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-images me-2"></i>
-                        Product Images
+                        <i class="bi bi-image me-2"></i>
+                        Cover / Main Image
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="images" class="form-label">Upload Images</label>
+                        <label for="cover_image" class="form-label">Upload Cover Image</label>
+                        <input type="file" class="form-control" id="cover_image" name="cover_image" 
+                               accept="image/*" onchange="previewSingleImage(this, 'cover-image-preview')">
+                        <div class="form-text">
+                            <strong>Recommended:</strong> Upload a dedicated cover/main image. This will be used as the primary product thumbnail in listings and search results.
+                            If not provided, existing product/variation images will be used as fallback.
+                        </div>
+                    </div>
+                    <div id="cover-image-preview" class="d-flex flex-wrap gap-2">
+                        @if($product->cover_image)
+                        <div class="position-relative me-2 mb-2 existing-cover">
+                            <img src="{{ Storage::disk('public')->url($product->cover_image) }}" 
+                                 alt="{{ $product->name }} Cover" 
+                                 width="120" height="120" 
+                                 class="rounded border border-primary"
+                                 style="object-fit: cover;"
+                                 loading="lazy"
+                                 onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
+                            <span class="badge bg-primary position-absolute top-0 start-0 m-1">Cover</span>
+                            <div class="mt-1 text-center">
+                                <label class="form-check-label small">
+                                    <input type="checkbox" name="remove_cover" value="1"> Remove cover
+                                </label>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Gallery Images -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-images me-2"></i>
+                        Product Gallery Images
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="images" class="form-label">Upload Gallery Images</label>
                         <input type="file" class="form-control" id="images" name="images[]" 
                                multiple accept="image/*" onchange="previewImages(this, 'main-images-preview')">
-                        <div class="form-text">You can upload multiple images. First image will be the main image.</div>
+                        <div class="form-text">You can upload multiple gallery images.</div>
                     </div>
                     <div id="main-images-preview" class="d-flex flex-wrap gap-2">
                         @foreach($product->images as $image)
@@ -217,7 +257,6 @@
                                      class="rounded border"
                                      loading="lazy"
                                      onerror="this.src='{{ asset('images/product-placeholder.jpg') }}'">
-                                <!-- Optionally add a delete button here -->
                             </div>
                         @endforeach
                     </div>
@@ -870,6 +909,33 @@ function previewVariationImages(input, index) {
         });
     }
 }
+// Single image preview function (for cover image)
+function previewSingleImage(input, containerId) {
+    const container = document.getElementById(containerId);
+    // Clear only new previews, keep existing cover
+    const existingCover = container.querySelector('.existing-cover');
+    container.innerHTML = '';
+    if (existingCover) container.appendChild(existingCover);
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'image-preview position-relative d-inline-block';
+            div.innerHTML = `
+                <img src="${e.target.result}" alt="Cover Preview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #0d6efd;">
+                <span class="badge bg-primary position-absolute top-0 start-0 m-1">New Cover</span>
+                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="this.closest('.image-preview').remove(); document.getElementById('cover_image').value = '';">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            container.insertBefore(div, container.firstChild);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 function previewImages(input, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';

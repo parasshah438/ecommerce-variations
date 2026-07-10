@@ -3,15 +3,15 @@
         <div class="card product-card h-100 shadow-sm border-0">
             <div class="product-image-container position-relative">
                 @php
-                    $selectedImage = $product->variations->first()?->images->first() ?? $product->images->first();
+                    $thumbImage = $product->getThumbnailImage();
                     $img = null;
                     $webpImg = null;
-                    if ($selectedImage) {
-                        if (str_starts_with($selectedImage->path, 'http')) {
-                            $img = $selectedImage->path;
+                    if ($thumbImage && $thumbImage->path) {
+                        if (str_starts_with($thumbImage->path, 'http')) {
+                            $img = $thumbImage->path;
                         } else {
-                            $img = $selectedImage->getOptimizedImageUrl();
-                            $webpImg = $selectedImage->getWebPUrl();
+                            $img = $thumbImage->getOptimizedImageUrl();
+                            $webpImg = $thumbImage->getWebPUrl();
                         }
                     }
                 @endphp

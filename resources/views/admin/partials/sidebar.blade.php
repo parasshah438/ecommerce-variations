@@ -63,20 +63,35 @@
                     <a class="nav-link" href="#" 
                        data-bs-toggle="collapse" 
                        data-bs-target="#analyticsMenu"
-                       data-keywords="charts graphs data visualization metrics stats">
+                       data-keywords="charts graphs data visualization metrics stats reports analytics ecommerce">
                         <i class="nav-icon fas fa-chart-line"></i>
                         <span class="nav-text">Analytics</span>
                         <i class="fas fa-chevron-right ms-auto nav-arrow"></i>
                     </a>
                     <div class="collapse" id="analyticsMenu">
                         <div class="nav-sub-menu">
-                            <a class="nav-link" href="#" data-keywords="reports export data analysis">
+                            <a class="nav-link {{ request()->routeIs('admin.sales*') ? 'active' : '' }}" 
+                               href="{{ route('admin.sales.index') }}" 
+                               data-keywords="reports export data analysis sales revenue profit financial trends">
                                 <i class="nav-icon fas fa-chart-bar"></i>
-                                <span class="nav-text">Reports</span>
+                                <span class="nav-text">Sales Reports</span>
                             </a>
-                            <a class="nav-link" href="#" data-keywords="statistics numbers metrics data">
-                                <i class="nav-icon fas fa-chart-pie"></i>
-                                <span class="nav-text">Statistics</span>
+                            <a class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}" 
+                               href="{{ route('admin.orders.index') }}" 
+                               data-keywords="order statistics metrics data transactions purchases status">
+                                <i class="nav-icon fas fa-shopping-cart"></i>
+                                <span class="nav-text">Order Analytics</span>
+                            </a>
+                            <a class="nav-link {{ request()->routeIs('admin.stock*') ? 'active' : '' }}" 
+                               href="{{ route('admin.stock.dashboard') }}" 
+                               data-keywords="inventory stock warehouse levels products quantity">
+                                <i class="nav-icon fas fa-boxes"></i>
+                                <span class="nav-text">Stock Reports</span>
+                            </a>
+                            <a class="nav-link" href="#" 
+                               data-keywords="customers users behavior analytics demographics">
+                                <i class="nav-icon fas fa-user-chart"></i>
+                                <span class="nav-text">Customer Analytics</span>
                             </a>
                         </div>
                     </div>
@@ -175,25 +190,27 @@
                 </div>
             </div>
 
+
             <div class="nav-section">
-                <div class="nav-section-title">Reports & Analytics</div>
+                <div class="nav-section-title">Content Marketing</div>
                 <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="sales revenue profit income financial reports">
-                        <i class="nav-icon fas fa-chart-area"></i>
-                        <span class="nav-text">Sales Reports</span>
+                    <a class="nav-link {{ request()->routeIs('admin.blog.posts*') ? 'active' : '' }}"
+                       href="{{ route('admin.blog.posts.index') }}"
+                       data-keywords="blog posts articles content writing SEO marketing organic traffic">
+                        <i class="nav-icon fas fa-newspaper"></i>
+                        <span class="nav-text">Blog Posts</span>
+                        @php $draftCount = \App\Models\BlogPost::draft()->count(); @endphp
+                        @if($draftCount > 0)
+                            <span class="nav-badge">{{ $draftCount }}</span>
+                        @endif
                     </a>
                 </div>
                 <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="inventory stock levels warehouse products">
-                        <i class="nav-icon fas fa-boxes"></i>
-                        <span class="nav-text">Inventory Report</span>
-                        <span class="nav-badge">New</span>
-                    </a>
-                </div>
-                <div class="nav-item">
-                    <a class="nav-link" href="#" data-keywords="customers users behavior analytics demographics">
-                        <i class="nav-icon fas fa-user-chart"></i>
-                        <span class="nav-text">Customer Analytics</span>
+                    <a class="nav-link {{ request()->routeIs('admin.blog.categories*') ? 'active' : '' }}"
+                       href="{{ route('admin.blog.categories.index') }}"
+                       data-keywords="blog categories topics tags content organization">
+                        <i class="nav-icon fas fa-folder"></i>
+                        <span class="nav-text">Blog Categories</span>
                     </a>
                 </div>
             </div>

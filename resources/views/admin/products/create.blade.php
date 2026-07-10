@@ -184,20 +184,42 @@
                 </div>
             </div>
             
+            <!-- Product Cover Image -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-image me-2"></i>
+                        Cover / Main Image
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="cover_image" class="form-label">Upload Cover Image</label>
+                        <input type="file" class="form-control" id="cover_image" name="cover_image" 
+                               accept="image/*" onchange="previewSingleImage(this, 'cover-image-preview')">
+                        <div class="form-text">
+                            <strong>Recommended:</strong> Upload a dedicated cover/main image. This will be used as the primary product thumbnail in listings and search results.
+                            If not provided, the first uploaded image will be used as fallback.
+                        </div>
+                    </div>
+                    <div id="cover-image-preview" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
             <!-- Product Images -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
                         <i class="bi bi-images me-2"></i>
-                        Product Images
+                        Product Gallery Images
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="images" class="form-label">Upload Images</label>
+                        <label for="images" class="form-label">Upload Gallery Images</label>
                         <input type="file" class="form-control" id="images" name="images[]" 
                                multiple accept="image/*" onchange="previewImages(this, 'main-images-preview')">
-                        <div class="form-text">You can upload multiple images. First image will be the main image.</div>
+                        <div class="form-text">You can upload multiple gallery images.</div>
                     </div>
                     <div id="main-images-preview" class="d-flex flex-wrap gap-2"></div>
                 </div>
@@ -867,6 +889,30 @@ function previewVariationImages(input, index) {
             };
             reader.readAsDataURL(file);
         });
+    }
+}
+
+// Single image preview function (for cover image)
+function previewSingleImage(input, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'image-preview position-relative d-inline-block';
+            div.innerHTML = `
+                <img src="${e.target.result}" alt="Cover Preview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #0d6efd;">
+                <span class="badge bg-primary position-absolute top-0 start-0 m-1">Cover</span>
+                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="this.parentElement.remove(); document.getElementById('cover_image').value = '';">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        };
+        reader.readAsDataURL(file);
     }
 }
 

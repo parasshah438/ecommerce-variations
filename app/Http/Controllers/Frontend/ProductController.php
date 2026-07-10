@@ -26,7 +26,7 @@ class ProductController extends Controller
             'variations' => function($q) { $q->select('id', 'product_id', 'price', 'attribute_value_ids'); },
             'category:id,name,slug',
             'brand:id,name,slug'
-        ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at');
+        ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at', 'cover_image');
         
         // Route-based filtering
         $isNewArrivals = $request->route()->getName() === 'products.new_arrivals' || 
@@ -326,7 +326,7 @@ class ProductController extends Controller
             'category:id,name,slug',
             'brand:id,name,slug'
         ])
-        ->select('id', 'name', 'slug', 'description', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+        ->select('id', 'name', 'slug', 'description', 'price', 'mrp', 'category_id', 'brand_id', 'created_at', 'cover_image')
         ->where('slug', $slug)
         ->firstOrFail();
 
@@ -470,7 +470,7 @@ class ProductController extends Controller
             'variations' => function($q) { $q->select('id', 'product_id', 'price', 'attribute_value_ids'); },
             'category:id,name,slug',
             'brand:id,name,slug'
-        ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at')
+        ])->select('id', 'name', 'slug', 'price', 'mrp', 'category_id', 'brand_id', 'created_at', 'cover_image')
           ->where('category_id', $category->id);
         
         // ENHANCED Search filter with professional logic

@@ -60,6 +60,7 @@ class ProductController extends Controller
             'height' => 'nullable|numeric|min:0',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB - dedicated cover image
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             'video' => 'nullable|file|mimes:mp4,webm,ogg,avi,mov|max:51200', // 50MB max
             'variations' => 'nullable|array',
@@ -102,6 +103,23 @@ class ProductController extends Controller
                 'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true),
             ];
+
+            // Handle cover image
+            if ($request->hasFile('cover_image')) {
+                // Delete old cover image if exists
+                if ($product->cover_image && Storage::disk('public')->exists($product->cover_image)) {
+                    Storage::disk('public')->delete($product->cover_image);
+                }
+                $updateData['cover_image'] = $request->file('cover_image')->store('products/covers', 'public');
+            }
+            // If no cover_image file provided but there was one previously, keep it (don't change)
+            // If remove_cover flag is set, clear it
+            if ($request->boolean('remove_cover')) {
+                if ($product->cover_image && Storage::disk('public')->exists($product->cover_image)) {
+                    Storage::disk('public')->delete($product->cover_image);
+                }
+                $updateData['cover_image'] = null;
+            }
 
             if ($request->hasFile('video')) {
                 // Delete old video if exists
@@ -340,13 +358,138 @@ class ProductController extends Controller
             return back()->withInput()->withErrors(['error' => 'Failed to update product: ' . $e->getMessage()]);
         }
     }
-    public function index()
+
+    public function index(Request $request)
     {
-        $products = Product::with(['category', 'brand', 'variations', 'images', 'variationImages'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
-            
-        return view('admin.products.index', compact('products'));
+        $query = Product::with(['category', 'brand', 'variations', 'images', 'variationImages']);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('slug', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('short_description', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhere('hsn_code', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Category filter
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        // Brand filter
+        if ($request->filled('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
+        // Status filter
+        if ($request->filled('status')) {
+            $query->where('active', $request->status === 'active' ? 1 : 0);
+        }
+
+        // Price range filter
+        if ($request->filled('price_min')) {
+            $query->where('price', '>=', $request->price_min);
+        }
+        if ($request->filled('price_max')) {
+            $query->where('price', '<=', $request->price_max);
+        }
+
+        // Has variations filter
+        if ($request->filled('has_variations')) {
+            if ($request->has_variations === 'yes') {
+                $query->has('variations');
+            } else {
+                $query->doesntHave('variations');
+            }
+        }
+
+        // Date range filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Quick date filters
+        if ($request->filled('quick_filter')) {
+            $today = now();
+            switch ($request->quick_filter) {
+                case 'today':
+                    $query->whereDate('created_at', $today->toDateString());
+                    break;
+                case 'yesterday':
+                    $yesterday = $today->copy()->subDay();
+                    $query->whereDate('created_at', $yesterday->toDateString());
+                    break;
+                case 'this_week':
+                    $startOfWeek = $today->copy()->startOfWeek();
+                    $endOfWeek = $today->copy()->endOfWeek();
+                    $query->whereBetween('created_at', [
+                        $startOfWeek->toDateTimeString(),
+                        $endOfWeek->toDateTimeString()
+                    ]);
+                    break;
+                case 'last_week':
+                    $lastWeekStart = $today->copy()->subWeek()->startOfWeek();
+                    $lastWeekEnd = $today->copy()->subWeek()->endOfWeek();
+                    $query->whereBetween('created_at', [
+                        $lastWeekStart->toDateTimeString(),
+                        $lastWeekEnd->toDateTimeString()
+                    ]);
+                    break;
+                case 'this_month':
+                    $query->whereMonth('created_at', $today->month)
+                          ->whereYear('created_at', $today->year);
+                    break;
+                case 'last_month':
+                    $lastMonth = $today->copy()->subMonth();
+                    $query->whereMonth('created_at', $lastMonth->month)
+                          ->whereYear('created_at', $lastMonth->year);
+                    break;
+            }
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+
+        switch ($sortBy) {
+            case 'name':
+                $query->orderBy('name', $sortOrder);
+                break;
+            case 'price':
+                $query->orderBy('price', $sortOrder);
+                break;
+            case 'category':
+                $query->join('categories', 'products.category_id', '=', 'categories.id')
+                      ->orderBy('categories.name', $sortOrder)
+                      ->select('products.*');
+                break;
+            case 'brand':
+                $query->join('brands', 'products.brand_id', '=', 'brands.id')
+                      ->orderBy('brands.name', $sortOrder)
+                      ->select('products.*');
+                break;
+            case 'active':
+                $query->orderBy('active', $sortOrder);
+                break;
+            default:
+                $query->orderBy('created_at', $sortOrder);
+                break;
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 20);
+        $products = $query->paginate($perPage)->appends($request->query());
+
+        $categories = Category::orderBy('name')->get();
+        $brands = Brand::orderBy('name')->get();
+
+        return view('admin.products.index', compact('products', 'categories', 'brands'));
     }
 
     public function create()
@@ -382,6 +525,9 @@ class ProductController extends Controller
             'height' => 'nullable|numeric|min:0|max:1000',
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
+            
+            // Cover image (dedicated main/cover image)
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
             
             // Main product images
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
@@ -441,6 +587,12 @@ class ProductController extends Controller
                 'volumetric_weight' => $volumetricWeight,
                 'active' => $request->boolean('active', true), // Handle boolean properly
             ]);
+
+            // Handle cover image (dedicated main/cover photo)
+            if ($request->hasFile('cover_image')) {
+                $coverPath = $request->file('cover_image')->store('products/covers', 'public');
+                $product->update(['cover_image' => $coverPath]);
+            }
 
             // Handle main product images
             if ($request->hasFile('images')) {

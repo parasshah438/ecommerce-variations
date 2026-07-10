@@ -607,7 +607,16 @@ class UserController extends Controller
 
     public function activity_logs()
     {
-       return view('admin/manage_activity_logs');
+        $users = User::select('id', 'name', 'email')
+                     ->whereIn('id', function ($q) {
+                         $q->select('user_id')
+                           ->from('user_activities')
+                           ->distinct();
+                     })
+                     ->orderBy('name')
+                     ->get();
+        
+        return view('admin/manage_activity_logs', compact('users'));
     }
 
     public function manage_activity_logs(Request $request): JsonResponse

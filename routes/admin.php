@@ -274,4 +274,30 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::post('/clear-specific', [\App\Http\Controllers\Admin\CacheManagementController::class, 'clearSpecificCache'])->name('clear-specific');
         Route::get('/logs', [\App\Http\Controllers\Admin\CacheManagementController::class, 'getLogs'])->name('logs');
     });
+
+    // Blog / Content Marketing Routes
+    Route::prefix('blog')->name('blog.')->group(function () {
+        // Blog Posts
+        Route::prefix('posts')->name('posts.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\BlogPostController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'store'])->name('store');
+            Route::get('/{blogPost}/edit', [\App\Http\Controllers\Admin\BlogPostController::class, 'edit'])->name('edit');
+            Route::put('/{blogPost}', [\App\Http\Controllers\Admin\BlogPostController::class, 'update'])->name('update');
+            Route::delete('/{blogPost}', [\App\Http\Controllers\Admin\BlogPostController::class, 'destroy'])->name('destroy');
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\BlogPostController::class, 'bulkAction'])->name('bulk-action');
+            Route::post('/{blogPost}/toggle-trending', [\App\Http\Controllers\Admin\BlogPostController::class, 'toggleTrending'])->name('toggle-trending');
+            Route::post('/{blogPost}/toggle-featured', [\App\Http\Controllers\Admin\BlogPostController::class, 'toggleFeatured'])->name('toggle-featured');
+        });
+
+        // Blog Categories
+        Route::prefix('categories')->name('categories.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'store'])->name('store');
+            Route::get('/{blogCategory}/edit', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'edit'])->name('edit');
+            Route::put('/{blogCategory}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'update'])->name('update');
+            Route::delete('/{blogCategory}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'destroy'])->name('destroy');
+        });
+    });
 });
