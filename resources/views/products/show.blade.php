@@ -1286,6 +1286,7 @@ $(document).ready(function() {
         const image = currentImages[index];
         
         $('.main-product-image').attr('src', image.path);
+        $('.main-product-image').attr('onclick', `openImageModal('${image.path}')`);
         $('.thumbnail-image').removeClass('border-primary');
         $(`.thumbnail-image[data-index="${index}"]`).addClass('border-primary');
         
