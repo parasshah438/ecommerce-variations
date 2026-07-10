@@ -17,11 +17,25 @@ class BlogPostController extends Controller
         $this->middleware(['auth', 'admin']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $posts = BlogPost::with('category')
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        $query = BlogPost::with('category');
+
+        if ($request->filled('status') && in_array($request->status, ['published', 'draft', 'archived'], true)) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('category')) {
+            $query->where('blog_category_id', $request->category);
+        }
+
+        if ($request->filled('search')) {
+            $query->search($request->search);
+        }
+
+        $posts = $query->orderBy('created_at', 'desc')->paginate(15);
+        $categories = BlogCategory::orderBy('name')->get();
+
         $stats = [
             'total' => BlogPost::count(),
             'published' => BlogPost::where('status', 'published')->count(),
@@ -29,7 +43,7 @@ class BlogPostController extends Controller
             'trending' => BlogPost::where('is_trending', true)->count(),
             'total_views' => BlogPost::sum('views_count'),
         ];
-        return view('admin.blog.posts.index', compact('posts', 'stats'));
+        return view('admin.blog.posts.index', compact('posts', 'stats', 'categories'));
     }
 
     public function create()
