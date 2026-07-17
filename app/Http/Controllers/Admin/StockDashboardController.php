@@ -14,27 +14,44 @@ class StockDashboardController extends Controller
 {
     public function index()
     {
-        // Get stock statistics
+        // Get stock statistics (deduplicated)
         $totalVariations = ProductVariation::count();
-        $outOfStock = VariationStock::where('quantity', '<=', 0)->count();
-        $lowStock = VariationStock::whereBetween('quantity', [1, 10])->count();
-        $inStock = VariationStock::where('quantity', '>', 10)->count();
-        
-        // Get recent stock movements (you may need to create this table)
-        // $recentMovements = StockMovement::latest()->limit(10)->get();
+        $outOfStock = VariationStock::selectRaw('product_variation_id, SUM(quantity) as total')
+            ->groupBy('product_variation_id')
+            ->having('total', '<=', 0)
+            ->get()
+            ->count();
+        $lowStock = VariationStock::selectRaw('product_variation_id, SUM(quantity) as total')
+            ->groupBy('product_variation_id')
+            ->havingBetween('total', [1, 10])
+            ->get()
+            ->count();
+        $inStock = VariationStock::selectRaw('product_variation_id, SUM(quantity) as total')
+            ->groupBy('product_variation_id')
+            ->having('total', '>', 10)
+            ->get()
+            ->count();
         
         // Get low stock products
         $lowStockProducts = ProductVariation::with(['product', 'stock'])
             ->whereHas('stock', function ($query) {
-                $query->whereBetween('quantity', [1, 10]);
+                $query->where('quantity', '>=', 1);
+            })
+            ->whereDoesntHave('stock', function ($query) {
+                $query->where('quantity', '>', 10);
             })
             ->limit(10)
             ->get();
             
         // Get out of stock products
         $outOfStockProducts = ProductVariation::with(['product', 'stock'])
-            ->whereHas('stock', function ($query) {
-                $query->where('quantity', '<=', 0);
+            ->whereDoesntHave('stock', function ($query) {
+                $query->where('quantity', '>', 0);
+            })
+            ->orWhereHas('stock', function ($query) {
+                $query->selectRaw('product_variation_id, SUM(quantity) as total_qty')
+                    ->groupBy('product_variation_id')
+                    ->having('total_qty', '<=', 0);
             })
             ->limit(10)
             ->get();
@@ -59,7 +76,10 @@ class StockDashboardController extends Controller
     {
         $lowStockProducts = ProductVariation::with(['product', 'stock'])
             ->whereHas('stock', function ($query) {
-                $query->whereBetween('quantity', [1, 10]);
+                $query->where('quantity', '>=', 1);
+            })
+            ->whereDoesntHave('stock', function ($query) {
+                $query->where('quantity', '>', 10);
             })
             ->paginate(20);
 
@@ -69,8 +89,13 @@ class StockDashboardController extends Controller
     public function outOfStockReport()
     {
         $outOfStockProducts = ProductVariation::with(['product', 'stock'])
-            ->whereHas('stock', function ($query) {
-                $query->where('quantity', '<=', 0);
+            ->whereDoesntHave('stock', function ($query) {
+                $query->where('quantity', '>', 0);
+            })
+            ->orWhereHas('stock', function ($query) {
+                $query->selectRaw('product_variation_id, SUM(quantity) as total_qty')
+                    ->groupBy('product_variation_id')
+                    ->having('total_qty', '<=', 0);
             })
             ->paginate(20);
 

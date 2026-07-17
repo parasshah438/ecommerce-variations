@@ -104,9 +104,13 @@
             <h6 class="m-0 font-weight-bold text-danger">
                 <i class="fas fa-list me-2"></i>Out of Stock Products
             </h6>
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-primary" onclick="selectAll()">
-                    <i class="fas fa-check-double"></i> Select All
+            <div class="d-flex gap-2 align-items-center">
+                <span id="selectionCounter" class="badge bg-secondary fs-6 px-3 py-2 d-none">0 selected</span>
+                <button class="btn btn-sm btn-primary" id="selectAllBtn">
+                    <i class="fas fa-check-double"></i> Select Page
+                </button>
+                <button class="btn btn-sm btn-success" id="selectAllAcrossBtn" style="display:none">
+                    <i class="fas fa-check-double"></i> Select All {{ $outOfStockProducts->total() }} Items
                 </button>
                 <button class="btn btn-sm btn-warning" onclick="bulkRestock()">
                     <i class="fas fa-plus"></i> Bulk Restock
@@ -123,7 +127,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th width="30">
-                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                                    <input type="checkbox" id="selectAllCheckbox">
                                 </th>
                                 <th>Product</th>
                                 <th>SKU</th>
@@ -382,7 +386,7 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 // Quick restock functions
 function quickRestock(variationId) {
@@ -428,7 +432,29 @@ function saveQuickRestock() {
     });
 }
 
-// Selection functions
+// Selection state
+let allItemsSelectedMode = false;
+const totalItems = {{ $outOfStockProducts->total() }};
+const perPage = {{ $outOfStockProducts->perPage() }};
+
+function updateSelectionCounter() {
+    const counter = document.getElementById('selectionCounter');
+    const checked = document.querySelectorAll('.product-checkbox:checked').length;
+    
+    if (checked > 0 || allItemsSelectedMode) {
+        counter.classList.remove('d-none');
+        if (allItemsSelectedMode) {
+            counter.innerHTML = `<strong>${totalItems}</strong> of ${totalItems} selected (all pages)`;
+            counter.className = 'badge bg-success fs-6 px-3 py-2';
+        } else {
+            counter.innerHTML = `<strong>${checked}</strong> of ${totalItems} selected (page: ${checked})`;
+            counter.className = 'badge bg-secondary fs-6 px-3 py-2';
+        }
+    } else {
+        counter.classList.add('d-none');
+    }
+}
+
 function toggleSelectAll() {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const productCheckboxes = document.querySelectorAll('.product-checkbox');
@@ -436,6 +462,16 @@ function toggleSelectAll() {
     productCheckboxes.forEach(checkbox => {
         checkbox.checked = selectAllCheckbox.checked;
     });
+    
+    const acrossBtn = document.getElementById('selectAllAcrossBtn');
+    if (selectAllCheckbox.checked && totalItems > perPage) {
+        acrossBtn.style.display = 'inline-block';
+    } else {
+        acrossBtn.style.display = 'none';
+    }
+    
+    allItemsSelectedMode = false;
+    updateSelectionCounter();
 }
 
 function selectAll() {
@@ -444,17 +480,45 @@ function selectAll() {
     toggleSelectAll();
 }
 
-function bulkRestock() {
-    const selectedCheckboxes = document.querySelectorAll('.product-checkbox:checked');
+function selectAllAcrossAllPages() {
+    allItemsSelectedMode = true;
     
-    if (selectedCheckboxes.length === 0) {
+    document.querySelectorAll('.product-checkbox').forEach(cb => {
+        cb.checked = true;
+    });
+    document.getElementById('selectAllCheckbox').checked = true;
+    document.getElementById('selectAllAcrossBtn').style.display = 'none';
+    
+    updateSelectionCounter();
+    showAlert('success', `All ${totalItems} out-of-stock items selected for bulk action.`);
+}
+
+// Make globally accessible for inline handlers
+window.selectAll = selectAll;
+window.toggleSelectAll = toggleSelectAll;
+window.selectAllAcrossAllPages = selectAllAcrossAllPages;
+
+function bulkRestock() {
+    let selectedIds = [];
+    
+    if (allItemsSelectedMode) {
+        selectedIds = Array.from(document.querySelectorAll('.product-checkbox')).map(cb => cb.value);
+    } else {
+        selectedIds = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    }
+    
+    if (selectedIds.length === 0) {
         alert('Please select at least one product to restock.');
         return;
     }
     
+    const label = allItemsSelectedMode 
+        ? `All <strong>${totalItems}</strong> products selected across all pages.`
+        : `<strong>${selectedIds.length}</strong> products selected.`;
+    
     document.getElementById('selectedProductsForRestock').innerHTML = `
         <div class="alert alert-info">
-            <strong>${selectedCheckboxes.length}</strong> products selected for bulk restock.
+            ${label}
         </div>
     `;
     
@@ -462,16 +526,21 @@ function bulkRestock() {
 }
 
 function saveBulkRestock() {
-    const selectedCheckboxes = document.querySelectorAll('.product-checkbox:checked');
     const quantity = document.getElementById('bulkRestockQuantity').value;
-    
     if (!quantity || quantity < 1) {
         alert('Please enter a valid quantity.');
         return;
     }
     
-    const updates = Array.from(selectedCheckboxes).map(cb => ({
-        variation_id: cb.value,
+    let ids;
+    if (allItemsSelectedMode) {
+        ids = Array.from(document.querySelectorAll('.product-checkbox')).map(cb => cb.value);
+    } else {
+        ids = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    }
+    
+    const updates = ids.map(id => ({
+        variation_id: id,
         quantity: parseInt(quantity)
     }));
     
@@ -501,22 +570,27 @@ function saveBulkRestock() {
 
 // Other functions
 function viewDetails(variationId) {
-    // Implement product details view
     showAlert('info', 'Product details feature coming soon!');
 }
 
 function notifySupplier(variationId) {
-    // Implement supplier notification
     showAlert('info', 'Supplier notification feature coming soon!');
 }
 
 function exportSelected() {
-    const selectedCheckboxes = document.querySelectorAll('.product-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
+    let selectedIds = [];
+    
+    if (allItemsSelectedMode) {
+        selectedIds = Array.from(document.querySelectorAll('.product-checkbox')).map(cb => cb.value);
+    } else {
+        selectedIds = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+    }
+    
+    if (selectedIds.length === 0) {
         alert('Please select at least one product to export.');
         return;
     }
-    showAlert('info', 'Export selected feature coming soon!');
+    showAlert('info', allItemsSelectedMode ? `Exporting all ${totalItems} items...` : `Exporting ${selectedIds.length} items...`);
 }
 
 // Utility function
@@ -539,12 +613,36 @@ function showAlert(type, message) {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    // Focus on search or filter elements if needed
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', selectAll);
+    }
+    
+    const selectAllAcrossBtn = document.getElementById('selectAllAcrossBtn');
+    if (selectAllAcrossBtn) {
+        selectAllAcrossBtn.addEventListener('click', selectAllAcrossAllPages);
+    }
+    
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', toggleSelectAll);
+    }
+    
+    document.querySelectorAll('.product-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            allItemsSelectedMode = false;
+            const acrossBtn = document.getElementById('selectAllAcrossBtn');
+            if (acrossBtn) acrossBtn.style.display = 'none';
+            updateSelectionCounter();
+        });
+    });
+    
+    updateSelectionCounter();
 });
 </script>
-@endsection
+@endpush
 
-@section('styles')
+@push('styles')
 <style>
 .border-left-danger {
     border-left: 0.25rem solid #e74a3b !important;
@@ -662,4 +760,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-@endsection
+@endpush
