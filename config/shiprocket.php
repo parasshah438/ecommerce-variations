@@ -102,6 +102,10 @@ return [
     
     'auto_assign_courier' => env('SHIPROCKET_AUTO_ASSIGN_COURIER', false),
     
+    // Automatically call the "Generate Pickup" API right after AWB is assigned.
+    // Admin can still manually retry from the order page if this fails.
+    'auto_schedule_pickup' => env('SHIPROCKET_AUTO_SCHEDULE_PICKUP', true),
+    
     'prefer_cheapest' => env('SHIPROCKET_PREFER_CHEAPEST', true),
     
     'max_courier_rate' => env('SHIPROCKET_MAX_COURIER_RATE', null),

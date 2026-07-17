@@ -24,6 +24,18 @@ class ShiprocketCourierService extends ShiprocketService
     }
 
     /**
+     * Request/confirm courier pickup for one or more shipments.
+     * Shiprocket API: POST /courier/generate/pickup
+     * Response includes pickup_scheduled_date and pickup_token_number.
+     */
+    public function generatePickup(array $shipmentIds): array
+    {
+        return $this->makeRequest('POST', '/courier/generate/pickup', [
+            'shipment_id' => array_values(array_map('intval', $shipmentIds)),
+        ]);
+    }
+
+    /**
      * Get list of available couriers
      */
     public function getCouriers(): array

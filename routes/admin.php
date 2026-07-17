@@ -114,6 +114,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         
         // Shipping
         Route::post('/{order}/create-shipment', [AdminOrderController::class, 'createShipment'])->name('create_shipment');
+        Route::post('/{order}/schedule-pickup', [AdminOrderController::class, 'schedulePickup'])->name('schedule_pickup');
 
         // Partial item cancellation
         Route::post('/{order}/cancel-items', [AdminOrderController::class, 'cancelItems'])->name('cancel_items');

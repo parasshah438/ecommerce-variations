@@ -309,6 +309,45 @@ class OrderController extends Controller
         }
     }
 
+    /**
+     * Manually (re)request Shiprocket pickup for the order's active shipment.
+     * Used when auto-scheduling failed or needs to be retried.
+     */
+    public function schedulePickup(Order $order)
+    {
+        $shipment = $order->activeShipment;
+
+        if (!$shipment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active shipment found for this order.'
+            ], 422);
+        }
+
+        if (!$shipment->awb_code) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AWB must be generated before scheduling pickup.'
+            ], 422);
+        }
+
+        $processor = app(\App\Services\ShiprocketOrderProcessor::class);
+        $result = $processor->requestPickup($shipment);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pickup requested successfully.',
+                'shipment_status' => $shipment->fresh()->formatted_status,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['error'] ?? 'Failed to request pickup.'
+        ], 422);
+    }
+
     public function cancelOrder(Request $request, Order $order)
     {
         $request->validate([

@@ -21,5 +21,9 @@ class VerifyCsrfToken extends Middleware
         '/chatbot/chat',
         'chatbot/chat/',
         '/chatbot/chat/',
+
+        // Shiprocket webhooks - external server posts without a CSRF token,
+        // so these must be excluded or every callback returns 419 and is dropped.
+        'webhooks/shiprocket/*',
     ];
 }

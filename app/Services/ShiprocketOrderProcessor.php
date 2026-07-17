@@ -420,12 +420,19 @@ class ShiprocketOrderProcessor
                     : now()->addDays(7)
             ]);
 
+            // Auto-request courier pickup right after AWB assignment (configurable, non-fatal)
+            $pickupResult = null;
+            if (config('shiprocket.auto_schedule_pickup', true)) {
+                $pickupResult = $this->requestPickup($shipment);
+            }
+
             return [
                 'success' => true,
                 'courier' => $bestCourier,
                 'assignment_result' => $assignmentResult,
                 'label_result' => $labelResult,
                 'label_error' => $labelError,
+                'pickup_result' => $pickupResult,
             ];
 
         } catch (Exception $e) {
@@ -437,6 +444,53 @@ class ShiprocketOrderProcessor
                 'success' => false,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Request/confirm courier pickup for a shipment that already has an AWB.
+     * Safe to call multiple times — used both automatically after AWB assignment
+     * and manually from the admin panel as a retry when auto-scheduling fails.
+     */
+    public function requestPickup(Shipment $shipment): array
+    {
+        try {
+            if (!$shipment->shiprocket_shipment_id) {
+                throw new Exception('Shipment has no Shiprocket shipment ID yet.');
+            }
+            if (!$shipment->awb_code) {
+                throw new Exception('AWB must be generated before requesting pickup.');
+            }
+
+            $result = $this->shiprocketManager->couriers()->generatePickup([
+                (int) $shipment->shiprocket_shipment_id
+            ]);
+
+            $pickupData = $result['response'] ?? $result;
+            $courierResponse = $shipment->courier_response ?? [];
+            $courierResponse['pickup_generation'] = $result;
+
+            $shipment->update([
+                'status' => Shipment::STATUS_PICKUP_SCHEDULED,
+                'pickup_scheduled_date' => !empty($pickupData['pickup_scheduled_date'])
+                    ? \Carbon\Carbon::parse($pickupData['pickup_scheduled_date'])
+                    : now(),
+                'courier_response' => $courierResponse,
+            ]);
+
+            Log::info("Pickup requested for Shipment #{$shipment->id}", [
+                'shiprocket_shipment_id' => $shipment->shiprocket_shipment_id,
+                'pickup_status' => $result['pickup_status'] ?? null,
+            ]);
+
+            return ['success' => true, 'result' => $result];
+
+        } catch (Exception $e) {
+            Log::warning("Pickup request failed for Shipment #{$shipment->id}", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }

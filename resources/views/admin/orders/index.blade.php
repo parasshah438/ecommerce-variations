@@ -303,6 +303,13 @@
                                                 </a>
                                             </li>
                                         @endif
+                                        @if($order->activeShipment && $order->activeShipment->awb_code && $order->activeShipment->status !== \App\Models\Shipment::STATUS_PICKUP_SCHEDULED)
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="#" onclick="schedulePickup({{ $order->id }})">
+                                                    <i class="fas fa-box me-2"></i>Retry Pickup Schedule
+                                                </a>
+                                            </li>
+                                        @endif
                                         @if($order->canBeCancelled())
                                             <li>
                                                 <a class="dropdown-item text-danger" href="#" onclick="quickCancelOrder({{ $order->id }})">
@@ -511,6 +518,36 @@ function createShipment(orderId) {
         })
         .catch(error => {
             showToast('An error occurred while creating the shipment.', 'error');
+        })
+        .finally(() => {
+            if (loadingToast) loadingToast.hide();
+        });
+    }
+}
+
+function schedulePickup(orderId) {
+    if (confirm('Request courier pickup for this shipment?')) {
+        const loadingToast = showToast('Requesting pickup from Shiprocket...', 'info');
+
+        fetch(`/admin/orders/${orderId}/schedule-pickup`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('An error occurred while requesting pickup.', 'error');
         })
         .finally(() => {
             if (loadingToast) loadingToast.hide();
