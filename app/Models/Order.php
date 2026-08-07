@@ -173,6 +173,21 @@ class Order extends Model
     }
 
     /**
+     * Human-readable order number.
+     *
+     * Orders are identified by their primary key. This accessor provides a
+     * presentable reference (e.g. #000123) for receipts, emails and tracking.
+     */
+    public function getOrderNumberAttribute(): string
+    {
+        if (isset($this->attributes['order_number']) && $this->attributes['order_number']) {
+            return $this->attributes['order_number'];
+        }
+
+        return '#' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Get formatted payment status
      */
     public function getFormattedPaymentStatusAttribute()

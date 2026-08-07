@@ -427,9 +427,78 @@ class OrderController extends Controller
         ]);
 
         try {
-            // Implementation for sending order emails would go here
-            return response()->json(['success' => true, 'message' => 'Order email sent successfully']);
+            $order->load(['user', 'address', 'items.productVariation.product']);
+
+            if (!$order->user?->email) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This order has no customer email to send to.'
+                ], 422);
+            }
+
+            $emailService = app(\App\Services\ReliableEmailService::class);
+
+            $mailable = null;
+            $emailType = '';
+
+            switch ($request->email_type) {
+                case 'confirmation':
+                    $mailable = new \App\Mail\OrderConfirmationMail($order);
+                    $emailType = 'order_confirmation';
+                    break;
+
+                case 'status_update':
+                    $mailable = new \App\Mail\OrderStatusMail($order, $request->custom_message);
+                    $emailType = 'order_status_update';
+                    break;
+
+                case 'invoice':
+                    // Invoice email is not implemented yet — confirmation template doubles as receipt.
+                    $mailable = new \App\Mail\OrderConfirmationMail($order);
+                    $emailType = 'order_confirmation';
+                    break;
+            }
+
+            if (!$mailable) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unsupported email type.'
+                ], 422);
+            }
+
+            $emailLog = $emailService->sendEmail(
+                emailType: $emailType,
+                recipientEmail: $order->user->email,
+                mailable: $mailable,
+                user: $order->user,
+                emailData: [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'email_type' => $request->email_type,
+                    'custom_message' => $request->custom_message,
+                ]
+            );
+
+            if ($emailLog->status === \App\Models\EmailLog::STATUS_FAILED) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email delivery failed. Check the email logs for details.',
+                    'email_log_id' => $emailLog->id
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order email sent successfully',
+                'email_log_id' => $emailLog->id,
+                'status' => $emailLog->status
+            ]);
         } catch (\Exception $e) {
+            \Log::error('Failed to send order email from admin', [
+                'order_id' => $order->id,
+                'email_type' => $request->email_type,
+                'error' => $e->getMessage(),
+            ]);
             return response()->json(['success' => false, 'message' => 'Failed to send email: ' . $e->getMessage()]);
         }
     }

@@ -180,28 +180,35 @@
 <div class="container-fluid">
     <!-- Stats Cards -->
     <div class="row stats-cards">
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-6 mb-3">
             <div class="stats-card">
                 <i class="fas fa-users"></i>
                 <h3 id="totalUsers">0</h3>
                 <p class="mb-0">Total Users</p>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-6 mb-3">
             <div class="stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                 <i class="fas fa-user-check"></i>
                 <h3 id="activeUsers">0</h3>
                 <p class="mb-0">Active Users</p>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-6 mb-3">
             <div class="stats-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
                 <i class="fas fa-user-times"></i>
                 <h3 id="inactiveUsers">0</h3>
                 <p class="mb-0">Inactive Users</p>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
+        <div class="col-lg-2 col-md-6 mb-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-envelope-open-text"></i>
+                <h3 id="verifiedUsers">0</h3>
+                <p class="mb-0">Verified Users</p>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
             <div class="stats-card" style="background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);">
                 <i class="fas fa-user-shield"></i>
                 <h3 id="adminUsers">0</h3>
@@ -225,6 +232,11 @@
                         <option value="admin">Admin</option>
                         <option value="manager">Manager</option>
                         <option value="user">User</option>
+                    </select>
+                    <select class="form-select form-select-sm" id="verifiedFilter" style="width: auto;">
+                        <option value="">All Verification</option>
+                        <option value="verified">Verified</option>
+                        <option value="unverified">Not Verified</option>
                     </select>
                     <button type="button" class="btn btn-outline-secondary btn-sm" id="resetFilters">
                         <i class="fas fa-refresh"></i> Reset
@@ -275,6 +287,7 @@
                             <th>Mobile</th>
                             <th>Role</th>
                             <th>Status</th>
+                            <th>Verified</th>
                             <th>Joined</th>
                             <th width="200">Actions</th>
                         </tr>
@@ -487,6 +500,7 @@ $(document).ready(function() {
                 d._token = $('meta[name="csrf-token"]').attr('content');
                 d.status = $('#statusFilter').val();
                 d.role = $('#roleFilter').val();
+                d.verified = $('#verifiedFilter').val();
             }
         },
         columns: [
@@ -534,6 +548,14 @@ $(document).ready(function() {
                     return `<span class="badge bg-${statusClass}">${data.charAt(0).toUpperCase() + data.slice(1)}</span>`;
                 }
             },
+            { 
+                data: 'verified',
+                render: function(data, type, row) {
+                    return data
+                        ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>'
+                        : '<span class="badge bg-secondary"><i class="fas fa-times-circle me-1"></i>Not Verified</span>';
+                }
+            },
             { data: 'created_at' },
             { 
                 data: 'actions', 
@@ -558,12 +580,12 @@ $(document).ready(function() {
     });
 
     // Filter handlers
-    $('#statusFilter, #roleFilter').on('change', function() {
+    $('#statusFilter, #roleFilter, #verifiedFilter').on('change', function() {
         usersTable.draw();
     });
 
     $('#resetFilters').on('click', function() {
-        $('#statusFilter, #roleFilter').val('').trigger('change');
+        $('#statusFilter, #roleFilter, #verifiedFilter').val('').trigger('change');
     });
 
     // Load user statistics
@@ -580,6 +602,7 @@ $(document).ready(function() {
                     $('#totalUsers').text(response.stats.total || 0);
                     $('#activeUsers').text(response.stats.active || 0);
                     $('#inactiveUsers').text(response.stats.inactive || 0);
+                    $('#verifiedUsers').text(response.stats.verified || 0);
                     $('#adminUsers').text(response.stats.admins || 0);
                 }
             }

@@ -887,8 +887,11 @@
         <!-- Sidebar Backdrop for Mobile -->
         <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-        <!-- Main Content -->.369
+        <!-- Main Content -->
         <main class="main-content">
+            <!-- Email Verification Banner -->
+            @include('partials.email-verification-banner')
+
             <!-- Top Navigation -->
             <div class="top-nav">
                 <div style="display: flex; align-items: center; gap: 1rem;">

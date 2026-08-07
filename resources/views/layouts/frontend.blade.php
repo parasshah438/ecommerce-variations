@@ -319,6 +319,9 @@
         </div>
     </nav>
 
+    <!-- Email Verification Banner -->
+    @include('partials.email-verification-banner')
+
     <!-- Breadcrumb -->
     @yield('breadcrumb')
 

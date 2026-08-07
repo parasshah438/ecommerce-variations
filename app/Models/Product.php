@@ -9,7 +9,7 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'weight', 'length', 'width', 'height', 'volumetric_weight', 'active', 'cover_image', 'reviews_count', 'average_rating'];
+    protected $fillable = ['name', 'slug', 'description', 'short_description', 'long_description', 'video', 'category_id', 'brand_id', 'price', 'mrp', 'weight', 'length', 'width', 'height', 'volumetric_weight', 'active', 'is_featured', 'cover_image', 'hsn_code', 'meta_title', 'meta_description', 'meta_keywords', 'video_url', 'video_type', 'country_of_origin', 'manufacturer', 'reviews_count', 'average_rating'];
 
     protected $casts = [
         'weight' => 'decimal:2',

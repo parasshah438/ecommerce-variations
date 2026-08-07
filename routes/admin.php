@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\AttributeController;
@@ -48,6 +49,14 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
         Route::post('/', [ProductController::class, 'store'])->name('store');
+
+        // Bulk import (MUST be declared before the parameterized {product} routes)
+        Route::get('/import', [ProductImportController::class, 'showImportForm'])->name('import.form');
+        Route::post('/import/preview', [ProductImportController::class, 'preview'])->name('import.preview');
+        Route::post('/import/execute', [ProductImportController::class, 'import'])->name('import.execute');
+        Route::get('/import/log/{batch}', [ProductImportController::class, 'downloadErrors'])->name('import.log');
+        Route::get('/import/sample/{format}', [ProductImportController::class, 'downloadSample'])->name('import.sample');
+
         Route::get('/{product}', [ProductController::class, 'show'])->name('show');
         Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit');
         Route::put('/{product}', [ProductController::class, 'update'])->name('update');

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Foundation\Auth\VerifiesEmails;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class VerificationController extends Controller
 {
@@ -17,8 +19,6 @@ class VerificationController extends Controller
     | be re-sent if the user didn't receive the original email message.
     |
     */
-
-    use VerifiesEmails;
 
     /**
      * Where to redirect users after verification.
@@ -38,4 +38,39 @@ class VerificationController extends Controller
         $this->middleware('signed')->only('verify');
         $this->middleware('throttle:6,1')->only('verify', 'resend');
     }
+
+    /**
+     * Show the email verification notice.
+     */
+    public function show(Request $request): RedirectResponse|\Illuminate\View\View
+    {
+        return $request->user()->hasVerifiedEmail()
+            ? redirect($this->redirectTo)
+            : view('auth.verify');
+    }
+
+    /**
+     * Mark the authenticated user's email address as verified.
+     */
+    public function verify(EmailVerificationRequest $request): RedirectResponse
+    {
+        $request->fulfill();
+
+        return redirect($this->redirectTo)->with('verified', true);
+    }
+
+    /**
+     * Resend the email verification notification.
+     */
+    public function resend(Request $request): RedirectResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect($this->redirectTo);
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('resent', true);
+    }
 }
+

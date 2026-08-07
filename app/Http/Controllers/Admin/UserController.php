@@ -349,7 +349,9 @@ class UserController extends Controller
                     'total' => User::count(),
                     'active' => User::where('status', 'active')->count(),
                     'inactive' => User::where('status', 'inactive')->count(),
-                    'admins' => User::where('role', 'admin')->count()
+                    'admins' => User::where('role', 'admin')->count(),
+                    'verified' => User::whereNotNull('email_verified_at')->count(),
+                    'unverified' => User::whereNull('email_verified_at')->count(),
                 ];
                 return response()->json(['stats' => $stats]);
             }
@@ -363,6 +365,7 @@ class UserController extends Controller
                 'columns' => 'nullable|array',
                 'status' => 'nullable|in:active,inactive',
                 'role' => 'nullable|in:admin,manager,user',
+                'verified' => 'nullable|in:verified,unverified',
                 'draw' => 'nullable|integer'
             ]);
 
@@ -375,6 +378,14 @@ class UserController extends Controller
 
             if ($request->filled('role')) {
                 $query->where('role', $request->get('role'));
+            }
+
+            if ($request->filled('verified')) {
+                if ($request->get('verified') === 'verified') {
+                    $query->whereNotNull('email_verified_at');
+                } else {
+                    $query->whereNull('email_verified_at');
+                }
             }
 
             // Global search
@@ -396,7 +407,7 @@ class UserController extends Controller
                 $orderColumn = $request->input('order.0.column', 0);
                 $orderDir = $request->input('order.0.dir', 'asc');
                 
-                $columns = ['', 'id', 'name', 'email', 'mobile_number', 'role', 'status', 'created_at', ''];
+                $columns = ['', 'id', 'name', 'email', 'mobile_number', 'role', 'status', 'email_verified_at', 'created_at', ''];
                 if (isset($columns[$orderColumn]) && $columns[$orderColumn]) {
                     $query->orderBy($columns[$orderColumn], $orderDir);
                 }
@@ -419,6 +430,7 @@ class UserController extends Controller
                     'mobile_number' => $user->mobile_number ?? '-',
                     'role' => $user->role ?? 'user',
                     'status' => $user->status ?? 'active',
+                    'verified' => $user->hasVerifiedEmail(),
                     'created_at' => $user->created_at ? (is_string($user->created_at) ? $user->created_at : $user->created_at->format('d M Y')) : 'N/A',
                     'avatar' => $user->avatar ?? asset('images/default-avatar.png'),
                     'actions' => $this->generateActionButtons($user)

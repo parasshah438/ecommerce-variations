@@ -16,6 +16,10 @@
                 <span class="badge bg-primary ms-1">Active</span>
             @endif
         </button>
+        <a href="{{ route('admin.products.import.form') }}" class="btn btn-outline-primary">
+            <i class="bi bi-upload me-1"></i>
+            Bulk Import
+        </a>
         <a href="{{ route('admin.products.create') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>
             Add New Product

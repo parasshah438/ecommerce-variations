@@ -52,7 +52,12 @@ class OrderService
             $shippingResult = $this->processOrderForShipping($order);
 
             DB::commit();
-            
+
+            // Send order confirmation emails (customer + admin).
+            // Runs outside the DB transaction and never throws:
+            // order placement must succeed even if email delivery fails.
+            $this->sendOrderConfirmationEmails($order);
+
             Log::info("Order confirmed and processed for shipping - Order #{$order->id}", [
                 'shipping_processed' => $shippingResult['success'],
                 'shiprocket_order_id' => $shippingResult['shiprocket_order_id'] ?? null
@@ -68,6 +73,82 @@ class OrderService
             DB::rollback();
             Log::error("Failed to confirm order #{$order->id}: " . $e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Send order confirmation emails to the customer and admin.
+     *
+     * Uses ReliableEmailService (logs each attempt to email_logs and retries on failure).
+     * Runs outside any DB transaction and never throws — a mail failure must not
+     * roll back a successfully placed order.
+     */
+    protected function sendOrderConfirmationEmails(Order $order): void
+    {
+        try {
+            if (! config('shop.notifications.enabled', true)) {
+                Log::info("Order emails disabled via config — skipping for Order #{$order->id}");
+                return;
+            }
+
+            $order->load(['user', 'address', 'items.productVariation.product']);
+
+            $emailService = app(ReliableEmailService::class);
+
+            // 1) Customer confirmation
+            $customerEmail = $order->user?->email;
+            if ($customerEmail) {
+                $customerLog = $emailService->sendEmail(
+                    emailType: 'order_confirmation',
+                    recipientEmail: $customerEmail,
+                    mailable: new \App\Mail\OrderConfirmationMail($order),
+                    user: $order->user,
+                    emailData: [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'order_total' => $order->total,
+                    ]
+                );
+
+                Log::info("Customer order confirmation email sent", [
+                    'order_id' => $order->id,
+                    'email' => $customerEmail,
+                    'email_log_id' => $customerLog->id,
+                    'status' => $customerLog->status,
+                ]);
+            } else {
+                Log::warning("No customer email to send order confirmation", ['order_id' => $order->id]);
+            }
+
+            // 2) Admin new-order alert
+            if (config('shop.notifications.admin_new_order', true)) {
+                foreach (config('shop.notifications.admin_emails', []) as $adminEmail) {
+                    $adminLog = $emailService->sendEmail(
+                        emailType: 'admin_new_order',
+                        recipientEmail: $adminEmail,
+                        mailable: new \App\Mail\AdminOrderNotificationMail($order),
+                        emailData: [
+                            'order_id' => $order->id,
+                            'order_number' => $order->order_number,
+                            'order_total' => $order->total,
+                        ]
+                    );
+
+                    Log::info("Admin new-order notification email sent", [
+                        'order_id' => $order->id,
+                        'email' => $adminEmail,
+                        'email_log_id' => $adminLog->id,
+                        'status' => $adminLog->status,
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            // Never throw — order placement must succeed even if email delivery fails.
+            Log::error("Failed to send order confirmation emails for Order #{$order->id}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 

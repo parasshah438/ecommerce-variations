@@ -87,6 +87,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Order Notification Emails
+    |--------------------------------------------------------------------------
+    */
+
+    'notifications' => [
+        'enabled' => env('ORDER_EMAIL_NOTIFICATIONS', true),
+
+        // Recipient(s) for the admin "new order" alert. Comma-separated emails allowed.
+        'admin_emails' => array_filter(array_map('trim', explode(',', env('ADMIN_NOTIFICATION_EMAIL', '')))),
+
+        // Send the admin alert when a new order is placed/confirmed.
+        'admin_new_order' => env('ADMIN_ORDER_ALERT_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | COD Configuration
     |--------------------------------------------------------------------------
     */

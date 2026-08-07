@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EmailLog;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
@@ -186,21 +187,59 @@ class ReliableEmailService
                         return new \App\Mail\WelcomeEmail($emailLog->user);
                     }
                     break;
-                
+
                 case 'order_confirmation':
-                    // Add order confirmation email reconstruction
+                    return $this->reconstructOrderMailable($emailLog, \App\Mail\OrderConfirmationMail::class);
+
+                case 'admin_new_order':
+                    return $this->reconstructOrderMailable($emailLog, \App\Mail\AdminOrderNotificationMail::class);
+
+                case 'order_status_update':
+                    $order = $this->orderFromLog($emailLog);
+                    if ($order) {
+                        return new \App\Mail\OrderStatusMail(
+                            $order,
+                            $emailLog->email_data['custom_message'] ?? null
+                        );
+                    }
                     break;
-                
+
                 case 'password_reset':
                     // Add password reset email reconstruction
                     break;
-                
+
                 // Add more email types as needed
             }
         } catch (Exception $e) {
             Log::error("Failed to reconstruct mailable for email log {$emailLog->id}: " . $e->getMessage());
         }
         
+        return null;
+    }
+
+    /**
+     * Rebuild an order-related mailable from the stored email data.
+     */
+    private function reconstructOrderMailable(EmailLog $emailLog, string $mailableClass): ?Mailable
+    {
+        $order = $this->orderFromLog($emailLog);
+        if (!$order) {
+            return null;
+        }
+
+        return new $mailableClass($order);
+    }
+
+    /**
+     * Resolve the order referenced by an email log entry.
+     */
+    private function orderFromLog(EmailLog $emailLog): ?Order
+    {
+        $orderId = $emailLog->email_data['order_id'] ?? null;
+        if ($orderId) {
+            return Order::with(['user', 'address', 'items.productVariation.product'])->find($orderId);
+        }
+
         return null;
     }
 }

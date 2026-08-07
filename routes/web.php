@@ -113,7 +113,7 @@ Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 // API route for featured products
 Route::get('/api/featured-products', [WelcomeController::class, 'getFeaturedProducts'])->name('api.featured.products');
 
-Auth::routes();
+Auth::routes(['verify' => true]);
 
 // Social Login Routes (with rate limiting for security)
 Route::prefix('auth')->name('social.')->middleware(['throttle:10,1'])->group(function () {
